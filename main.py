@@ -33,12 +33,10 @@ portfolio_ws = sheet.worksheet("Portfolio")
 # ---------------------------
 
 stocks = [
-    "BDL.NS",
+    "GRAPHITE.NS",
     "BEL.NS",
-    "TCS.NS",
-    "INFY.NS",
-    "RELIANCE.NS",
-    "HAL.NS"
+    "TCI.NS",
+    "ADANIENT.NS",
 ]
 
 results = []
