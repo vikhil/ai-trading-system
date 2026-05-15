@@ -24,8 +24,11 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(
 
 client = gspread.authorize(creds)
 
-#sheet = client.open("AI_Trading_System")
-sheet = client.open_by_key("1AbCDefGHIJK1234567890")
+spreadsheet_id = "1qGsaLVDzxxPSuYnY_Qd2vcEiYXE4tWoTEuxLfH38hPI"
+
+sheet = client.open_by_key(spreadsheet_id)
+
+print("Connected successfully")
 
 scanner_ws = sheet.worksheet("Scanner")
 
