@@ -1,14 +1,14 @@
 import yfinance as yf
 import pandas as pd
-import pandas_ta as ta
+import numpy as np
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import json
 import os
 
-# ---------------------------
-# GOOGLE SHEETS CONNECTION
-# ---------------------------
+# -----------------------------------
+# GOOGLE SHEETS AUTH
+# -----------------------------------
 
 creds_dict = json.loads(os.environ['GOOGLE_CREDENTIALS'])
 
@@ -26,24 +26,43 @@ client = gspread.authorize(creds)
 
 sheet = client.open("AI_Trading_System")
 
-portfolio_ws = sheet.worksheet("Portfolio")
+scanner_ws = sheet.worksheet("Scanner")
 
-# ---------------------------
+# -----------------------------------
 # STOCK LIST
-# ---------------------------
+# -----------------------------------
 
 stocks = [
-    "GRAPHITE.NS",
-    "BEL.NS",
-    "TCI.NS",
-    "ADANIENT.NS",
+    "TCS.NS",
+    "INFY.NS",
+    "RELIANCE.NS"
 ]
 
 results = []
 
-# ---------------------------
-# ANALYSIS LOOP
-# ---------------------------
+# -----------------------------------
+# RSI FUNCTION
+# -----------------------------------
+
+def calculate_rsi(data, period=14):
+
+    delta = data.diff()
+
+    gain = np.where(delta > 0, delta, 0)
+    loss = np.where(delta < 0, -delta, 0)
+
+    gain = pd.Series(gain).rolling(period).mean()
+    loss = pd.Series(loss).rolling(period).mean()
+
+    rs = gain / loss
+
+    rsi = 100 - (100 / (1 + rs))
+
+    return rsi
+
+# -----------------------------------
+# MAIN ANALYSIS
+# -----------------------------------
 
 for ticker in stocks:
 
@@ -59,22 +78,29 @@ for ticker in stocks:
         if df.empty:
             continue
 
+        # CLOSE PRICE
         close = df['Close']
 
-        # Indicators
-        df['EMA20'] = ta.ema(close, length=20)
-        df['EMA50'] = ta.ema(close, length=50)
-        df['RSI'] = ta.rsi(close, length=14)
+        # EMA
+        df['EMA20'] = close.ewm(span=20).mean()
+        df['EMA50'] = close.ewm(span=50).mean()
+
+        # RSI
+        df['RSI'] = calculate_rsi(close)
 
         latest = df.iloc[-1]
 
-        cmp = round(latest['Close'], 2)
-        rsi = round(latest['RSI'], 2)
+        cmp = round(float(latest['Close']), 2)
 
-        ema20 = latest['EMA20']
-        ema50 = latest['EMA50']
+        ema20 = float(latest['EMA20'])
+        ema50 = float(latest['EMA50'])
 
-        # SIGNAL LOGIC
+        rsi = round(float(latest['RSI']), 2)
+
+        # -----------------------------
+        # SCORING LOGIC
+        # -----------------------------
+
         score = 0
 
         if ema20 > ema50:
@@ -86,7 +112,10 @@ for ticker in stocks:
         if cmp > ema20:
             score += 30
 
-        # Final Signal
+        # -----------------------------
+        # SIGNAL
+        # -----------------------------
+
         if score >= 80:
             signal = "STRONG BUY"
 
@@ -105,19 +134,29 @@ for ticker in stocks:
             ticker,
             cmp,
             rsi,
+            round(ema20, 2),
+            round(ema50, 2),
             trend,
             score,
             signal
         ])
 
     except Exception as e:
-        print(e)
 
-# ---------------------------
+        results.append([
+            ticker,
+            "ERROR",
+            str(e),
+            "",
+            "",
+            "",
+            "",
+            ""
+        ])
+
+# -----------------------------------
 # UPDATE GOOGLE SHEET
-# ---------------------------
-
-scanner_ws = sheet.worksheet("Scanner")
+# -----------------------------------
 
 scanner_ws.clear()
 
@@ -125,6 +164,8 @@ headers = [
     "Ticker",
     "CMP",
     "RSI",
+    "EMA20",
+    "EMA50",
     "Trend",
     "Score",
     "Signal"
