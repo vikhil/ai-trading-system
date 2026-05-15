@@ -3,5 +3,5 @@ pandas
 numpy
 gspread
 oauth2client
-pandas_ta
+pandas-ta
 openpyxl
