@@ -1,0 +1,7 @@
+yfinance
+pandas
+numpy
+gspread
+oauth2client
+pandas-ta
+openpyxl
