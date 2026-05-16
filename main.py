@@ -6,31 +6,66 @@ from oauth2client.service_account import ServiceAccountCredentials
 import json
 import os
 
+print("Script Started")
+
 # -----------------------------------
 # GOOGLE SHEETS AUTH
 # -----------------------------------
 
-creds_dict = json.loads(os.environ['GOOGLE_CREDENTIALS'])
+try:
 
-scope = [
-    "https://spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/drive"
-]
+    creds_dict = json.loads(os.environ['GOOGLE_CREDENTIALS'])
 
-creds = ServiceAccountCredentials.from_json_keyfile_dict(
-    creds_dict,
-    scope
-)
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive"
+    ]
 
-client = gspread.authorize(creds)
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(
+        creds_dict,
+        scope
+    )
 
-spreadsheet_id = "1qGsaLVDzxxPSuYnY_Qd2vcEiYXE4tWoTEuxLfH38hPI"
+    client = gspread.authorize(creds)
 
-sheet = client.open_by_key(spreadsheet_id)
+    print("Google Auth Successful")
 
-print("Connected successfully")
+except Exception as e:
 
-scanner_ws = sheet.worksheet("Scanner")
+    print("Google Auth Error:", e)
+    raise
+
+# -----------------------------------
+# OPEN SHEET
+# -----------------------------------
+
+try:
+
+    spreadsheet_id = "1qGsaLVDzxxPSuYnY_Qd2vcEiYXE4tWoTEuxLfH38hPI"
+
+    sheet = client.open_by_key(spreadsheet_id)
+
+    print("Spreadsheet Connected")
+
+except Exception as e:
+
+    print("Spreadsheet Connection Error:", e)
+    raise
+
+# -----------------------------------
+# OPEN WORKSHEET
+# -----------------------------------
+
+try:
+
+    scanner_ws = sheet.worksheet("Scanner")
+
+    print("Scanner Worksheet Found")
+
+except Exception as e:
+
+    print("Worksheet Error:", e)
+    raise
 
 # -----------------------------------
 # STOCK LIST
@@ -70,19 +105,23 @@ def calculate_rsi(data, period=14):
 
 for ticker in stocks:
 
+    print(f"Processing {ticker}")
+
     try:
 
         df = yf.download(
             ticker,
             period="6mo",
             interval="1d",
+            auto_adjust=True,
             progress=False
         )
 
         if df.empty:
+
+            print(f"No Data Found: {ticker}")
             continue
 
-        # CLOSE PRICE
         close = df['Close']
 
         # EMA
@@ -96,13 +135,13 @@ for ticker in stocks:
 
         cmp = round(float(latest['Close']), 2)
 
-        ema20 = float(latest['EMA20'])
-        ema50 = float(latest['EMA50'])
+        ema20 = round(float(latest['EMA20']), 2)
+        ema50 = round(float(latest['EMA50']), 2)
 
         rsi = round(float(latest['RSI']), 2)
 
         # -----------------------------
-        # SCORING LOGIC
+        # SCORING
         # -----------------------------
 
         score = 0
@@ -138,46 +177,48 @@ for ticker in stocks:
             ticker,
             cmp,
             rsi,
-            round(ema20, 2),
-            round(ema50, 2),
+            ema20,
+            ema50,
             trend,
             score,
             signal
         ])
 
+        print(f"{ticker} Processed Successfully")
+
     except Exception as e:
 
-        results.append([
-            ticker,
-            "ERROR",
-            str(e),
-            "",
-            "",
-            "",
-            "",
-            ""
-        ])
+        print(f"Error Processing {ticker}: {e}")
 
 # -----------------------------------
 # UPDATE GOOGLE SHEET
 # -----------------------------------
 
-scanner_ws.clear()
+try:
 
-headers = [
-    "Ticker",
-    "CMP",
-    "RSI",
-    "EMA20",
-    "EMA50",
-    "Trend",
-    "Score",
-    "Signal"
-]
+    scanner_ws.clear()
 
-scanner_ws.append_row(headers)
+    headers = [
+        "Ticker",
+        "CMP",
+        "RSI",
+        "EMA20",
+        "EMA50",
+        "Trend",
+        "Score",
+        "Signal"
+    ]
 
-for row in results:
-    scanner_ws.append_row(row)
+    scanner_ws.append_row(headers)
 
-print("Sheet Updated Successfully")
+    for row in results:
+        scanner_ws.append_row(row)
+
+    print("Google Sheet Updated Successfully")
+
+except Exception as e:
+
+    print("Google Sheet Update Error:", e)
+    raise
+
+print("Script Completed")
