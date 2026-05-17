@@ -131,15 +131,26 @@ for ticker in stocks:
         # RSI
         df['RSI'] = calculate_rsi(close)
 
-        latest = df.iloc[-1]
+        latest = df.tail(1)
 
         cmp = round(float(close.iloc[-1]), 2)
 
-        ema20 = round(float(latest['EMA20']), 2)
-        ema50 = round(float(latest['EMA50']), 2)
+        ema20 = round(float(latest['EMA20'].iloc[0]) if pd.notna(latest['EMA20'].iloc[0]) else 0, 2)
+        ema50 = round(float(latest['EMA50'].iloc[0]) if pd.notna(latest['EMA50'].iloc[0]) else 0, 2)
 
-        rsi = round(float(latest['RSI']), 2)
+        rsi = round(float(latest['RSI'].iloc[0]) if pd.notna(latest['RSI'].iloc[0]) else 0, 2)
 
+        # CLEAN INVALID VALUES
+
+        if np.isnan(rsi):
+            rsi = 0
+        
+        if np.isnan(ema20):
+            ema20 = 0
+        
+        if np.isnan(ema50):
+            ema50 = 0
+        
         # -----------------------------
         # SCORING
         # -----------------------------
