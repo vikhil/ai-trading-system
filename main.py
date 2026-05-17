@@ -68,14 +68,21 @@ except Exception as e:
     raise
 
 # -----------------------------------
-# STOCK LIST
+# READ STOCKS FROM WATCHLIST
 # -----------------------------------
 
-stocks = [
-    "BEL.NS",
-    "GRAPHITE.NS",
-    "TATACONSUM.NS"
-]
+try:
+
+    watchlist_ws = sheet.worksheet("Watchlist")
+
+    stocks = watchlist_ws.col_values(1)[1:]
+
+    print(f"{len(stocks)} Stocks Loaded From Watchlist")
+
+except Exception as e:
+
+    print("Watchlist Error:", e)
+    raise
 
 results = []
 
@@ -157,26 +164,37 @@ for ticker in stocks:
 
         score = 0
 
+        # EMA Trend
         if ema20 > ema50:
-            score += 40
-
+            score += 30
+        
+        # RSI Strength
         if rsi > 60:
-            score += 30
-
+            score += 25
+        
+        # Price Above EMA
         if cmp > ema20:
-            score += 30
-
+            score += 20
+        
+        # Strong Momentum
+        if rsi > 70:
+            score += 15
+        
+        # Bullish Structure
+        if cmp > ema50:
+            score += 10
+            
         # -----------------------------
         # SIGNAL
         # -----------------------------
 
-        if score >= 80:
+        if score >= 75:
             signal = "STRONG BUY"
 
-        elif score >= 60:
+        elif score >= 55:
             signal = "BUY"
 
-        elif score >= 40:
+        elif score >= 35:
             signal = "HOLD"
 
         else:
@@ -200,6 +218,12 @@ for ticker in stocks:
     except Exception as e:
 
         print(f"Error Processing {ticker}: {e}")
+
+# -----------------------------------
+# SORT RESULTS BY SCORE
+# -----------------------------------
+
+results = sorted(results, key=lambda x: x[6], reverse=True)
 
 # -----------------------------------
 # UPDATE GOOGLE SHEET
