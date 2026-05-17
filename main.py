@@ -122,8 +122,8 @@ for ticker in stocks:
             print(f"No Data Found: {ticker}")
             continue
 
-        close = df['Close']
-
+        close = df['Close'].squeeze()
+        
         # EMA
         df['EMA20'] = close.ewm(span=20).mean()
         df['EMA50'] = close.ewm(span=50).mean()
@@ -133,7 +133,7 @@ for ticker in stocks:
 
         latest = df.iloc[-1]
 
-        cmp = round(float(latest['Close']), 2)
+        cmp = round(float(close.iloc[-1]), 2)
 
         ema20 = round(float(latest['EMA20']), 2)
         ema50 = round(float(latest['EMA50']), 2)
