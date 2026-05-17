@@ -72,9 +72,9 @@ except Exception as e:
 # -----------------------------------
 
 stocks = [
-    "TCS.NS",
-    "INFY.NS",
-    "RELIANCE.NS"
+    "BEL.NS",
+    "GRAPHITE.NS",
+    "TATACONSUM.NS"
 ]
 
 results = []
