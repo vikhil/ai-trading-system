@@ -5,6 +5,8 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import json
 import os
+import requests
+from io import StringIO
 
 print("Script Started")
 
@@ -73,9 +75,9 @@ except Exception as e:
 
 try:
 
-    watchlist_ws = sheet.worksheet("Watchlist")
+    #watchlist_ws = sheet.worksheet("Watchlist")
 
-    stocks = watchlist_ws.col_values(1)[1:]
+    #stocks = watchlist_ws.col_values(1)[1:]
 
     print(f"{len(stocks)} Stocks Loaded From Watchlist")
 
@@ -106,6 +108,71 @@ def calculate_rsi(data, period=14):
 
     return rsi
 
+# -----------------------------------
+# NSE STOCK FETCHER
+# -----------------------------------
+
+def fetch_nse_index_stocks(url):
+
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(f"Failed to fetch NSE data: {response.status_code}")
+
+    df = pd.read_csv(StringIO(response.text))
+
+    stocks = df['Symbol'].tolist()
+
+    stocks = [stock + ".NS" for stock in stocks]
+
+    return stocks
+
+# -----------------------------------
+# AUTO FETCH NSE STOCKS
+# -----------------------------------
+
+try:
+
+    nifty50_url = "https://archives.nseindia.com/content/indices/ind_nifty50list.csv"
+
+    niftynext50_url = "https://archives.nseindia.com/content/indices/ind_niftynext50list.csv"
+
+    nifty50_stocks = fetch_nse_index_stocks(nifty50_url)
+
+    niftynext50_stocks = fetch_nse_index_stocks(niftynext50_url)
+
+    # COMBINE
+
+    stocks = list(set(
+        nifty50_stocks +
+        niftynext50_stocks
+    ))
+
+    print(f"{len(stocks)} NSE Stocks Loaded")
+
+    # UPDATE WATCHLIST SHEET
+    
+    watchlist_ws = sheet.worksheet("Watchlist")
+    
+    watchlist_ws.clear()
+    
+    watchlist_ws.append_row(["Ticker"])
+    
+    for stock in stocks:
+    
+        watchlist_ws.append_row([stock])
+    
+    print("Watchlist Updated Successfully")
+
+except Exception as e:
+
+    print("NSE Fetch Error:", e)
+
+    raise
 # -----------------------------------
 # MAIN ANALYSIS
 # -----------------------------------
