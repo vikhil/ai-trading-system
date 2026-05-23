@@ -25,7 +25,7 @@ def load_universe():
     # CLEAN STOCKS
     stocks = [s.strip().upper() for s in stocks]
 
-    # REMOVE INVALID / DUMMY
+    # REMOVE INVALID / DUMMY SYMBOLS
     stocks = [
         s for s in stocks
         if s.endswith(".NS")
