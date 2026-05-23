@@ -8,6 +8,8 @@ from signals import generate_signal
 from sheets_writer import safe_update
 import yfinance as yf
 import numpy as np
+from signals import (calculate_institutional_score, classify_signal, calculate_rsi)
+
 
 def get_market_regime():
     df = yf.download("^NSEI", period="6mo", interval="1d", progress=False)
@@ -60,24 +62,56 @@ safe_update(watchlist_ws, watchlist_data)
 # ----------------------------
 # ANALYSIS
 # ----------------------------
+regime = get_market_regime()
+
 results = []
 
 for ticker in stocks:
-    try:
-        df = fetch_stock_data(ticker)
 
-        if df is None or df.empty:
+    try:
+        df = yf.download(
+            ticker,
+            period="6mo",
+            interval="1d",
+            auto_adjust=True,
+            progress=False
+        )
+
+        if df.empty:
             continue
 
-        cmp, rsi, ema20, ema50, trend, score, signal = generate_signal(df)
+        close = df["Close"]
+
+        ema20 = close.ewm(span=20).mean().iloc[-1]
+        ema50 = close.ewm(span=50).mean().iloc[-1]
+        rsi = calculate_rsi(close).iloc[-1]
+        cmp = close.iloc[-1]
+
+        if pd.isna(ema20) or pd.isna(ema50) or pd.isna(rsi):
+            continue
+
+        score = calculate_institutional_score(cmp, rsi, ema20, ema50)
+        signal = classify_signal(score, regime)
+
+        trend = "Bullish" if ema20 > ema50 else "Bearish"
+
+        # FILTER LOW QUALITY TRADES
+        if score < 40:
+            continue
 
         results.append([
-            ticker, cmp, rsi, ema20, ema50, trend, score, signal
+            ticker,
+            round(cmp, 2),
+            round(rsi, 2),
+            round(ema20, 2),
+            round(ema50, 2),
+            trend,
+            score,
+            signal
         ])
 
     except Exception as e:
         print(f"Error Processing {ticker}: {e}")
-        results.append([ticker, 0, 0, 0, 0, "Error", 0, "SKIP"])
         continue
         
 # ----------------------------
