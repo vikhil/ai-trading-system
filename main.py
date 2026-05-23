@@ -11,16 +11,25 @@ import numpy as np
 from signals import (calculate_institutional_score, classify_signal, calculate_rsi)
 
 
-def get_market_regime():
-    df = yf.download("^NSEI", period="6mo", interval="1d", progress=False)
+def get_market_regime(df):
 
     close = df["Close"]
+
+    if isinstance(close, pd.DataFrame):
+        close = close.iloc[:, 0]
+
+    close = close.dropna()
+
     ema50 = close.ewm(span=50).mean()
     ema200 = close.ewm(span=200).mean()
 
-    if close.iloc[-1] > ema50.iloc[-1] > ema200.iloc[-1]:
+    last_close = float(close.iloc[-1])
+    last_ema50 = float(ema50.iloc[-1])
+    last_ema200 = float(ema200.iloc[-1])
+
+    if last_close > last_ema50 and last_ema50 > last_ema200:
         return "BULL"
-    elif close.iloc[-1] < ema50.iloc[-1] < ema200.iloc[-1]:
+    elif last_close < last_ema50 and last_ema50 < last_ema200:
         return "BEAR"
     else:
         return "SIDEWAYS"
