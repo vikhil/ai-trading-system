@@ -60,8 +60,10 @@ for ticker in stocks:
         ])
 
     except Exception as e:
-        print("Error:", ticker, e)
-
+        print(f"Error Processing {ticker}: {e}")
+        results.append([ticker, 0, 0, 0, 0, "Error", 0, "SKIP"])
+        continue
+        
 # ----------------------------
 # SORT
 # ----------------------------
