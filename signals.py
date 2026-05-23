@@ -26,13 +26,23 @@ def generate_signal(df):
     latest = df.iloc[-1]
 
     cmp = float(close.iloc[-1])
+
+    ema20 = latest["EMA20"]
+    ema50 = latest["EMA50"]
+    rsi = latest["RSI"]
+
+    # FORCE SCALAR SAFETY
+    ema20 = float(ema20.iloc[-1]) if hasattr(ema20, "iloc") else float(ema20)
+    ema50 = float(ema50.iloc[-1]) if hasattr(ema50, "iloc") else float(ema50)
+    rsi = float(rsi.iloc[-1]) if hasattr(rsi, "iloc") else float(rsi)
+
     ema20 = float(latest["EMA20"]) if pd.notna(latest["EMA20"]) else 0
     ema50 = float(latest["EMA50"]) if pd.notna(latest["EMA50"]) else 0
     rsi = float(latest["RSI"]) if pd.notna(latest["RSI"]) else 0
 
     score = 0
 
-    if ema20 > ema50:
+    if pd.notna(ema20) and pd.notna(ema50) and ema20 > ema50:
         score += 30
     if rsi > 60:
         score += 25
