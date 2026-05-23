@@ -70,20 +70,52 @@ except Exception as e:
     raise
 
 # -----------------------------------
-# READ STOCKS FROM WATCHLIST
+# AUTO LOAD STOCKS
 # -----------------------------------
 
 try:
 
-    #watchlist_ws = sheet.worksheet("Watchlist")
+    nifty50 = pd.read_csv("data/nifty50.csv")
 
-    #stocks = watchlist_ws.col_values(1)[1:]
+    niftynext50 = pd.read_csv("data/niftynext50.csv")
 
-    print(f"{len(stocks)} Stocks Loaded From Watchlist")
+    # COMBINE STOCKS
+
+    combined_stocks = pd.concat([
+        nifty50,
+        niftynext50
+    ])
+
+    # REMOVE DUPLICATES
+
+    combined_stocks.drop_duplicates(inplace=True)
+
+    # CONVERT TO LIST
+
+    stocks = combined_stocks['Ticker'].tolist()
+
+    print(f"{len(stocks)} Stocks Loaded")
+
+    # -----------------------------------
+    # UPDATE WATCHLIST SHEET
+    # -----------------------------------
+    
+    watchlist_ws = sheet.worksheet("Watchlist")
+    
+    watchlist_ws.clear()
+    
+    watchlist_ws.append_row(["Ticker"])
+    
+    for stock in stocks:
+    
+        watchlist_ws.append_row([stock])
+    
+    print("Watchlist Updated Successfully")
 
 except Exception as e:
 
-    print("Watchlist Error:", e)
+    print("Stock Loading Error:", e)
+
     raise
 
 results = []
