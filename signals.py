@@ -2,42 +2,63 @@ import numpy as np
 import pandas as pd
 
 def calculate_rsi(data, period=14):
+    
     delta = data.diff()
 
-    gain = np.where(delta > 0, delta, 0)
-    loss = np.where(delta < 0, -delta, 0)
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
 
-    gain = pd.Series(gain).rolling(period).mean()
-    loss = pd.Series(loss).rolling(period).mean()
+    avg_gain = gain.rolling(period).mean()
+    avg_loss = loss.rolling(period).mean()
 
-    rs = gain / loss
+    rs = avg_gain / avg_loss
+    
     rsi = 100 - (100 / (1 + rs))
 
     return rsi
 
 
 def generate_signal(df):
-    close = df["Close"].squeeze()
+    
+    # FORCE CLEAN CLOSE SERIES
+     close = df["Close"]
 
-    df["EMA20"] = close.ewm(span=20).mean()
-    df["EMA50"] = close.ewm(span=50).mean()
-    df["RSI"] = calculate_rsi(close)
+    # HANDLE DATAFRAME CASE
+    if isinstance(close, pd.DataFrame):
+        close = close.iloc[:, 0]
 
-    latest = df.iloc[-1]
+    close = pd.Series(close).dropna()
+
+    # EMA
+    ema20_series = close.ewm(span=20).mean()
+    ema50_series = close.ewm(span=50).mean()
+
+    # RSI
+    rsi_series = calculate_rsi(close)
+
+    # SAFE LATEST VALUES
+    cmp = float(close.iloc[-1])
 
     # SAFE SCALAR EXTRACTION (ONLY ONCE)
     cmp = float(close.iloc[-1])
 
-    ema20 = latest["EMA20"]
-    ema50 = latest["EMA50"]
-    rsi = latest["RSI"]
+    ema20 = float(ema20_series.iloc[-1])
+    ema50 = float(ema50_series.iloc[-1])
+    rsi = float(rsi_series.iloc[-1])
 
-    # Convert safely to float
-    ema20 = float(ema20) if pd.notna(ema20) else 0.0
-    ema50 = float(ema50) if pd.notna(ema50) else 0.0
-    rsi = float(rsi) if pd.notna(rsi) else 0.0
+    # HANDLE NaN
+    if pd.isna(rsi):
+        rsi = 0
 
+    if pd.isna(ema20):
+        ema20 = 0
+
+    if pd.isna(ema50):
+        ema50 = 0
+
+    # -----------------------------
     # SCORE
+    # -----------------------------
     score = 0
 
     if ema20 > ema50:
@@ -55,7 +76,9 @@ def generate_signal(df):
     if cmp > ema50:
         score += 10
 
+    # -----------------------------
     # SIGNAL
+    # -----------------------------
     if score >= 75:
         signal = "STRONG BUY"
     elif score >= 55:
@@ -67,4 +90,12 @@ def generate_signal(df):
 
     trend = "Bullish" if ema20 > ema50 else "Bearish"
 
-    return [cmp, rsi, ema20, ema50, trend, score, signal]
+    return [
+        round(cmp, 2),
+        round(rsi, 2),
+        round(ema20, 2),
+        round(ema50, 2),
+        trend,
+        score,
+        signal
+    ]
