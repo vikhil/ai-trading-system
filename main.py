@@ -85,14 +85,20 @@ def fetch_nse_index_stocks(url):
 # -----------------------------------
 # LOAD STOCKS (ONLY ONCE)
 # -----------------------------------
-nifty50_url = "https://archives.nseindia.com/content/indices/ind_nifty50list.csv"
-niftynext50_url = "https://archives.nseindia.com/content/indices/ind_niftynext50list.csv"
+try:
+    nifty50_url = "https://archives.nseindia.com/content/indices/ind_nifty50list.csv"
+    niftynext50_url = "https://archives.nseindia.com/content/indices/ind_niftynext50list.csv"
 
-stocks = list(set(
-        fetch_nse_index_stocks(nifty50_url) + fetch_nse_index_stocks(niftynext50_url)
+    stocks = list(set(
+        fetch_nse_index_stocks(nifty50_url) +
+        fetch_nse_index_stocks(niftynext50_url)
     ))
 
-print(f"{len(stocks)} NSE Stocks Loaded")
+    print(f"{len(stocks)} NSE Stocks Loaded")
+
+except Exception as e:
+    print("Stock loading failed:", e)
+    stocks = []
 
 # -----------------------------------
 # WATCHLIST UPDATE (FIXED - SINGLE BULK CALL)
@@ -105,11 +111,10 @@ try:
 
     print("Watchlist Updated Successfully")
     
- except Exception as e:
+except Exception as e:
     print("Watchlist Update Error:", e)
     raise   
     
-
 # -----------------------------------
 # MAIN ANALYSIS
 # -----------------------------------
