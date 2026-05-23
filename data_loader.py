@@ -13,7 +13,6 @@ def fetch_nse_index_stocks(url):
     df = pd.read_csv(StringIO(response.text))
     return [s + ".NS" for s in df["Symbol"].tolist()]
 
-
 def load_universe():
     nifty50_url = "https://archives.nseindia.com/content/indices/ind_nifty50list.csv"
     niftynext50_url = "https://archives.nseindia.com/content/indices/ind_niftynext50list.csv"
@@ -23,9 +22,21 @@ def load_universe():
         fetch_nse_index_stocks(niftynext50_url)
     ))
 
+    # CLEAN STOCKS
+    stocks = [s.strip().upper() for s in stocks]
+
+    # REMOVE INVALID / DUMMY
+    stocks = [
+        s for s in stocks
+        if s.endswith(".NS")
+        and "DUMMY" not in s
+    ]
+
+    # REMOVE DUPLICATES WHILE KEEPING ORDER
+    stocks = list(dict.fromkeys(stocks))
+
     return stocks
-
-
+    
 def fetch_stock_data(ticker):
     df = yf.download(
         ticker,
