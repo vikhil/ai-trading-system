@@ -192,11 +192,17 @@ try:
     
     watchlist_ws.clear()
     
-    watchlist_ws.append_row(["Ticker"])
+    # PREPARE DATA
+    
+    watchlist_data = [["Ticker"]]
     
     for stock in stocks:
     
-        watchlist_ws.append_row([stock])
+        watchlist_data.append([stock])
+    
+    # BULK UPDATE
+    
+    watchlist_ws.update("A1", watchlist_data)
     
     print("Watchlist Updated Successfully")
 
@@ -343,10 +349,13 @@ try:
         "Signal"
     ]
 
-    scanner_ws.append_row(headers)
+    # PREPARE SCANNER DATA
 
-    for row in results:
-        scanner_ws.append_row(row)
+    scanner_data = [headers] + results
+
+    # BULK UPDATE
+
+    scanner_ws.update("A1", scanner_data)
 
     print("Google Sheet Updated Successfully")
 
