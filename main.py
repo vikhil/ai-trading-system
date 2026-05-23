@@ -6,7 +6,23 @@ from oauth2client.service_account import ServiceAccountCredentials
 from data_loader import load_universe, fetch_stock_data
 from signals import generate_signal
 from sheets_writer import safe_update
+import yfinance as yf
+import numpy as np
 
+def get_market_regime():
+    df = yf.download("^NSEI", period="6mo", interval="1d", progress=False)
+
+    close = df["Close"]
+    ema50 = close.ewm(span=50).mean()
+    ema200 = close.ewm(span=200).mean()
+
+    if close.iloc[-1] > ema50.iloc[-1] > ema200.iloc[-1]:
+        return "BULL"
+    elif close.iloc[-1] < ema50.iloc[-1] < ema200.iloc[-1]:
+        return "BEAR"
+    else:
+        return "SIDEWAYS"
+        
 print("Script Started")
 
 # ----------------------------
