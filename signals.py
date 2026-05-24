@@ -145,14 +145,9 @@ def generate_signal(df, regime="BULL"):
         # NaN SAFETY
         # -------------------------
 
-        if np.isnan(rsi):
-            rsi = 0
-
-        if np.isnan(ema20):
-            ema20 = 0
-
-        if np.isnan(ema50):
-            ema50 = 0
+        rsi = 0 if np.isnan(rsi) else rsi
+        ema20 = 0 if np.isnan(ema20) else ema20
+        ema50 = 0 if np.isnan(ema50) else ema50
 
         # -------------------------
         # TREND
@@ -188,7 +183,55 @@ def generate_signal(df, regime="BULL"):
         ]
 
     except Exception as e:
-
         print(f"Signal Engine Error: {e}")
-
         return None
+
+# -----------------------------------
+# ATR RISK ENGINE (FIXED + PRODUCTION READY)
+# -----------------------------------
+
+def calculate_atr(df, period=14):
+
+    df = df.copy()
+
+    if len(df) < period + 1:
+        df["ATR"] = np.nan
+        return df
+
+    df["prev_close"] = df["Close"].shift(1)
+
+    df["tr1"] = df["High"] - df["Low"]
+    df["tr2"] = abs(df["High"] - df["prev_close"])
+    df["tr3"] = abs(df["Low"] - df["prev_close"])
+
+    df["TR"] = df[["tr1", "tr2", "tr3"]].max(axis=1)
+
+    df["ATR"] = df["TR"].rolling(window=period).mean()
+
+    return df
+
+
+# -----------------------------------
+# RISK ENGINE (LONG ONLY - aligned with your system)
+# -----------------------------------
+
+def apply_risk_engine(row, atr_multiplier=1.5, rr_multiple=2.0):
+
+    entry = row["Close"]
+    atr = row["ATR"]
+
+    if pd.isna(atr):
+        return pd.Series([np.nan, np.nan, np.nan, np.nan])
+
+    stop_loss = entry - (atr * atr_multiplier)
+    risk = entry - stop_loss
+    target = entry + (risk * rr_multiple)
+
+    rr = (target - entry) / (entry - stop_loss)
+
+    return pd.Series([
+        round(atr, 2),
+        round(stop_loss, 2),
+        round(target, 2),
+        round(rr, 2)
+    ])
