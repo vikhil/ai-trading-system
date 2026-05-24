@@ -9,7 +9,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from data_loader import load_universe
 from signals import generate_signal
 from sheets_writer import safe_update
-
+from signals import calculate_atr, apply_risk_engine
 
 print("Script Started")
 
@@ -99,6 +99,8 @@ regime = get_market_regime()
 
 nifty_df = yf.download("^NSEI", period="6mo", interval="1d", auto_adjust=True, progress=False)
 
+df = calculate_atr(df)
+
 nifty_close = nifty_df["Close"]
 
 if isinstance(nifty_close, pd.DataFrame):
@@ -179,12 +181,18 @@ for ticker in stocks:
             continue
 
         # ----------------------------
+        # ATR RISK ENGINE
+        # ----------------------------
+
+        last_row = df.iloc[-1]
+
+        risk_values = apply_risk_engine(last_row)
+        
+        atr, stop_loss, target, risk_reward = risk_values
+        
+        # ----------------------------
         # PLACEHOLDERS (NO CRASH VERSION)
         # ----------------------------
-        atr = 0
-        stop_loss = 0
-        target = 0
-        risk_reward = 0
 
         avg_volume = 0
         current_volume = 0
