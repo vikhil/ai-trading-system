@@ -1,16 +1,19 @@
 import json
 import os
+import pandas as pd
 import gspread
+import yfinance as yf
+
 from oauth2client.service_account import ServiceAccountCredentials
 
-from data_loader import load_universe, fetch_stock_data
+from data_loader import load_universe
 from signals import generate_signal
 from sheets_writer import safe_update
-import yfinance as yf
+
 
 print("Script Started")
 
-def get_market_regime(df):
+def get_market_regime():
 
     nifty = yf.download(
         "^NSEI",
