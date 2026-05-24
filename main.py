@@ -93,6 +93,16 @@ safe_update(watchlist_ws, watchlist_data)
 
 regime = get_market_regime()
 
+# ----------------------------
+# NIFTY DATA FOR RELATIVE STRENGTH
+# ----------------------------
+
+nifty_df = yf.download("^NSEI", period="6mo", interval="1d", auto_adjust=True, progress=False)
+
+nifty_close = nifty_df["Close"].dropna()
+
+nifty_return = (nifty_close.iloc[-1] / nifty_close.iloc[0]) - 1
+
 print("Market Regime:", regime)
 
 # ----------------------------
@@ -111,10 +121,41 @@ for ticker in stocks:
             auto_adjust=True,
             progress=False
         )
-
+        
         if df.empty:
             continue
+        
+        stock_close = df["Close"]
 
+        if isinstance(stock_close, pd.DataFrame):
+            stock_close = stock_close.iloc[:, 0]
+
+        stock_close = pd.Series(stock_close).dropna()
+        
+        # ----------------------------
+        # BASIC RETURNS (RS LOGIC)
+        # ----------------------------
+        
+        stock_return = (stock_close.iloc[-1] / stock_close.iloc[0]) - 1
+
+        if nifty_return != 0:
+            rs_score = stock_return / nifty_return
+        else:
+            rs_score = 0
+
+        if rs_score > 1.5:
+            rs_rank = "ELITE"
+        elif rs_score > 1.0:
+            rs_rank = "STRONG"
+        elif rs_score > 0.8:
+            rs_rank = "AVERAGE"
+        else:
+            rs_rank = "WEAK"
+    
+        # ----------------------------
+        # SIGNAL ENGINE
+        # ----------------------------
+        
         signal_data = generate_signal(df, regime)
 
         if signal_data is None:
@@ -126,6 +167,22 @@ for ticker in stocks:
         if score < 40:
             continue
 
+        # ----------------------------
+        # PLACEHOLDERS (NO CRASH VERSION)
+        # ----------------------------
+        atr = 0
+        stop_loss = 0
+        target = 0
+        risk_reward = 0
+
+        avg_volume = 0
+        current_volume = 0
+        volume_spike = "NA"
+        breakout = "NA"
+
+        # ----------------------------
+        # FINAL ROW
+        # ----------------------------
         results.append([
             ticker,
             cmp,
@@ -134,23 +191,21 @@ for ticker in stocks:
             ema50,
             trend,
             score,
-            signal
-            ATR
-            Stop Loss,
-            Target,
-            Risk Reward,
-            RS Score,
-            Relative Rank,
-            Avg Volume,
-            Current Volume,
-            Volume Spike,
-            Breakout
+            signal,
+            atr,
+            stop_loss,
+            target,
+            risk_reward,
+            rs_score,
+            rs_rank,
+            avg_volume,
+            current_volume,
+            volume_spike,
+            breakout
         ])
 
     except Exception as e:
-
         print(f"Error Processing {ticker}: {e}")
-
         continue
         
 # ----------------------------
