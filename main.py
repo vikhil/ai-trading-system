@@ -99,9 +99,14 @@ regime = get_market_regime()
 
 nifty_df = yf.download("^NSEI", period="6mo", interval="1d", auto_adjust=True, progress=False)
 
-nifty_close = nifty_df["Close"].dropna()
+nifty_close = nifty_df["Close"]
 
-nifty_return = (nifty_close.iloc[-1] / nifty_close.iloc[0]) - 1
+if isinstance(nifty_close, pd.DataFrame):
+    nifty_close = nifty_close.iloc[:, 0]
+
+nifty_close = pd.Series(nifty_close).dropna()
+
+nifty_return = float((nifty_close.iloc[-1] / nifty_close.iloc[0]) - 1)
 
 print("Market Regime:", regime)
 
@@ -131,24 +136,30 @@ for ticker in stocks:
             stock_close = stock_close.iloc[:, 0]
 
         stock_close = pd.Series(stock_close).dropna()
-        
+
+        if len(stock_close) < 2:
+            continue
+    
         # ----------------------------
         # BASIC RETURNS (RS LOGIC)
         # ----------------------------
         
-        stock_return = (stock_close.iloc[-1] / stock_close.iloc[0]) - 1
-
+        stock_return = float((stock_close.iloc[-1] / stock_close.iloc[0]) - 1)
+    
         if nifty_return != 0:
-            rs_score = stock_return / nifty_return
+            rs_score = float(stock_return / nifty_return)
         else:
-            rs_score = 0
+            rs_score = 0.0
 
         if rs_score > 1.5:
             rs_rank = "ELITE"
+            
         elif rs_score > 1.0:
             rs_rank = "STRONG"
+            
         elif rs_score > 0.8:
             rs_rank = "AVERAGE"
+            
         else:
             rs_rank = "WEAK"
     
