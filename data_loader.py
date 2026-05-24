@@ -16,10 +16,13 @@ def fetch_nse_index_stocks(url):
 def load_universe():
     nifty50_url = "https://archives.nseindia.com/content/indices/ind_nifty50list.csv"
     niftynext50_url = "https://archives.nseindia.com/content/indices/ind_niftynext50list.csv"
-
+    #nifty500_url = "https://nsearchives.nseindia.com/content/indices/ind_nifty500list.csv"
+    
     stocks = list(set(
         fetch_nse_index_stocks(nifty50_url) +
-        fetch_nse_index_stocks(niftynext50_url)
+        fetch_nse_index_stocks(niftynext50_url) 
+        #+
+        #fetch_nse_index_stocks(nifty500_url)
     ))
 
     # CLEAN STOCKS
