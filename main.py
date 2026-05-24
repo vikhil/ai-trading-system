@@ -135,6 +135,16 @@ for ticker in stocks:
             trend,
             score,
             signal
+            ATR
+            Stop Loss,
+            Target,
+            Risk Reward,
+            RS Score,
+            Relative Rank,
+            Avg Volume,
+            Current Volume,
+            Volume Spike,
+            Breakout
         ])
 
     except Exception as e:
@@ -153,7 +163,26 @@ results = sorted(results, key=lambda x: x[6], reverse=True)
 # UPDATE SCANNER
 # ----------------------------
 
-headers = ["Ticker","CMP","RSI","EMA20","EMA50","Trend","Score","Signal"]
+headers = [
+    "Ticker",
+    "CMP",
+    "RSI",
+    "EMA20",
+    "EMA50",
+    "Trend",
+    "Score",
+    "Signal",
+    "ATR",
+    "Stop Loss",
+    "Target",
+    "Risk Reward",
+    "RS Score",
+    "Relative Rank",
+    "Avg Volume",
+    "Current Volume",
+    "Volume Spike",
+    "Breakout"
+]
 
 scanner_data = [headers] + results
 
