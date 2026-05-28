@@ -217,35 +217,68 @@ def add_volume_and_breakout(df):
 
     df = df.copy()
 
-    if "Volume" not in df.columns or "Close" not in df.columns or "High" not in df.columns:
-        df["Avg Volume"] = 0
-        df["Volume Spike"] = 0
-        df["Breakout"] = "NO"
-        return df
+    # ---------------------------------
+    # REQUIRED COLUMNS CHECK
+    # ---------------------------------
+    required_cols = ["Volume", "Close", "High"]
 
-    volume = df["Volume"]
-    close = df["Close"]
-    high = df["High"]
+    for col in required_cols:
+        if col not in df.columns:
+            df["Avg Volume"] = 0
+            df["Volume Spike"] = 0
+            df["Breakout"] = "NO"
+            return df
 
-    # Average volume
+    # ---------------------------------
+    # FORCE 1D SERIES (CRITICAL FIX)
+    # ---------------------------------
+    volume = pd.Series(df["Volume"]).squeeze()
+    close = pd.Series(df["Close"]).squeeze()
+    high = pd.Series(df["High"]).squeeze()
+
+    # ---------------------------------
+    # NUMERIC SAFETY
+    # ---------------------------------
+    volume = pd.to_numeric(volume, errors="coerce")
+    close = pd.to_numeric(close, errors="coerce")
+    high = pd.to_numeric(high, errors="coerce")
+
+    # ---------------------------------
+    # AVERAGE VOLUME
+    # ---------------------------------
     avg_volume = volume.rolling(20).mean()
 
     df["Avg Volume"] = avg_volume
-    df["Volume Spike"] = volume / avg_volume.replace(0, np.nan)
 
-    # 20-day breakout level
+    df["Volume Spike"] = np.where(
+        avg_volume != 0,
+        volume / avg_volume,
+        0
+    )
+
+    # ---------------------------------
+    # 20 DAY BREAKOUT
+    # ---------------------------------
     high_20 = high.rolling(20).max()
 
-    # SAFE ALIGNMENT FIX (THIS IS CRITICAL)
     breakout_condition = (
         (close > high_20.shift(1)) &
         (df["Volume Spike"] > 1.5)
     )
 
-    df["Breakout"] = np.where(breakout_condition, "YES", "NO")
+    df["Breakout"] = np.where(
+        breakout_condition,
+        "YES",
+        "NO"
+    )
 
-    # cleanup
-    df["Volume Spike"] = df["Volume Spike"].fillna(0)
+    # ---------------------------------
+    # CLEANUP
+    # ---------------------------------
+    df["Volume Spike"] = (
+        pd.to_numeric(df["Volume Spike"], errors="coerce")
+        .fillna(0)
+    )
 
     return df
 
