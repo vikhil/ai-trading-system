@@ -245,7 +245,7 @@ for ticker in stocks:
 
         last_row = df.iloc[-1]
 
-        risk_values = apply_risk_engine(last_row, df=df)
+        risk_values = apply_risk_engine(last_row)
         
         atr = round(float(risk_values.iloc[0]), 2)
         stop_loss = round(float(risk_values.iloc[1]), 2)
