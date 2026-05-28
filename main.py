@@ -248,6 +248,8 @@ for ticker in stocks:
 
 results = sorted(results, key=lambda x: x[6], reverse=True)
 
+print("Final Results Count:", len(results))
+
 # ----------------------------
 # UPDATE SCANNER
 # ----------------------------
