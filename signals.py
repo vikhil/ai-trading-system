@@ -219,7 +219,6 @@ def add_volume_and_breakout(df):
 
     return df
 
-
 # =========================================================
 # RISK ENGINE (FIXED SAFE VERSION)
 # =========================================================
@@ -230,35 +229,38 @@ def apply_risk_engine(row, df=None, atr_multiplier=1.5):
         entry = safe_last_value(row.get("Close", 0))
         atr = safe_last_value(row.get("ATR", 0))
 
+        # ---------------------------
+        # SAFETY CHECK (IMPORTANT)
+        # ---------------------------
+        if df is None or len(df) < 20:
+            return pd.Series([np.nan, np.nan, np.nan, np.nan])
+
         if atr == 0 or pd.isna(atr):
             return pd.Series([np.nan, np.nan, np.nan, np.nan])
 
-        # -------------------------------------------------
-        # 1. STRUCTURE BASED STOP LOSS (NOT JUST ATR)
-        # -------------------------------------------------
-        structure_low = df["Close"].rolling(10).min().iloc[-1] if df is not None else entry
+        # ---------------------------
+        # STRUCTURE STOP
+        # ---------------------------
+        structure_low = df["Close"].rolling(10).min().iloc[-1]
 
         atr_stop = entry - (atr * atr_multiplier)
 
-        # tighter of the two → institutional logic
         stop_loss = max(atr_stop, structure_low)
 
         risk = abs(entry - stop_loss)
-        
-        # -------------------------------------------------
-        # 2. DYNAMIC TARGET (VOLATILITY + STRUCTURE)
-        # -------------------------------------------------
-        resistance = df["Close"].rolling(20).max().iloc[-1] if df is not None else entry
 
+        # ---------------------------
+        # TARGET
+        # ---------------------------
+        resistance = df["Close"].rolling(20).max().iloc[-1]
         momentum_extension = entry + (atr * 2.5)
 
-        # take the higher realistic target
         target = max(resistance, momentum_extension)
 
         reward = abs(target - entry)
 
         rr = reward / risk if risk != 0 else np.nan
-        
+
         return pd.Series([
             round(atr, 2),
             round(stop_loss, 2),
