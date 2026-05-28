@@ -110,17 +110,32 @@ def classify_signal(score, regime):
 def generate_signal(df, regime="BULL"):
 
     try:
+        # -------------------------
+        # SAFE CLOSE SERIES
+        # -------------------------
+        
         df = df.copy()
 
+        if "Close" not in df.columns:
+            return None
+    
         close = df["Close"]
+
+        # Handle multi-column DataFrame (yfinance edge case)
         if isinstance(close, pd.DataFrame):
             close = close.iloc[:, 0]
 
         close = pd.Series(close).dropna()
 
-        if len(close) < 50:
+        # HARD SAFETY CHECKS (IMPORTANT)
+        if close.empty or len(close) < 50:
             return None
 
+        close = pd.to_numeric(close, errors="coerce").dropna()
+
+        if close.empty:
+            return None
+        
         # -------------------------
         # INDICATORS
         # -------------------------
