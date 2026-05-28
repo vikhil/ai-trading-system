@@ -188,13 +188,15 @@ for ticker in stocks:
         last_row = df.iloc[-1]
 
         risk_values = apply_risk_engine(last_row)
-        if risk_values.isna().any():
-            continue
+
+        atr = round(float(risk_values.iloc[0]), 2)
+        stop_loss = round(float(risk_values.iloc[1]), 2)
+        target = round(float(risk_values.iloc[2]), 2)
+        risk_reward = round(float(risk_values.iloc[3]), 2)
         
-        atr = float(risk_values.iloc[0])
-        stop_loss = float(risk_values.iloc[1])
-        target = float(risk_values.iloc[2])
-        risk_reward = float(risk_values.iloc[3])
+        # NaN Safety
+        if pd.isna(risk_reward):
+            continue
 
         # FILTER LOW QUALITY (risk quality filter)
         if risk_reward < 1.5:
