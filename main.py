@@ -10,6 +10,33 @@ from data_loader import load_universe
 from signals import generate_signal, calculate_atr, apply_risk_engine, add_volume_and_breakout
 from sheets_writer import safe_update
 
+import time
+import yfinance as yf
+
+def safe_download(ticker, period="6mo", interval="1d", retries=2):
+
+    for attempt in range(retries + 1):
+        try:
+            df = yf.download(
+                ticker,
+                period=period,
+                interval=interval,
+                auto_adjust=True,
+                progress=False,
+                threads=False
+            )
+
+            if df is not None and not df.empty:
+                return df, None
+
+        except Exception as e:
+            time.sleep(1.5 * (attempt + 1))
+
+            if attempt == retries:
+                return None, str(e)
+
+    return None, "Unknown failure"
+    
 print("Script Started")
 
 def get_market_regime():
@@ -65,7 +92,15 @@ client = gspread.authorize(creds)
 sheet = client.open_by_key("1qGsaLVDzxxPSuYnY_Qd2vcEiYXE4tWoTEuxLfH38hPI")
 
 scanner_ws = sheet.worksheet("Scanner")
+
+try:
+    failed_ws = sheet.worksheet("FailedLogs")
+except:
+    failed_ws = sheet.add_worksheet(title="FailedLogs", rows="1000", cols="10")
+    
 watchlist_ws = sheet.worksheet("Watchlist")
+
+failed_logs = []
 
 print("Connected")
 
@@ -118,13 +153,15 @@ for ticker in stocks:
 
     try:
 
-        df = yf.download(
-            ticker,
-            period="6mo",
-            interval="1d",
-            auto_adjust=True,
-            progress=False
-        )
+        df, error = safe_download(ticker)
+
+        if error:
+            failed_logs.append([ticker, "DOWNLOAD_FAILED", error])
+            continue
+        
+        if df is None or df.empty:
+            failed_logs.append([ticker, "EMPTY_DATA", "No data returned"])
+            continue
         
         # ATR CALCULATION AND VOLUME AND BREAKOUT
         df = calculate_atr(df)
@@ -170,7 +207,16 @@ for ticker in stocks:
         # SIGNAL ENGINE
         # ----------------------------
         
-        signal_data = generate_signal(df, regime)
+        try:
+            signal_data = generate_signal(df, regime)
+        
+            if signal_data is None:
+                failed_logs.append([ticker, "SIGNAL_FAILED", "generate_signal returned None"])
+                continue
+        
+        except Exception as e:
+            failed_logs.append([ticker, "SIGNAL_EXCEPTION", str(e)])
+            continue
 
         if signal_data is None:
             continue
@@ -278,5 +324,9 @@ headers = [
 scanner_data = [headers] + results
 
 safe_update(scanner_ws, scanner_data)
+
+if failed_logs:
+    failed_headers = [["Ticker", "Error Type", "Reason"]]
+    safe_update(failed_ws, failed_headers + failed_logs)
 
 print("Completed Successfully")
