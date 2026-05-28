@@ -238,13 +238,38 @@ def add_volume_and_breakout(df):
         df["Breakout"] = "NA"
         return df
 
-    df["Avg Volume"] = df["Volume"].rolling(20).mean()
-    df["Volume Spike"] = df["Volume"] / df["Avg Volume"]
+    # FORCE CLEAN SERIES
+    volume = df["Volume"]
+    avg_volume = df["Volume"].rolling(20).mean()
+    
+    # Convert DataFrame → Series if needed
+    if isinstance(volume, pd.DataFrame):
+        volume = volume.iloc[:, 0]
+    
+    if isinstance(avg_volume, pd.DataFrame):
+        avg_volume = avg_volume.iloc[:, 0]
+    
+    df["Avg Volume"] = avg_volume
+    
+    df["Volume Spike"] = np.where(
+        avg_volume != 0,
+        volume / avg_volume,
+        0
+    )
 
-    df["20D High"] = df["High"].rolling(20).max()
-
+    high = df["High"]
+    close = df["Close"]
+    
+    if isinstance(high, pd.DataFrame):
+        high = high.iloc[:, 0]
+    
+    if isinstance(close, pd.DataFrame):
+        close = close.iloc[:, 0]
+    
+    df["20D High"] = high.rolling(20).max()
+    
     df["Breakout"] = np.where(
-        df["Close"] > df["20D High"].shift(1),
+        close > df["20D High"].shift(1),
         "YES",
         "NO"
     )
