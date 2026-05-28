@@ -7,9 +7,8 @@ import yfinance as yf
 from oauth2client.service_account import ServiceAccountCredentials
 
 from data_loader import load_universe
-from signals import generate_signal
+from signals import generate_signal, calculate_atr, apply_risk_engine, add_volume_and_breakout
 from sheets_writer import safe_update
-from signals import calculate_atr, apply_risk_engine
 
 print("Script Started")
 
@@ -127,8 +126,9 @@ for ticker in stocks:
             progress=False
         )
         
-        # ATR CALCULATION
+        # ATR CALCULATION AND VOLUME AND BREAKOUT
         df = calculate_atr(df)
+        df = add_volume_and_breakout(df)
         
         if df.empty:
             continue
