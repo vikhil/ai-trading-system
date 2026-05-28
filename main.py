@@ -150,7 +150,7 @@ for ticker in stocks:
         stock_return = float((stock_close.iloc[-1] / stock_close.iloc[0]) - 1)
     
         if nifty_return != 0:
-            rs_score = float(stock_return / nifty_return)
+            rs_score = float(stock_return - nifty_return) * 100
         else:
             rs_score = 0.0
 
