@@ -2,13 +2,44 @@ import pandas as pd
 import numpy as np
 
 
-# -----------------------------------
-# RSI CALCULATION
-# -----------------------------------
+# =========================================================
+# UTILITIES (GLOBAL SAFE HELPERS)
+# =========================================================
 
-def calculate_rsi(data, period=14):
+def safe_last_value(data, default=0.0):
+    try:
+        if isinstance(data, pd.DataFrame):
+            data = data.iloc[:, 0]
 
-    delta = data.diff()
+        if isinstance(data, pd.Series):
+            return float(data.dropna().iloc[-1])
+
+        return float(data)
+
+    except:
+        return default
+
+
+def safe_string_last(data, default="NO"):
+    try:
+        if isinstance(data, pd.DataFrame):
+            data = data.iloc[:, 0]
+
+        if isinstance(data, pd.Series):
+            return str(data.dropna().iloc[-1])
+
+        return str(data)
+
+    except:
+        return default
+
+
+# =========================================================
+# RSI
+# =========================================================
+
+def calculate_rsi(close, period=14):
+    delta = close.diff()
 
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
@@ -17,103 +48,72 @@ def calculate_rsi(data, period=14):
     avg_loss = loss.rolling(period).mean()
 
     rs = avg_gain / avg_loss
-
     rsi = 100 - (100 / (1 + rs))
 
     return rsi
 
 
-# -----------------------------------
-# INSTITUTIONAL SCORE ENGINE
-# -----------------------------------
+# =========================================================
+# SCORE ENGINE
+# =========================================================
 
 def calculate_institutional_score(cmp, rsi, ema20, ema50):
 
     score = 0
 
-    # Trend
     if ema20 > ema50:
         score += 25
 
-    # Momentum
     if 55 < rsi < 75:
         score += 20
     elif rsi >= 75:
         score += 10
 
-    # Price structure
     if cmp > ema20:
         score += 15
 
     if cmp > ema50:
         score += 10
 
-    # Stability
     if 40 < rsi < 70:
         score += 10
 
-    # Weak structure penalty
     if ema20 < ema50:
         score -= 15
 
     return max(0, min(100, score))
 
 
-# -----------------------------------
+# =========================================================
 # SIGNAL CLASSIFIER
-# -----------------------------------
+# =========================================================
 
 def classify_signal(score, regime):
 
     if regime == "BEAR":
+        return "TACTICAL BUY" if score >= 85 else "WATCHLIST" if score >= 60 else "NO TRADE"
 
-        if score >= 85:
-            return "TACTICAL BUY"
+    if regime == "SIDEWAYS":
+        return "SWING BUY" if score >= 85 else "NO TRADE"
 
-        elif score >= 60:
-            return "WATCHLIST"
-
-        else:
-            return "NO TRADE"
-
-    elif regime == "SIDEWAYS":
-
-        if score >= 85:
-            return "SWING BUY"
-
-        else:
-            return "NO TRADE"
-
-    else:
-
-        if score >= 85:
-            return "INSTITUTIONAL BUY"
-
-        elif score >= 70:
-            return "BUY"
-
-        elif score >= 55:
-            return "ACCUMULATE"
-
-        else:
-            return "NO TRADE"
+    return (
+        "INSTITUTIONAL BUY" if score >= 85 else
+        "BUY" if score >= 70 else
+        "ACCUMULATE" if score >= 55 else
+        "NO TRADE"
+    )
 
 
-# -----------------------------------
-# MAIN SIGNAL ENGINE
-# -----------------------------------
+# =========================================================
+# SIGNAL ENGINE (MAIN OUTPUT)
+# =========================================================
 
 def generate_signal(df, regime="BULL"):
 
     try:
-
-        # -------------------------
-        # CLOSE SERIES SAFETY
-        # -------------------------
-
         df = df.copy()
+
         close = df["Close"]
-        
         if isinstance(close, pd.DataFrame):
             close = close.iloc[:, 0]
 
@@ -121,73 +121,43 @@ def generate_signal(df, regime="BULL"):
 
         if len(close) < 50:
             return None
-        
+
         # -------------------------
         # INDICATORS
         # -------------------------
-
-        ema20_series = close.ewm(span=20).mean()
-        ema50_series = close.ewm(span=50).mean()
-
-        rsi_series = calculate_rsi(close)
-
-        # -------------------------
-        # SAFE FLOAT VALUES
-        # -------------------------
+        ema20 = close.ewm(span=20).mean()
+        ema50 = close.ewm(span=50).mean()
+        rsi = calculate_rsi(close)
 
         cmp = float(close.iloc[-1])
+        ema20_v = float(ema20.iloc[-1])
+        ema50_v = float(ema50.iloc[-1])
+        rsi_v = float(rsi.iloc[-1])
 
-        ema20 = ema20_series.iloc[-1] if len(ema20_series) > 0 else 0
-        ema50 = ema50_series.iloc[-1] if len(ema50_series) > 0 else 0
-        rsi = rsi_series.iloc[-1] if len(rsi_series) > 0 else 0
+        trend = "Bullish" if ema20_v > ema50_v else "Bearish"
 
-        # -------------------------
-        # TREND
-        # -------------------------
-
-        trend = "Bullish" if ema20 > ema50 else "Bearish"
-
-        # -------------------------
-        # SCORE
-        # -------------------------
-
-        score = calculate_institutional_score(
-            cmp,
-            rsi,
-            ema20,
-            ema50
-        )
-
-        # -------------------------
-        # SIGNAL
-        # -------------------------
-
+        score = calculate_institutional_score(cmp, rsi_v, ema20_v, ema50_v)
         signal = classify_signal(score, regime)
 
         # -------------------------
-        # VOLUME DATA
+        # VOLUME / BREAKOUT (SAFE)
         # -------------------------
-        
-        avg_volume = df["Avg Volume"].iloc[-1] if "Avg Volume" in df.columns else 0
-        current_volume = df["Volume"].iloc[-1] if "Volume" in df.columns else 0
-        volume_spike = df["Volume Spike"].iloc[-1] if "Volume Spike" in df.columns else 0
-        breakout = df["Breakout"].iloc[-1] if "Breakout" in df.columns else "NO"
-        
-        avg_volume = round(float(avg_volume), 0) if pd.notna(avg_volume) else 0
-        current_volume = round(float(current_volume), 0) if pd.notna(current_volume) else 0
-        volume_spike = round(float(volume_spike), 2) if pd.notna(volume_spike) else 0
+        avg_volume = safe_last_value(df.get("Avg Volume", 0))
+        current_volume = safe_last_value(df.get("Volume", 0))
+        volume_spike = safe_last_value(df.get("Volume Spike", 0))
+        breakout = safe_string_last(df.get("Breakout", "NO"))
 
         return [
             round(cmp, 2),
-            round(rsi, 2),
-            round(ema20, 2),
-            round(ema50, 2),
+            round(rsi_v, 2),
+            round(ema20_v, 2),
+            round(ema50_v, 2),
             trend,
-            score,
+            int(score),
             signal,
-            avg_volume,
-            current_volume,
-            volume_spike,
+            round(avg_volume, 0),
+            round(current_volume, 0),
+            round(volume_spike, 2),
             breakout
         ]
 
@@ -195,9 +165,10 @@ def generate_signal(df, regime="BULL"):
         print(f"Signal Engine Error: {e}")
         return None
 
-# -----------------------------------
-# ATR RISK ENGINE (FIXED + PRODUCTION READY)
-# -----------------------------------
+
+# =========================================================
+# ATR CALCULATION
+# =========================================================
 
 def calculate_atr(df, period=14):
 
@@ -206,87 +177,61 @@ def calculate_atr(df, period=14):
     if len(df) < period + 1:
         df["ATR"] = np.nan
         return df
-    
+
     high = df["High"].squeeze().astype(float)
     low = df["Low"].squeeze().astype(float)
     close = df["Close"].squeeze().astype(float)
 
     prev_close = close.shift(1)
 
-    tr1 = high - low
-    tr2 = abs(high - prev_close)
-    tr3 = abs(low - prev_close)
+    tr = pd.concat([
+        high - low,
+        abs(high - prev_close),
+        abs(low - prev_close)
+    ], axis=1).max(axis=1)
 
-    tr = pd.concat([tr1, tr2, tr3], axis=1)
-    tr = tr.max(axis=1, skipna=True)
+    df["ATR"] = tr.rolling(period).mean().fillna(0)
 
-    df["ATR"] = tr.rolling(window=period).mean()
-    df["ATR"] = df["ATR"].fillna(0)
-    
     return df
 
-# -----------------------------------
-# Volume and Breakout
-# -----------------------------------
+
+# =========================================================
+# VOLUME + BREAKOUT ENGINE
+# =========================================================
 
 def add_volume_and_breakout(df):
+
     df = df.copy()
 
     if "Volume" not in df.columns:
-        df["Avg Volume"] = np.nan
-        df["Volume Spike"] = np.nan
-        df["Breakout"] = "NA"
+        df["Avg Volume"] = 0
+        df["Volume Spike"] = 0
+        df["Breakout"] = "NO"
         return df
 
-    # FORCE CLEAN SERIES
     volume = df["Volume"]
-    avg_volume = df["Volume"].rolling(20).mean()
-    
-    # Convert DataFrame → Series if needed
-    if isinstance(volume, pd.DataFrame):
-        volume = volume.iloc[:, 0]
-    
-    if isinstance(avg_volume, pd.DataFrame):
-        avg_volume = avg_volume.iloc[:, 0]
-    
-    df["Avg Volume"] = avg_volume
-    
-    df["Volume Spike"] = np.where(
-        avg_volume != 0,
-        volume / avg_volume,
-        0
-    )
+    avg_volume = volume.rolling(20).mean()
 
-    high = df["High"]
-    close = df["Close"]
-    
-    if isinstance(high, pd.DataFrame):
-        high = high.iloc[:, 0]
-    
-    if isinstance(close, pd.DataFrame):
-        close = close.iloc[:, 0]
-    
-    df["20D High"] = high.rolling(20).max()
-    
-    df["Breakout"] = np.where(
-        close > df["20D High"].shift(1),
-        "YES",
-        "NO"
-    )
+    df["Avg Volume"] = avg_volume
+    df["Volume Spike"] = np.where(avg_volume != 0, volume / avg_volume, 0)
+
+    high_20 = df["High"].rolling(20).max()
+    df["Breakout"] = np.where(df["Close"] > high_20.shift(1), "YES", "NO")
 
     return df
-    
-# -----------------------------------
-# RISK ENGINE (LONG ONLY - aligned with your system)
-# -----------------------------------
+
+
+# =========================================================
+# RISK ENGINE (FIXED SAFE VERSION)
+# =========================================================
 
 def apply_risk_engine(row, atr_multiplier=1.5, rr_multiple=2.0):
 
     try:
-        entry = float(row["Close"].iloc[0]) if hasattr(row["Close"], "iloc") else float(row["Close"])
-        atr = float(row["ATR"].iloc[0]) if hasattr(row["ATR"], "iloc") else float(row["ATR"])
+        entry = safe_last_value(row.get("Close", 0))
+        atr = safe_last_value(row.get("ATR", 0))
 
-        if pd.isna(atr) or atr == 0:
+        if atr == 0:
             return pd.Series([np.nan, np.nan, np.nan, np.nan])
 
         stop_loss = entry - (atr * atr_multiplier)
@@ -302,5 +247,5 @@ def apply_risk_engine(row, atr_multiplier=1.5, rr_multiple=2.0):
             round(rr, 2)
         ])
 
-    except Exception:
+    except:
         return pd.Series([np.nan, np.nan, np.nan, np.nan])
