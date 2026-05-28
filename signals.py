@@ -156,10 +156,10 @@ def generate_signal(df, regime="BULL"):
         # -------------------------
         # VOLUME / BREAKOUT (SAFE)
         # -------------------------
-        avg_volume = safe_last_value(df.get("Avg Volume", 0))
-        current_volume = safe_last_value(df.get("Volume", 0))
-        volume_spike = safe_last_value(df.get("Volume Spike", 0))
-        breakout = safe_string_last(df.get("Breakout", "NO"))
+        avg_volume = safe_last_value(df["Avg Volume"]) if "Avg Volume" in df.columns else 0
+        current_volume = safe_last_value(df["Volume"]) if "Volume" in df.columns else 0
+        volume_spike = safe_last_value(df["Volume Spike"]) if "Volume Spike" in df.columns else 0
+        breakout = safe_string_last(df["Breakout"]) if "Breakout" in df.columns else "NO"
 
         return [
             round(cmp, 2),
@@ -230,7 +230,14 @@ def add_volume_and_breakout(df):
     df["Volume Spike"] = np.where(avg_volume != 0, volume / avg_volume, 0)
 
     high_20 = df["High"].rolling(20).max()
-    df["Breakout"] = np.where((close > df["20D High"].shift(1)) & (df["Volume Spike"] > 1.5), "YES", "NO")
+    df["20D High"] = high_20
+    
+    df["Breakout"] = np.where(
+    (df["Close"] > df["20D High"].shift(1)) &
+    (df["Volume Spike"] > 1.5),
+    "YES",
+    "NO"
+    )
 
     return df
 
@@ -241,13 +248,13 @@ def add_volume_and_breakout(df):
 def apply_risk_engine(row, df=None, atr_multiplier=1.5):
 
     try:
-        entry = safe_last_value(row.get("Close", 0))
-        atr = safe_last_value(row.get("ATR", 0))
+        entry = float(row["Close"]) if not hasattr(row["Close"], "iloc") else float(row["Close"].iloc[-1])
+        atr = float(row["ATR"]) if not hasattr(row["ATR"], "iloc") else float(row["ATR"].iloc[-1])
 
         # ---------------------------
         # SAFETY CHECK (IMPORTANT)
         # ---------------------------
-        if df is None or len(df) < 20:
+        if df is None or len(df) < 20 or "Close" not in df.columns:
             return pd.Series([np.nan, np.nan, np.nan, np.nan])
 
         if atr == 0 or pd.isna(atr):
