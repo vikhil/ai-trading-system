@@ -186,6 +186,10 @@ for ticker in stocks:
         
         # 5. Drop bad rows
         df = df.dropna()
+
+        if len(df) < 60:
+            failed_logs.append([ticker, "INSUFFICIENT_DATA", len(df)])
+            continue
         
         # 6. Final safety check
         if df.empty:
@@ -202,6 +206,21 @@ for ticker in stocks:
         
         df = calculate_atr(df)
         df = add_volume_and_breakout(df)
+
+        # ---------------------------
+        # FILTERS (EARLY EXIT CONDITIONS)
+        # ---------------------------
+        
+        current_volume = df["Volume"].iloc[-1] if "Volume" in df.columns else 0
+        atr = df["ATR"].iloc[-1] if "ATR" in df.columns else 0
+        
+        # B) Liquidity filter
+        if current_volume < 100000:
+            continue
+        
+        # C) ATR filter
+        if atr <= 0 or pd.isna(atr):
+            continue
         
         # =========================
         # FINAL DATA NORMALIZATION FIX
