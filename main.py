@@ -99,8 +99,6 @@ regime = get_market_regime()
 
 nifty_df = yf.download("^NSEI", period="6mo", interval="1d", auto_adjust=True, progress=False)
 
-df = calculate_atr(df)
-
 nifty_close = nifty_df["Close"]
 
 if isinstance(nifty_close, pd.DataFrame):
@@ -128,6 +126,9 @@ for ticker in stocks:
             auto_adjust=True,
             progress=False
         )
+        
+        # ATR CALCULATION
+        df = calculate_atr(df)
         
         if df.empty:
             continue
@@ -179,10 +180,6 @@ for ticker in stocks:
         # FILTER LOW QUALITY (signal quality filter)
         if score < 40:
             continue
-            
-        # FILTER LOW QUALITY (risk quality filter)
-        if risk_reward < 1.5:
-            continue
     
         # ----------------------------
         # ATR RISK ENGINE
@@ -191,9 +188,18 @@ for ticker in stocks:
         last_row = df.iloc[-1]
 
         risk_values = apply_risk_engine(last_row)
+        if risk_values.isna().any():
+            continue
         
-        atr, stop_loss, target, risk_reward = risk_values
-        
+        atr = float(risk_values.iloc[0])
+        stop_loss = float(risk_values.iloc[1])
+        target = float(risk_values.iloc[2])
+        risk_reward = float(risk_values.iloc[3])
+
+        # FILTER LOW QUALITY (risk quality filter)
+        if risk_reward < 1.5:
+            continue
+            
         # ----------------------------
         # PLACEHOLDERS (NO CRASH VERSION)
         # ----------------------------
