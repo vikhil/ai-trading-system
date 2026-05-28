@@ -283,10 +283,6 @@ for ticker in stocks:
             volume_spike,
             breakout
         ) = signal_data
-        
-        # FILTER LOW QUALITY (signal quality filter)
-        #if score < 40:
-        #    continue
     
         # ----------------------------
         # ATR RISK ENGINE
@@ -294,16 +290,34 @@ for ticker in stocks:
 
         last_row = df.iloc[-1]
 
-        risk_values = apply_risk_engine(last_row)
+        risk_values = apply_risk_engine(last_row, df=df)
         
         atr = round(float(risk_values.iloc[0]), 2)
         stop_loss = round(float(risk_values.iloc[1]), 2)
         target = round(float(risk_values.iloc[2]), 2)
         risk_reward = round(float(risk_values.iloc[3]), 2)
+
+        # ----------------------------
+        # DEBUG LOGGING
+        # ----------------------------
+        
+        print(
+            ticker,
+            "Score:", score,
+            "RR:", risk_reward,
+            "Signal:", signal
+        )
+        # Temporary fallback fixes
+        if pd.isna(risk_reward):
+            risk_reward = 0
         
         # NaN Safety
-        if pd.isna(risk_reward):
-            continue
+        #if pd.isna(risk_reward):
+        #    continue
+
+        # FILTER LOW QUALITY (signal quality filter)
+        #if score < 40:
+        #    continue
 
         # FILTER LOW QUALITY (risk quality filter)
         #if risk_reward < 1.5:
