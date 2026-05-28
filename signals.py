@@ -164,6 +164,19 @@ def generate_signal(df, regime="BULL"):
 
         signal = classify_signal(score, regime)
 
+        # -------------------------
+        # VOLUME DATA
+        # -------------------------
+        
+        avg_volume = df["Avg Volume"].iloc[-1] if "Avg Volume" in df.columns else 0
+        current_volume = df["Volume"].iloc[-1] if "Volume" in df.columns else 0
+        volume_spike = df["Volume Spike"].iloc[-1] if "Volume Spike" in df.columns else 0
+        breakout = df["Breakout"].iloc[-1] if "Breakout" in df.columns else "NO"
+        
+        avg_volume = round(float(avg_volume), 0) if pd.notna(avg_volume) else 0
+        current_volume = round(float(current_volume), 0) if pd.notna(current_volume) else 0
+        volume_spike = round(float(volume_spike), 2) if pd.notna(volume_spike) else 0
+
         return [
             round(cmp, 2),
             round(rsi, 2),
@@ -171,7 +184,11 @@ def generate_signal(df, regime="BULL"):
             round(ema50, 2),
             trend,
             score,
-            signal
+            signal,
+            avg_volume,
+            current_volume,
+            volume_spike,
+            breakout
         ]
 
     except Exception as e:
@@ -241,8 +258,8 @@ def add_volume_and_breakout(df):
 def apply_risk_engine(row, atr_multiplier=1.5, rr_multiple=2.0):
 
     try:
-        entry = float(row["Close"])
-        atr = float(row["ATR"])
+        entry = float(row["Close"].iloc[0]) if hasattr(row["Close"], "iloc") else float(row["Close"])
+        atr = float(row["ATR"].iloc[0]) if hasattr(row["ATR"], "iloc") else float(row["ATR"])
 
         if pd.isna(atr) or atr == 0:
             return pd.Series([np.nan, np.nan, np.nan, np.nan])
