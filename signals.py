@@ -198,18 +198,44 @@ def calculate_atr(df, period=14):
         df["ATR"] = np.nan
         return df
 
-    df["prev_close"] = df["Close"].shift(1)
+    # -------------------------
+    # SAFE SERIES HANDLING
+    # -------------------------
 
-    df["tr1"] = df["High"] - df["Low"]
-    df["tr2"] = abs(df["High"] - df["prev_close"])
-    df["tr3"] = abs(df["Low"] - df["prev_close"])
+    high = df["High"]
+    low = df["Low"]
+    close = df["Close"]
 
-    df["TR"] = df[["tr1", "tr2", "tr3"]].max(axis=1)
+    if isinstance(high, pd.DataFrame):
+        high = high.iloc[:, 0]
 
-    df["ATR"] = df["TR"].rolling(window=period).mean()
+    if isinstance(low, pd.DataFrame):
+        low = low.iloc[:, 0]
+
+    if isinstance(close, pd.DataFrame):
+        close = close.iloc[:, 0]
+
+    high = pd.Series(high).dropna()
+    low = pd.Series(low).dropna()
+    close = pd.Series(close).dropna()
+
+    # -------------------------
+    # TRUE RANGE
+    # -------------------------
+
+    prev_close = close.shift(1)
+
+    tr1 = high - low
+    tr2 = abs(high - prev_close)
+    tr3 = abs(low - prev_close)
+
+    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+
+    atr = tr.rolling(window=period).mean()
+
+    df["ATR"] = atr
 
     return df
-
 
 # -----------------------------------
 # RISK ENGINE (LONG ONLY - aligned with your system)
