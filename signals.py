@@ -103,7 +103,6 @@ def classify_signal(score, regime):
         "NO TRADE"
     )
 
-
 # =========================================================
 # SIGNAL ENGINE (MAIN OUTPUT)
 # =========================================================
@@ -216,7 +215,7 @@ def add_volume_and_breakout(df):
     df["Volume Spike"] = np.where(avg_volume != 0, volume / avg_volume, 0)
 
     high_20 = df["High"].rolling(20).max()
-    df["Breakout"] = np.where(df["Close"] > high_20.shift(1), "YES", "NO")
+    df["Breakout"] = np.where((close > df["20D High"].shift(1)) & (df["Volume Spike"] > 1.5), "YES", "NO")
 
     return df
 
@@ -225,21 +224,41 @@ def add_volume_and_breakout(df):
 # RISK ENGINE (FIXED SAFE VERSION)
 # =========================================================
 
-def apply_risk_engine(row, atr_multiplier=1.5, rr_multiple=2.0):
+def apply_risk_engine(row, df=None, atr_multiplier=1.5):
 
     try:
         entry = safe_last_value(row.get("Close", 0))
         atr = safe_last_value(row.get("ATR", 0))
 
-        if atr == 0:
+        if atr == 0 or pd.isna(atr):
             return pd.Series([np.nan, np.nan, np.nan, np.nan])
 
-        stop_loss = entry - (atr * atr_multiplier)
-        risk = entry - stop_loss
-        target = entry + (risk * rr_multiple)
+        # -------------------------------------------------
+        # 1. STRUCTURE BASED STOP LOSS (NOT JUST ATR)
+        # -------------------------------------------------
+        structure_low = df["Close"].rolling(10).min().iloc[-1] if df is not None else entry
 
-        rr = (target - entry) / risk if risk != 0 else np.nan
+        atr_stop = entry - (atr * atr_multiplier)
 
+        # tighter of the two → institutional logic
+        stop_loss = max(atr_stop, structure_low)
+
+        risk = abs(entry - stop_loss)
+        
+        # -------------------------------------------------
+        # 2. DYNAMIC TARGET (VOLATILITY + STRUCTURE)
+        # -------------------------------------------------
+        resistance = df["Close"].rolling(20).max().iloc[-1] if df is not None else entry
+
+        momentum_extension = entry + (atr * 2.5)
+
+        # take the higher realistic target
+        target = max(resistance, momentum_extension)
+
+        reward = abs(target - entry)
+
+        rr = reward / risk if risk != 0 else np.nan
+        
         return pd.Series([
             round(atr, 2),
             round(stop_loss, 2),
@@ -247,5 +266,5 @@ def apply_risk_engine(row, atr_multiplier=1.5, rr_multiple=2.0):
             round(rr, 2)
         ])
 
-    except:
+    except Exception:
         return pd.Series([np.nan, np.nan, np.nan, np.nan])
