@@ -285,8 +285,8 @@ for ticker in stocks:
         ) = signal_data
         
         # FILTER LOW QUALITY (signal quality filter)
-        if score < 40:
-            continue
+        #if score < 40:
+        #    continue
     
         # ----------------------------
         # ATR RISK ENGINE
@@ -306,12 +306,19 @@ for ticker in stocks:
             continue
 
         # FILTER LOW QUALITY (risk quality filter)
-        if risk_reward < 1.5:
-            continue
+        #if risk_reward < 1.5:
+        #    continue
 
         # ----------------------------
         # FINAL ROW
         # ----------------------------
+        print(
+            ticker,
+            "Score:", score,
+            "RR:", risk_reward,
+            "Signal:", signal
+        )
+        
         results.append([
             ticker,
             cmp,
