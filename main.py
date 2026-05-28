@@ -301,12 +301,13 @@ for ticker in stocks:
         # DEBUG LOGGING
         # ----------------------------
         
-        print(
-            ticker,
-            "Score:", score,
-            "RR:", risk_reward,
-            "Signal:", signal
-        )
+        #print(
+        #    ticker,
+        #    "Score:", score,
+        #    "RR:", risk_reward,
+        #    "Signal:", signal
+        #)
+        
         # Temporary fallback fixes
         if pd.isna(risk_reward):
             risk_reward = 0
