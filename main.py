@@ -150,11 +150,30 @@ print("Market Regime:", regime)
 results = []
 
 for ticker in stocks:
-
+    error_reason = None
+    
     try:
 
         df, error = safe_download(ticker)
 
+        # =========================
+        # FORCE FLAT DATAFRAME FIX
+        # =========================
+        
+        if df is not None:
+        
+            # Fix MultiIndex columns (CRITICAL)
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+        
+            # Ensure only OHLCV columns are kept
+            required_cols = ["Open", "High", "Low", "Close", "Volume"]
+        
+            df = df[[c for c in df.columns if c in required_cols]]
+        
+            # Drop any duplicate columns
+            df = df.loc[:, ~df.columns.duplicated()]
+        
         if error:
             failed_logs.append([ticker, "DOWNLOAD_FAILED", error])
             continue
@@ -285,7 +304,9 @@ for ticker in stocks:
         ])
 
     except Exception as e:
+        error_reason = str(e)
         print(f"Error Processing {ticker}: {e}")
+        failed_logs.append([ticker, "PIPELINE_ERROR", error_reason])
         continue
         
 # ----------------------------
