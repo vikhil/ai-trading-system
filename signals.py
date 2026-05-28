@@ -91,7 +91,9 @@ def calculate_institutional_score(cmp, rsi, ema20, ema50):
 def classify_signal(score, regime):
 
     if regime == "BEAR":
-        return "TACTICAL BUY" if score >= 85 else "WATCHLIST" if score >= 60 else "NO TRADE"
+        return "TACTICAL BUY" if score >= 85 and rr >= 2 else \
+               "WATCHLIST" if score >= 70 else \
+               "NO TRADE"
 
     if regime == "SIDEWAYS":
         return "SWING BUY" if score >= 85 else "NO TRADE"
@@ -325,17 +327,23 @@ def apply_risk_engine(row, df=None, atr_multiplier=1.5):
         # ---------------------------
 
         risk = abs(entry - stop_loss)
+
+        # HARD SAFETY: prevent micro-risk distortion
+        min_risk_abs = atr * 0.5   # NEW: volatility-based floor
+        
+        if risk < min_risk_abs:
+            risk = min_risk_abs
+            
         reward = abs(target - entry)
         
         # SAFE GUARD (CRITICAL FIX)
-        if risk <= 0 or pd.isna(risk):
+        if risk <= 0 or pd.isna(risk) or risk < 1e-6:
             rr = 0
         else:
             rr = reward / risk
         
-        # SANITY CAP (VERY IMPORTANT FOR SCANNER QUALITY)
-        if rr > 10:
-            rr = 10
+        # volatility sanity cap (more realistic than flat 10)
+        rr = min(rr, 6)
         
         rr = round(rr, 2)
 
