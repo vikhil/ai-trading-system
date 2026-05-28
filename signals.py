@@ -243,21 +243,28 @@ def calculate_atr(df, period=14):
 
 def apply_risk_engine(row, atr_multiplier=1.5, rr_multiple=2.0):
 
-    entry = row["Close"]
-    atr = row["ATR"]
+    try:
 
-    if pd.isna(atr):
+        entry = float(row["Close"])
+        atr = float(row["ATR"])
+
+        if pd.isna(atr):
+            return pd.Series([np.nan, np.nan, np.nan, np.nan])
+
+        stop_loss = entry - (atr * atr_multiplier)
+
+        risk = entry - stop_loss
+
+        target = entry + (risk * rr_multiple)
+
+        rr = (target - entry) / risk
+
+        return pd.Series([
+            round(atr, 2),
+            round(stop_loss, 2),
+            round(target, 2),
+            round(rr, 2)
+        ])
+
+    except Exception:
         return pd.Series([np.nan, np.nan, np.nan, np.nan])
-
-    stop_loss = entry - (atr * atr_multiplier)
-    risk = entry - stop_loss
-    target = entry + (risk * rr_multiple)
-
-    rr = (target - entry) / (entry - stop_loss)
-
-    return pd.Series([
-        round(atr, 2),
-        round(stop_loss, 2),
-        round(target, 2),
-        round(rr, 2)
-    ])
