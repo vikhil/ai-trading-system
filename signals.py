@@ -261,13 +261,9 @@ def add_volume_and_breakout(df):
     # ---------------------------------
     high_20 = high.rolling(20).max()
 
-    breakout_condition = (
-        (close > high_20.shift(1)) &
-        (df["Volume Spike"] > 1.5)
-    )
-
     df["Breakout"] = np.where(
-        breakout_condition,
+        (close > high_20.shift(1)) &
+        (df["Volume Spike"] > 1.5),
         "YES",
         "NO"
     )
@@ -275,10 +271,8 @@ def add_volume_and_breakout(df):
     # ---------------------------------
     # CLEANUP
     # ---------------------------------
-    df["Volume Spike"] = (
-        pd.to_numeric(df["Volume Spike"], errors="coerce")
-        .fillna(0)
-    )
+    
+    df["Volume Spike"] = pd.to_numeric(df["Volume Spike"], errors="coerce").fillna(0)
 
     return df
 
@@ -310,8 +304,6 @@ def apply_risk_engine(row, df=None, atr_multiplier=1.5):
 
         stop_loss = max(atr_stop, structure_low)
 
-        risk = abs(entry - stop_loss)
-
         # ---------------------------
         # TARGET
         # ---------------------------
@@ -320,9 +312,32 @@ def apply_risk_engine(row, df=None, atr_multiplier=1.5):
 
         target = max(resistance, momentum_extension)
 
-        reward = abs(target - entry)
+        # ---------------------------
+        # STOP LOSS SAFETY BUFFER (MUST BE BEFORE RISK)
+        # ---------------------------
+        min_risk_buffer = entry * 0.003  # 0.3%
+        
+        if abs(entry - stop_loss) < min_risk_buffer:
+            stop_loss = entry - min_risk_buffer if entry > stop_loss else entry + min_risk_buffer
 
-        rr = reward / risk if risk != 0 else np.nan
+        # ---------------------------
+        # RISK & REWARD (NOW CORRECT)
+        # ---------------------------
+
+        risk = abs(entry - stop_loss)
+        reward = abs(target - entry)
+        
+        # SAFE GUARD (CRITICAL FIX)
+        if risk <= 0 or pd.isna(risk):
+            rr = 0
+        else:
+            rr = reward / risk
+        
+        # SANITY CAP (VERY IMPORTANT FOR SCANNER QUALITY)
+        if rr > 10:
+            rr = 10
+        
+        rr = round(rr, 2)
 
         return pd.Series([
             round(atr, 2),
