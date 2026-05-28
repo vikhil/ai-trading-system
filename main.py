@@ -176,10 +176,14 @@ for ticker in stocks:
 
         cmp, rsi, ema20, ema50, trend, score, signal = signal_data
 
-        # FILTER LOW QUALITY
+        # FILTER LOW QUALITY (signal quality filter)
         if score < 40:
             continue
-
+            
+        # FILTER LOW QUALITY (risk quality filter)
+        if risk_reward < 1.5:
+            continue
+    
         # ----------------------------
         # ATR RISK ENGINE
         # ----------------------------
