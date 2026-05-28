@@ -175,8 +175,20 @@ for ticker in stocks:
         if signal_data is None:
             continue
 
-        cmp, rsi, ema20, ema50, trend, score, signal = signal_data
-
+        (
+            cmp,
+            rsi,
+            ema20,
+            ema50,
+            trend,
+            score,
+            signal,
+            avg_volume,
+            current_volume,
+            volume_spike,
+            breakout
+        ) = signal_data
+        
         # FILTER LOW QUALITY (signal quality filter)
         if score < 40:
             continue
@@ -201,15 +213,6 @@ for ticker in stocks:
         # FILTER LOW QUALITY (risk quality filter)
         if risk_reward < 1.5:
             continue
-            
-        # ----------------------------
-        # PLACEHOLDERS (NO CRASH VERSION)
-        # ----------------------------
-
-        avg_volume = 0
-        current_volume = 0
-        volume_spike = "NA"
-        breakout = "NA"
 
         # ----------------------------
         # FINAL ROW
