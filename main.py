@@ -157,34 +157,64 @@ for ticker in stocks:
         df, error = safe_download(ticker)
 
         # =========================
-        # FORCE FLAT DATAFRAME FIX
+        # HARD DATAFRAME NORMALIZATION FIX
         # =========================
         
-        if df is not None:
-        
-            # Fix MultiIndex columns (CRITICAL)
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = df.columns.get_level_values(0)
-        
-            # Ensure only OHLCV columns are kept
-            required_cols = ["Open", "High", "Low", "Close", "Volume"]
-        
-            df = df[[c for c in df.columns if c in required_cols]]
-        
-            # Drop any duplicate columns
-            df = df.loc[:, ~df.columns.duplicated()]
-        
         if error:
-            failed_logs.append([ticker, "DOWNLOAD_FAILED", error])
+            failed_logs.append([ticker, "DOWNLOAD_FAILED", str(error)])
             continue
         
-        if df is None or df.empty:
+        if df is None:
             failed_logs.append([ticker, "EMPTY_DATA", "No data returned"])
             continue
         
-        # ATR CALCULATION AND VOLUME AND BREAKOUT
+        # 1. Flatten MultiIndex columns
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+        
+        # 2. Remove duplicate columns
+        df = df.loc[:, ~df.columns.duplicated()]
+        
+        # 3. Keep only OHLCV columns
+        required_cols = ["Open", "High", "Low", "Close", "Volume"]
+        
+        df = df[[col for col in required_cols if col in df.columns]]
+        
+        # 4. Convert all columns to numeric
+        for col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+        
+        # 5. Drop bad rows
+        df = df.dropna()
+        
+        # 6. Final safety check
+        if df.empty:
+            failed_logs.append([
+                ticker,
+                "EMPTY_AFTER_NORMALIZATION",
+                "DataFrame empty after cleanup"
+            ])
+            continue
+        
+        # ----------------------------
+        # ATR CALCULATION AND VOLUME/BREAKOUT
+        # ----------------------------
+        
         df = calculate_atr(df)
         df = add_volume_and_breakout(df)
+        
+        # =========================
+        # FINAL DATA NORMALIZATION FIX
+        # =========================
+        
+        for col in ["Open", "High", "Low", "Close", "Volume"]:
+        
+            if col in df.columns:
+        
+                if isinstance(df[col], pd.DataFrame):
+                    df[col] = df[col].iloc[:, 0]
+        
+                df[col] = pd.to_numeric(df[col], errors="coerce")
         
         if df.empty:
             continue
