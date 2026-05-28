@@ -217,27 +217,35 @@ def add_volume_and_breakout(df):
 
     df = df.copy()
 
-    if "Volume" not in df.columns:
+    if "Volume" not in df.columns or "Close" not in df.columns or "High" not in df.columns:
         df["Avg Volume"] = 0
         df["Volume Spike"] = 0
         df["Breakout"] = "NO"
         return df
 
     volume = df["Volume"]
+    close = df["Close"]
+    high = df["High"]
+
+    # Average volume
     avg_volume = volume.rolling(20).mean()
 
     df["Avg Volume"] = avg_volume
-    df["Volume Spike"] = np.where(avg_volume != 0, volume / avg_volume, 0)
+    df["Volume Spike"] = volume / avg_volume.replace(0, np.nan)
 
-    high_20 = df["High"].rolling(20).max()
-    df["20D High"] = high_20
-    
-    df["Breakout"] = np.where(
-    (df["Close"] > df["20D High"].shift(1)) &
-    (df["Volume Spike"] > 1.5),
-    "YES",
-    "NO"
+    # 20-day breakout level
+    high_20 = high.rolling(20).max()
+
+    # SAFE ALIGNMENT FIX (THIS IS CRITICAL)
+    breakout_condition = (
+        (close > high_20.shift(1)) &
+        (df["Volume Spike"] > 1.5)
     )
+
+    df["Breakout"] = np.where(breakout_condition, "YES", "NO")
+
+    # cleanup
+    df["Volume Spike"] = df["Volume Spike"].fillna(0)
 
     return df
 
