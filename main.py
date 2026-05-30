@@ -365,7 +365,13 @@ for ticker in stocks:
         
         try:
             signal_data = generate_signal(df, regime)
-        
+
+            cmp = signal_data["cmp"]
+            rsi = signal_data["rsi"]
+            score = signal_data["score"]
+            signal = signal_data["signal"]
+            trend = signal_data["trend"]
+
             if signal_data is None:
                 failed_logs.append([ticker, "SIGNAL_FAILED", "generate_signal returned None"])
                 continue
