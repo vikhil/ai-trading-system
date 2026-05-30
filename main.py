@@ -292,10 +292,10 @@ for ticker in stocks:
         df = calculate_atr(df)
         df = add_volume_and_breakout(df)
 
-        #avg_volume = df["Avg Volume"].iloc[-1]
-        #current_volume = df["Volume"].iloc[-1]
-        #volume_spike = df["Volume Spike"].iloc[-1]
-        #breakout = df["Breakout"].iloc[-1]
+        avg_volume = df["Avg Volume"].iloc[-1]
+        current_volume = df["Volume"].iloc[-1]
+        volume_spike = df["Volume Spike"].iloc[-1]
+        breakout = df["Breakout"].iloc[-1]
 
         # ---------------------------
         # FILTERS (EARLY EXIT CONDITIONS)
@@ -343,13 +343,9 @@ for ticker in stocks:
         # ----------------------------
         
         stock_return = float((stock_close.iloc[-1] / stock_close.iloc[0]) - 1)
-    
-        if nifty_return != 0:
-            rs_score = (stock_return - nifty_return) * 100
-            rs_score = max(min(rs_score, 100), -100)
-            rs_score = round(rs_score, 2)
-        else:
-            rs_score = 0.0
+
+        rs_score = (stock_return - nifty_return) * 100
+        rs_score = round(max(min(rs_score, 100), -100), 2)
             
         if rs_score > 1.5:
             rs_rank = "ELITE"
@@ -441,8 +437,10 @@ for ticker in stocks:
             score,
             risk_reward,
             rs_score,
-            volume_spike,
-            breakout,
+            #volume_spike,
+            #breakout,
+            df["Volume Spike"].iloc[-1],
+            df["Breakout"].iloc[-1],
             regime
         )
 
