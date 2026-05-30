@@ -173,10 +173,10 @@ def generate_signal(df, regime="BULL"):
             trend,
             int(score),
             signal
-            #round(avg_volume, 0),
-            #round(current_volume, 0),
-            #round(volume_spike, 2),
-            #breakout
+            round(avg_volume, 0),
+            round(current_volume, 0),
+            round(volume_spike, 2),
+            breakout
         ]
 
     except Exception as e:
