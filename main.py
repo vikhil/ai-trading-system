@@ -345,12 +345,12 @@ for ticker in stocks:
         stock_return = float((stock_close.iloc[-1] / stock_close.iloc[0]) - 1)
     
         if nifty_return != 0:
-            #rs_score = (stock_return - nifty_return) * 100
+            rs_score = (stock_return - nifty_return) * 100
             rs_score = max(min(rs_score, 100), -100)
             rs_score = round(rs_score, 2)
         else:
             rs_score = 0.0
-
+            
         if rs_score > 1.5:
             rs_rank = "ELITE"
             
@@ -414,7 +414,10 @@ for ticker in stocks:
         stop_loss = round(float(risk_values.iloc[1]), 2)
         target = round(float(risk_values.iloc[2]), 2)
         risk_reward = round(float(risk_values.iloc[3]), 2)
-
+        
+        if risk_reward < 1.5:
+            continue
+            
         # ----------------------------
         # DEBUG LOGGING
         # ----------------------------
@@ -545,7 +548,7 @@ scanner_data = [headers] + results
 
 safe_update(scanner_ws, scanner_data)
 
-if watchlist_data:
+if len(watchlist_data) > 1:
     safe_update(watchlist_ws, watchlist_data)
 
 if failed_logs:
