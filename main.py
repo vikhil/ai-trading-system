@@ -150,6 +150,11 @@ print("Market Regime:", regime)
 results = []
 
 def calculate_edge_score(score, risk_reward, rs_score, volume_spike, breakout):
+    
+    # Hard filter
+    if score < 60:
+        return 0
+    
     edge = 0
     
     # safety normalization
@@ -158,14 +163,18 @@ def calculate_edge_score(score, risk_reward, rs_score, volume_spike, breakout):
     rs_score = float(rs_score) if pd.notna(rs_score) else 0
     volume_spike = float(volume_spike) if pd.notna(volume_spike) else 0
     
-    # 1. Signal strength (0–3)
+    # 1. Signal strength (0–5)
     if score >= 80:
-        edge += 3
+        edge += 5
     elif score >= 70:
-        edge += 2
+        edge += 4
     elif score >= 60:
+        edge += 3
+    elif score >= 50:
+        edge += 2
+    elif score >= 40:
         edge += 1
-
+    
     # 2. Risk reward (0–2)
     if risk_reward >= 3:
         edge += 2
@@ -184,8 +193,7 @@ def calculate_edge_score(score, risk_reward, rs_score, volume_spike, breakout):
     elif volume_spike >= 1.2:
         edge += 1
 
-    #return min(edge, 9)
-    return min(edge * 11.11, 100)
+    return min((edge / 11) * 100, 100)
     
 def calculate_edge_rating(edge_score):
     edge_score = float(edge_score) if pd.notna(edge_score) else 0
@@ -420,7 +428,7 @@ for ticker in stocks:
         # ----------------------------
         # FINAL ROW
         # ----------------------------
-        
+    
         edge_score = calculate_edge_score(
             score,
             risk_reward,
@@ -435,13 +443,6 @@ for ticker in stocks:
         if trade_action in ["STRONG_BUY", "BUY"]:
             print("ALERT:", ticker, trade_action, "Edge:", edge_rating)
             # later we can send to Telegram / WhatsApp / email
-        
-        if edge_rating >= 8:
-            action = "STRONG BUY"
-        elif edge_rating >= 6:
-            action = "WATCHLIST"
-        else:
-            action = "IGNORE"
             
         print(
             ticker,
