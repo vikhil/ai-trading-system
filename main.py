@@ -182,9 +182,9 @@ def calculate_edge_score(score, risk_reward, rs_score, volume_spike, breakout):
         edge += 1
 
     # 3. Relative strength (0–2)
-    if rs_score >= 2:
+    if rs_score >= 50:
         edge += 2
-    elif rs_score >= 1:
+    elif rs_score >= 25:
         edge += 1
 
     # 4. Volume + breakout (0–2)
@@ -193,7 +193,7 @@ def calculate_edge_score(score, risk_reward, rs_score, volume_spike, breakout):
     elif volume_spike >= 1.2:
         edge += 1
 
-    return min((edge / 11) * 100, 100)
+    return min(round(edge * 11.11, 2), 100)
     
 def calculate_edge_rating(edge_score):
     edge_score = float(edge_score) if pd.notna(edge_score) else 0
@@ -337,7 +337,8 @@ for ticker in stocks:
         stock_return = float((stock_close.iloc[-1] / stock_close.iloc[0]) - 1)
     
         if nifty_return != 0:
-            rs_score = float(stock_return - nifty_return) * 100
+            rs_score = (stock_return - nifty_return) * 100
+            rs_score = round(rs_score, 2)
         else:
             rs_score = 0.0
 
@@ -437,10 +438,10 @@ for ticker in stocks:
             breakout
         )
 
-        edge_rating = calculate_edge_rating(edge_score)
+        edge_rating = int(calculate_edge_rating(edge_score))
         trade_action = get_trade_action(edge_rating)
 
-        if trade_action in ["STRONG_BUY", "BUY"]:
+        if trade_action in ["STRONG_BUY", "BUY", "WATCH"]:
             print("ALERT:", ticker, trade_action, "Edge:", edge_rating)
             # later we can send to Telegram / WhatsApp / email
             
@@ -486,7 +487,7 @@ for ticker in stocks:
 # SORT RESULTS
 # ----------------------------
 
-results = sorted(results, key=lambda x: x[7], reverse=True)
+results = sorted(results, key=lambda x: x[7] if x[7] is not None else 0, reverse=True)
 
 print("Final Results Count:", len(results))
 
