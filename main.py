@@ -151,12 +151,12 @@ def calculate_edge_score(score, risk_reward, rs_score, volume_spike, breakout, r
     if pd.isna(score) or score < 60:
         return 0
 
+    edge = 0
+    
     score = float(score)
     risk_reward = float(risk_reward) if pd.notna(risk_reward) else 0
     rs_score = float(rs_score) if pd.notna(rs_score) else 0
     volume_spike = float(volume_spike) if pd.notna(volume_spike) else 0
-
-    edge = 0
     
     # 1. Signal strength
     if score >= 80:
@@ -292,6 +292,11 @@ for ticker in stocks:
         df = calculate_atr(df)
         df = add_volume_and_breakout(df)
 
+        avg_volume = df["AvgVolume"].iloc[-1]
+        current_volume = df["Volume"].iloc[-1]
+        volume_spike = df["VolumeSpike"].iloc[-1]
+        breakout = df["Breakout"].iloc[-1]
+
         # ---------------------------
         # FILTERS (EARLY EXIT CONDITIONS)
         # ---------------------------
@@ -402,7 +407,9 @@ for ticker in stocks:
 
         risk_values = apply_risk_engine(last_row, df=df)
         
-        atr_indicator = df["ATR"].iloc[-1] if "ATR" in df.columns else 0
+        #risk_values = apply_risk_engine(last_row)
+        
+        #atr_indicator = df["ATR"].iloc[-1] if "ATR" in df.columns else 0
         atr_risk = round(float(risk_values.iloc[0]), 2)
         stop_loss = round(float(risk_values.iloc[1]), 2)
         target = round(float(risk_values.iloc[2]), 2)
