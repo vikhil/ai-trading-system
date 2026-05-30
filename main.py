@@ -181,7 +181,7 @@ def calculate_edge_score(score, risk_reward, rs_score, volume_spike, breakout):
     # 4. Volume + breakout (0–2)
     if volume_spike >= 1.5 and str(breakout).upper() == "YES":
         edge += 2
-    elif volume_spike >= 1.2
+    elif volume_spike >= 1.2:
         edge += 1
 
     #return min(edge, 9)
