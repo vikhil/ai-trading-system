@@ -546,13 +546,21 @@ headers = [
 
 scanner_data = [headers] + results
 
-safe_update(scanner_ws, scanner_data)
+try:
+    safe_update(scanner_ws, scanner_data)
+    print("Scanner Updated")
+except Exception as e:
+    print("Scanner Update Failed:", e)
+
+print("Scanner Rows:", len(scanner_data))
 
 if len(watchlist_data) > 1:
+    print("Watchlist Rows:", len(watchlist_data))
     safe_update(watchlist_ws, watchlist_data)
 
 if failed_logs:
     failed_headers = [["Ticker", "Error Type", "Reason"]]
+    print("Failed Rows:", len(failed_logs))
     safe_update(failed_ws, failed_headers + failed_logs)
 
 print("Completed Successfully")
