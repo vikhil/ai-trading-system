@@ -391,7 +391,7 @@ for ticker in stocks:
             ema50,
             trend,
             score,
-            signal
+            signal,
             avg_volume,
             current_volume,
             volume_spike,
