@@ -491,8 +491,8 @@ for ticker in stocks:
         elif trade_action in ["STRONG_BUY", "BUY"]:
             print("🔥 TRADE ALERT:", ticker, trade_action, "Edge:", edge_rating)
             # later we can send to Telegram / WhatsApp / email
-        except Exception as e:
-            print(e)
+    except Exception as e:
+        print(e)
     
         print(
             ticker,
