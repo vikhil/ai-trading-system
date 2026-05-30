@@ -104,6 +104,15 @@ failed_logs = []
 
 print("Connected")
 
+test_ws = sheet.worksheet("Scanner")
+
+test_ws.update(
+    "A1",
+    [["TEST"], ["GITHUB ACTIONS WRITE CHECK"]]
+)
+
+print("TEST WRITE SUCCESS")
+
 # ----------------------------
 # LOAD STOCKS
 # ----------------------------
