@@ -294,7 +294,7 @@ for ticker in stocks:
         df = add_volume_and_breakout(df)
 
         avg_volume = df["Avg Volume"].iloc[-1]
-        current_volume = df["Volume"].iloc[-1]
+        #current_volume = df["Volume"].iloc[-1]
         volume_spike = df["Volume Spike"].iloc[-1]
         breakout = df["Breakout"].iloc[-1]
 
@@ -302,7 +302,7 @@ for ticker in stocks:
         # FILTERS (EARLY EXIT CONDITIONS)
         # ---------------------------
         
-        #current_volume = df["Volume"].iloc[-1] if "Volume" in df.columns else 0
+        current_volume = df["Volume"].iloc[-1] if "Volume" in df.columns else 0
         atr_indicator = df["ATR"].iloc[-1] if "ATR" in df.columns else 0
         
         # B) Liquidity filter
@@ -482,8 +482,8 @@ for ticker in stocks:
         elif trade_action in ["STRONG_BUY", "BUY"]:
             print("🔥 TRADE ALERT:", ticker, trade_action, "Edge:", edge_rating)
             # later we can send to Telegram / WhatsApp / email
-        else:
-            pass
+        except Exception as e:
+            print(e)
     
         print(
             ticker,
@@ -580,6 +580,8 @@ headers = [
 scanner_data = [headers] + results
 
 try:
+    print("Writing Scanner...")
+    scanner_ws.clear()
     safe_update(scanner_ws, scanner_data)
     print("Scanner Updated")
 except Exception as e:
@@ -587,13 +589,29 @@ except Exception as e:
 
 print("Scanner Rows:", len(scanner_data))
 
-if len(watchlist_data) > 1:
-    print("Watchlist Rows:", len(watchlist_data))
+try:
+    print("Writing Watchlist...")
+    watchlist_ws.clear()
     safe_update(watchlist_ws, watchlist_data)
+    print("Watchlist Updated")
+except Exception as e:
+    print("Watchlist Update Failed:", e)
 
-if failed_logs:
+print("Watchlist Rows:", len(watchlist_data))
+
+try:
+    print("Writing FailedLogs...")
+    failed_ws.clear()
+
     failed_headers = [["Ticker", "Error Type", "Reason"]]
-    print("Failed Rows:", len(failed_logs))
-    safe_update(failed_ws, failed_headers + failed_logs)
+
+    if failed_logs:
+        safe_update(failed_ws, failed_headers + failed_logs)
+    else:
+        safe_update(failed_ws, failed_headers)
+
+    print("FailedLogs Updated")
+except Exception as e:
+    print("FailedLogs Update Failed:", e)
 
 print("Completed Successfully")
