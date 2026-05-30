@@ -593,9 +593,10 @@ print(scanner_data[:3])
 
 try:
     print("Writing Scanner...")
-    scanner_ws.clear()
+    #scanner_ws.clear()
     safe_update(scanner_ws, scanner_data)
     print("Scanner Updated")
+
 except Exception as e:
     print("Scanner Update Failed:", e)
 
@@ -606,9 +607,11 @@ print(watchlist_data[:3])
 
 try:
     print("Writing Watchlist...")
-    watchlist_ws.clear()
+    #watchlist_ws.clear()
+
     safe_update(watchlist_ws, watchlist_data)
     print("Watchlist Updated")
+
 except Exception as e:
     print("Watchlist Update Failed:", e)
 
@@ -619,7 +622,7 @@ print(failed_logs[:3])
 
 try:
     print("Writing FailedLogs...")
-    failed_ws.clear()
+    #failed_ws.clear()
 
     failed_headers = [["Ticker", "Error Type", "Reason"]]
 
