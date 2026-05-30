@@ -292,10 +292,10 @@ for ticker in stocks:
         df = calculate_atr(df)
         df = add_volume_and_breakout(df)
 
-        avg_volume = df["AvgVolume"].iloc[-1]
-        current_volume = df["Volume"].iloc[-1]
-        volume_spike = df["VolumeSpike"].iloc[-1]
-        breakout = df["Breakout"].iloc[-1]
+        #avg_volume = df["Avg Volume"].iloc[-1]
+        #current_volume = df["Volume"].iloc[-1]
+        #volume_spike = df["Volume Spike"].iloc[-1]
+        #breakout = df["Breakout"].iloc[-1]
 
         # ---------------------------
         # FILTERS (EARLY EXIT CONDITIONS)
