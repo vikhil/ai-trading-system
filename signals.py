@@ -91,9 +91,11 @@ def calculate_institutional_score(cmp, rsi, ema20, ema50):
 def classify_signal(score, regime):
 
     if regime == "BEAR":
-        return "TACTICAL BUY" if score >= 85 and rr >= 2 else \
-               "WATCHLIST" if score >= 70 else \
-               "NO TRADE"
+        return (
+            "TACTICAL BUY" if score >= 85 else
+            "WATCHLIST" if score >= 70 else
+            "NO TRADE"
+        )
 
     if regime == "SIDEWAYS":
         return "SWING BUY" if score >= 85 else "NO TRADE"
