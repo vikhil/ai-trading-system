@@ -372,14 +372,6 @@ for ticker in stocks:
         
         try:
             signal_data = generate_signal(df, regime)
-            if DEBUG:
-                print("SIGNAL OK:", ticker)
-    
-            cmp = signal_data["cmp"]
-            rsi = signal_data["rsi"]
-            score = signal_data["score"]
-            signal = signal_data["signal"]
-            trend = signal_data["trend"]
 
             if signal_data is None:
                 failed_logs.append([ticker, "SIGNAL_FAILED", "generate_signal returned None"])
@@ -400,12 +392,15 @@ for ticker in stocks:
             trend,
             score,
             signal
-            #avg_volume,
-            #current_volume,
-            #volume_spike,
-            #breakout
+            avg_volume,
+            current_volume,
+            volume_spike,
+            breakout
         ) = signal_data
 
+        if DEBUG:
+            print("SIGNAL OK:", ticker)
+    
         rsi = float(rsi) if pd.notna(rsi) else 0
         ema20 = float(ema20) if pd.notna(ema20) else 0
         ema50 = float(ema50) if pd.notna(ema50) else 0
@@ -498,6 +493,13 @@ for ticker in stocks:
             "Signal:", signal
         )
         
+        print(
+            f"ADDING RESULT: {ticker} | "
+            f"Score={score} | "
+            f"RR={risk_reward} | "
+            f"Edge={edge_score}"
+        )
+        
         results.append([
             ticker,
             cmp,
@@ -524,8 +526,19 @@ for ticker in stocks:
 
     except Exception as e:
         error_reason = str(e)
-        print(f"Error Processing {ticker}: {e}")
-        failed_logs.append([ticker, "PIPELINE_ERROR", error_reason])
+    
+        print(
+            f"ERROR: {ticker} | "
+            f"{type(e).__name__} | "
+            f"{error_reason}"
+        )
+    
+        failed_logs.append([
+            ticker,
+            "PIPELINE_ERROR",
+            error_reason
+        ])
+    
         continue
         
 # ----------------------------
