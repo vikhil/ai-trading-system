@@ -301,7 +301,7 @@ for ticker in stocks:
         # FILTERS (EARLY EXIT CONDITIONS)
         # ---------------------------
         
-        current_volume = df["Volume"].iloc[-1] if "Volume" in df.columns else 0
+        #current_volume = df["Volume"].iloc[-1] if "Volume" in df.columns else 0
         atr_indicator = df["ATR"].iloc[-1] if "ATR" in df.columns else 0
         
         # B) Liquidity filter
@@ -390,11 +390,11 @@ for ticker in stocks:
             ema50,
             trend,
             score,
-            signal,
-            avg_volume,
-            current_volume,
-            volume_spike,
-            breakout
+            signal
+            #avg_volume,
+            #current_volume,
+            #volume_spike,
+            #breakout
         ) = signal_data
 
         rsi = float(rsi) if pd.notna(rsi) else 0
@@ -443,10 +443,8 @@ for ticker in stocks:
             score,
             risk_reward,
             rs_score,
-            #volume_spike,
-            #breakout,
-            df["Volume Spike"].iloc[-1],
-            df["Breakout"].iloc[-1],
+            volume_spike,
+            breakout,
             regime
         )
 
