@@ -579,6 +579,9 @@ headers = [
 
 scanner_data = [headers] + results
 
+print("Scanner sample row:")
+print(scanner_data[:3])
+
 try:
     print("Writing Scanner...")
     scanner_ws.clear()
@@ -589,6 +592,9 @@ except Exception as e:
 
 print("Scanner Rows:", len(scanner_data))
 
+print("Watchlist sample row:")
+print(watchlist_data[:3])
+
 try:
     print("Writing Watchlist...")
     watchlist_ws.clear()
@@ -598,6 +604,9 @@ except Exception as e:
     print("Watchlist Update Failed:", e)
 
 print("Watchlist Rows:", len(watchlist_data))
+
+print("Failed sample row:")
+print(failed_logs[:3])
 
 try:
     print("Writing FailedLogs...")
