@@ -248,14 +248,10 @@ for ticker in stocks:
         
         if error:
             failed_logs.append([ticker, "DOWNLOAD_FAILED", str(error)])
-            if DEBUG:
-                print("SKIP:", ticker, "REASON: <fill reason>")
             continue
         
         if df is None:
             failed_logs.append([ticker, "EMPTY_DATA", "No data returned"])
-            if DEBUG:
-                print("SKIP:", ticker, "REASON: <fill reason>")
             continue
         
         # 1. Flatten MultiIndex columns
@@ -276,13 +272,11 @@ for ticker in stocks:
         
         # 5. Drop bad rows
         df = df.dropna()
-
-        if len(df) < 60:
-            failed_logs.append([ticker, "INSUFFICIENT_DATA", len(df)])
-            if DEBUG:
-                print("SKIP:", ticker, "REASON: <fill reason>")
-            continue
         
+        if len(df) < 60:
+            print(f"SKIP: {ticker} REASON: INSUFFICIENT_DATA {len(df)}")
+            continue
+            
         # 6. Final safety check
         if df.empty:
             failed_logs.append([
@@ -290,8 +284,6 @@ for ticker in stocks:
                 "EMPTY_AFTER_NORMALIZATION",
                 "DataFrame empty after cleanup"
             ])
-            if DEBUG:
-                print("SKIP:", ticker, "REASON: <fill reason>")
             continue
         
         # ----------------------------
@@ -314,15 +306,17 @@ for ticker in stocks:
         atr_indicator = df["ATR"].iloc[-1] if "ATR" in df.columns else 0
         
         # B) Liquidity filter
-        if pd.isna(current_volume) or current_volume < 10000:
-            if DEBUG:
-                print("SKIP (volume):", ticker, current_volume)
+        if pd.isna(current_volume) or current_volume <= 0:
+            print(f"SKIP: {ticker} REASON: INVALID_VOLUME {current_volume}")
             continue
-        
+
+        if current_volume < 50000:   # relaxed threshold
+            print(f"SKIP: {ticker} REASON: LOW_VOLUME {current_volume}")
+            continue
+    
         # C) ATR filter
-        if pd.isna(atr_indicator) or atr_indicator <= 0:
-            if DEBUG:
-                print("SKIP (ATR):", ticker, atr_indicator)
+        if atr_indicator <= 0 or pd.isna(atr_indicator):
+            print(f"SKIP: {ticker} REASON: BAD_ATR {atr_indicator}")
             continue
         
         # =========================
@@ -339,8 +333,6 @@ for ticker in stocks:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
         
         if df.empty:
-            if DEBUG:
-                print("SKIP:", ticker, "REASON: <fill reason>")
             continue
         
         stock_close = df["Close"]
@@ -351,8 +343,6 @@ for ticker in stocks:
         stock_close = pd.Series(stock_close).dropna()
 
         if len(stock_close) < 2:
-            if DEBUG:
-                print("SKIP:", ticker, "REASON: <fill reason>")
             continue
     
         # ----------------------------
@@ -393,19 +383,13 @@ for ticker in stocks:
 
             if signal_data is None:
                 failed_logs.append([ticker, "SIGNAL_FAILED", "generate_signal returned None"])
-                if DEBUG:
-                    print("SKIP:", ticker, "REASON: <fill reason>")
                 continue
         
         except Exception as e:
             failed_logs.append([ticker, "SIGNAL_EXCEPTION", str(e)])
-            if DEBUG:
-                print("SKIP:", ticker, "REASON: <fill reason>")
             continue
 
         if signal_data is None:
-            if DEBUG:
-                print("SKIP:", ticker, "REASON: <fill reason>")
             continue
 
         (
@@ -442,9 +426,16 @@ for ticker in stocks:
         target = round(float(risk_values.iloc[2]), 2)
         risk_reward = round(float(risk_values.iloc[3]), 2)
         
-        if risk_reward < 1.5:
-            if DEBUG:
-                print("SKIP:", ticker, "REASON: <fill reason>")
+        #if risk_reward < 1.5:
+            #print(f"SKIP: {ticker} REASON: LOW_RR {risk_reward}")
+            #continue
+
+        if pd.isna(risk_reward):
+            print(f"SKIP: {ticker} REASON: RR_NAN")
+            continue
+
+        if risk_reward < 1.0:   # relax temporarily
+            print(f"SKIP: {ticker} REASON: LOW_RR {risk_reward}")
             continue
             
         # ----------------------------
@@ -535,8 +526,6 @@ for ticker in stocks:
         error_reason = str(e)
         print(f"Error Processing {ticker}: {e}")
         failed_logs.append([ticker, "PIPELINE_ERROR", error_reason])
-        if DEBUG:
-            print("SKIP:", ticker, "REASON: <fill reason>")
         continue
         
 # ----------------------------
