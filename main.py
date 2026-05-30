@@ -11,7 +11,6 @@ from signals import generate_signal, calculate_atr, apply_risk_engine, add_volum
 from sheets_writer import safe_update
 
 import time
-import yfinance as yf
 
 def safe_download(ticker, period="6mo", interval="1d", retries=2):
 
@@ -117,9 +116,7 @@ print("Stocks:", len(stocks))
 # UPDATE WATCHLIST (1 CALL ONLY)
 # ----------------------------
 
-watchlist_data = [["Ticker"]] + [[s] for s in stocks]
-
-safe_update(watchlist_ws, watchlist_data)
+watchlist_data = [["Ticker", "CMP", "RSI", "EMA20", "EMA50", "Trend", "Score", "Edge Rating"]]
 
 # ----------------------------
 # MARKET REGIME
@@ -149,52 +146,58 @@ print("Market Regime:", regime)
 # ----------------------------
 results = []
 
-def calculate_edge_score(score, risk_reward, rs_score, volume_spike, breakout):
-    
-    # Hard filter
-    if score < 60:
+def calculate_edge_score(score, risk_reward, rs_score, volume_spike, breakout, regime):
+
+    if pd.isna(score) or score < 60:
         return 0
-    
-    edge = 0
-    
-    # safety normalization
-    score = float(score) if pd.notna(score) else 0
+
+    score = float(score)
     risk_reward = float(risk_reward) if pd.notna(risk_reward) else 0
     rs_score = float(rs_score) if pd.notna(rs_score) else 0
     volume_spike = float(volume_spike) if pd.notna(volume_spike) else 0
+
+    edge = 0
     
-    # 1. Signal strength (0–5)
+    # 1. Signal strength
     if score >= 80:
         edge += 5
-    elif score >= 70:
+    elif score >= 75:
         edge += 4
-    elif score >= 60:
+    elif score >= 70:
         edge += 3
-    elif score >= 50:
+    elif score >= 65:
         edge += 2
-    elif score >= 40:
+    elif score >= 60:
         edge += 1
-    
-    # 2. Risk reward (0–2)
+
+    # 2. Risk-reward quality
     if risk_reward >= 3:
         edge += 2
     elif risk_reward >= 2:
         edge += 1
 
-    # 3. Relative strength (0–2)
+    # 3. Relative strength
     if rs_score >= 50:
         edge += 2
     elif rs_score >= 25:
         edge += 1
 
-    # 4. Volume + breakout (0–2)
+    # 4. Volume + breakout
     if volume_spike >= 1.5 and str(breakout).upper() == "YES":
         edge += 2
     elif volume_spike >= 1.2:
         edge += 1
 
-    return min(round(edge * 11.11, 2), 100)
-    
+    base_score = edge * 10
+
+    # regime adjustment (IMPORTANT — keep this)
+    if regime == "BEAR":
+        base_score *= 0.85
+    elif regime == "SIDEWAYS":
+        base_score *= 0.92
+
+    return min(base_score, 100)
+
 def calculate_edge_rating(edge_score):
     edge_score = float(edge_score) if pd.notna(edge_score) else 0
 
@@ -294,14 +297,14 @@ for ticker in stocks:
         # ---------------------------
         
         current_volume = df["Volume"].iloc[-1] if "Volume" in df.columns else 0
-        atr = df["ATR"].iloc[-1] if "ATR" in df.columns else 0
+        atr_indicator = df["ATR"].iloc[-1] if "ATR" in df.columns else 0
         
         # B) Liquidity filter
         if current_volume < 100000:
             continue
         
         # C) ATR filter
-        if atr <= 0 or pd.isna(atr):
+        if atr_indicator <= 0 or pd.isna(atr_indicator):
             continue
         
         # =========================
@@ -337,7 +340,8 @@ for ticker in stocks:
         stock_return = float((stock_close.iloc[-1] / stock_close.iloc[0]) - 1)
     
         if nifty_return != 0:
-            rs_score = (stock_return - nifty_return) * 100
+            #rs_score = (stock_return - nifty_return) * 100
+            rs_score = max(min(rs_score, 100), -100)
             rs_score = round(rs_score, 2)
         else:
             rs_score = 0.0
@@ -385,7 +389,11 @@ for ticker in stocks:
             volume_spike,
             breakout
         ) = signal_data
-    
+
+        rsi = float(rsi) if pd.notna(rsi) else 0
+        ema20 = float(ema20) if pd.notna(ema20) else 0
+        ema50 = float(ema50) if pd.notna(ema50) else 0
+        
         # ----------------------------
         # ATR RISK ENGINE
         # ----------------------------
@@ -394,7 +402,8 @@ for ticker in stocks:
 
         risk_values = apply_risk_engine(last_row, df=df)
         
-        atr = round(float(risk_values.iloc[0]), 2)
+        atr_indicator = df["ATR"].iloc[-1] if "ATR" in df.columns else 0
+        atr_risk = round(float(risk_values.iloc[0]), 2)
         stop_loss = round(float(risk_values.iloc[1]), 2)
         target = round(float(risk_values.iloc[2]), 2)
         risk_reward = round(float(risk_values.iloc[3]), 2)
@@ -413,18 +422,6 @@ for ticker in stocks:
         # Temporary fallback fixes
         if pd.isna(risk_reward):
             risk_reward = 0
-        
-        # NaN Safety
-        #if pd.isna(risk_reward):
-        #    continue
-
-        # FILTER LOW QUALITY (signal quality filter)
-        #if score < 40:
-        #    continue
-
-        # FILTER LOW QUALITY (risk quality filter)
-        #if risk_reward < 1.5:
-        #    continue
 
         # ----------------------------
         # FINAL ROW
@@ -435,16 +432,34 @@ for ticker in stocks:
             risk_reward,
             rs_score,
             volume_spike,
-            breakout
+            breakout,
+            regime
         )
 
         edge_rating = int(calculate_edge_rating(edge_score))
         trade_action = get_trade_action(edge_rating)
 
-        if trade_action in ["STRONG_BUY", "BUY", "WATCH"]:
-            print("ALERT:", ticker, trade_action, "Edge:", edge_rating)
-            # later we can send to Telegram / WhatsApp / email
+        # Regime filter override
+        if regime == "BEAR":
+            if trade_action == "STRONG_BUY":
+                trade_action = "BUY"
+            elif trade_action == "BUY":
+                trade_action = "WATCH"
+        
+        # ----------------------------
+        # STREAM ROUTING
+        # ----------------------------
+        
+        if trade_action == "WATCH":
+            print("👀 WATCH:", ticker, "Edge:", edge_rating)
+            watchlist_data.append([ticker, cmp, rsi, ema20, ema50, trend, score, edge_rating])
             
+        elif trade_action in ["STRONG_BUY", "BUY"]:
+            print("🔥 TRADE ALERT:", ticker, trade_action, "Edge:", edge_rating)
+            # later we can send to Telegram / WhatsApp / email
+        else:
+            pass
+    
         print(
             ticker,
             "Score:", score,
@@ -465,7 +480,7 @@ for ticker in stocks:
             edge_rating,
             trade_action,
             signal,
-            atr,
+            atr_risk,
             stop_loss,
             target,
             risk_reward,
@@ -522,6 +537,9 @@ headers = [
 scanner_data = [headers] + results
 
 safe_update(scanner_ws, scanner_data)
+
+if watchlist_data:
+    safe_update(watchlist_ws, watchlist_data)
 
 if failed_logs:
     failed_headers = [["Ticker", "Error Type", "Reason"]]
