@@ -374,7 +374,7 @@ for ticker in stocks:
         # ----------------------------
         
         try:
-            signal_data = generate_signal(df, regime)
+            signal_data = generate_signal(df, regime, rs_score)
 
             if signal_data is None:
                 failed_logs.append([ticker, "SIGNAL_FAILED", "generate_signal returned None"])
