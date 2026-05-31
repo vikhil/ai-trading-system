@@ -1,4 +1,5 @@
 DEBUG = True
+DEBUG_LOGS = True
 import json
 import os
 import pandas as pd
@@ -174,14 +175,20 @@ regime = get_market_regime()
 
 nifty_df = yf.download("^NSEI", period="6mo", interval="1d", auto_adjust=True, progress=False)
 
-nifty_close = nifty_df["Close"]
+if nifty_df.empty or "Close" not in nifty_df.columns:
+    nifty_return = 0.0
+else:
+    nifty_close = nifty_df["Close"]
 
-if isinstance(nifty_close, pd.DataFrame):
-    nifty_close = nifty_close.iloc[:, 0]
+    if isinstance(nifty_close, pd.DataFrame):
+        nifty_close = nifty_close.iloc[:, 0]
 
-nifty_close = pd.Series(nifty_close).dropna()
+    nifty_close = pd.Series(nifty_close).dropna()
 
-nifty_return = float((nifty_close.iloc[-1] / nifty_close.iloc[0]) - 1)
+    if len(nifty_close) < 2:
+        nifty_return = 0.0
+    else:
+        nifty_return = float((nifty_close.iloc[-1] / nifty_close.iloc[0]) - 1)
 
 print("Market Regime:", regime)
 
@@ -190,6 +197,13 @@ print("Market Regime:", regime)
 # ----------------------------
 results = []
 
+def fetch(ticker):
+    df, error = safe_download(ticker)
+    return ticker, df, error
+
+with ThreadPoolExecutor(max_workers=10) as executor:
+    results_map = list(executor.map(fetch, stocks))
+    
 def calculate_edge_score(score, risk_reward, rs_score, volume_spike, breakout, regime):
 
     if pd.isna(score) or score < 60:
@@ -272,18 +286,12 @@ def get_trade_action(edge_rating):
     else:
         return "IGNORE"
 
-for ticker in stocks:
+for ticker, df, error in results_map:
     error_reason = None
     
     try:
 
         #df, error = safe_download(ticker)
-        
-        def fetch(ticker):
-            return ticker, safe_download(ticker)
-        
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            results_map = executor.map(fetch, stocks)
     
         # =========================
         # HARD DATAFRAME NORMALIZATION FIX
@@ -308,6 +316,7 @@ for ticker in stocks:
         required_cols = ["Open", "High", "Low", "Close", "Volume"]
         
         df = df[[col for col in required_cols if col in df.columns]]
+        df = df.dropna(subset=["Close"])
         
         # 4. Convert all columns to numeric
         for col in df.columns:
@@ -335,21 +344,26 @@ for ticker in stocks:
         
         df = calculate_atr(df)
         df = add_volume_and_breakout(df)
+        
+        row = df.iloc[-1]
+        
+        avg_volume = row.get("Avg Volume", 0)
+        volume_spike = row.get("Volume Spike", 0)
+        breakout = row.get("Breakout", 0)
 
-        avg_volume = df["Avg Volume"].iloc[-1]
-        #current_volume = df["Volume"].iloc[-1]
-        volume_spike = df["Volume Spike"].iloc[-1]
-        breakout = df["Breakout"].iloc[-1]
+        current_volume = row.get("Volume", 0)
+        atr_indicator = row.get("ATR", 0)
 
         # ---------------------------
         # FILTERS (EARLY EXIT CONDITIONS)
         # ---------------------------
         
-        current_volume = df["Volume"].iloc[-1] if "Volume" in df.columns else 0
-        atr_indicator = df["ATR"].iloc[-1] if "ATR" in df.columns else 0
+        # Safety conversions (important because yfinance + pandas can return NaN/Series)
+        current_volume = float(current_volume) if pd.notna(current_volume) else 0
+        atr_indicator = float(atr_indicator) if pd.notna(atr_indicator) else 0
         
         # B) Liquidity filter
-        if pd.isna(current_volume) or current_volume <= 0:
+        if current_volume <= 0:
             print(f"SKIP: {ticker} REASON: INVALID_VOLUME {current_volume}")
             continue
 
@@ -358,7 +372,7 @@ for ticker in stocks:
             continue
     
         # C) ATR filter
-        if atr_indicator <= 0 or pd.isna(atr_indicator):
+        if atr_indicator <= 0:
             print(f"SKIP: {ticker} REASON: BAD_ATR {atr_indicator}")
             continue
         
@@ -366,24 +380,10 @@ for ticker in stocks:
         # FINAL DATA NORMALIZATION FIX
         # =========================
         
-        for col in ["Open", "High", "Low", "Close", "Volume"]:
-        
-            if col in df.columns:
-        
-                if isinstance(df[col], pd.DataFrame):
-                    df[col] = df[col].iloc[:, 0]
-        
-                df[col] = pd.to_numeric(df[col], errors="coerce")
-        
         if df.empty:
             continue
         
-        stock_close = df["Close"]
-
-        if isinstance(stock_close, pd.DataFrame):
-            stock_close = stock_close.iloc[:, 0]
-
-        stock_close = pd.Series(stock_close).dropna()
+        stock_close = df["Close"].dropna()
 
         if len(stock_close) < 2:
             continue
@@ -438,7 +438,7 @@ for ticker in stocks:
             breakout
         ) = signal_data
 
-        if DEBUG:
+        if DEBUG_LOGS:
             print("SIGNAL OK:", ticker)
     
         rsi = float(rsi) if pd.notna(rsi) else 0
@@ -453,13 +453,13 @@ for ticker in stocks:
 
         risk_values = apply_risk_engine(last_row, df=df)
         
-        #risk_values = apply_risk_engine(last_row)
-        
-        #atr_indicator = df["ATR"].iloc[-1] if "ATR" in df.columns else 0
         atr_risk = round(float(risk_values.iloc[0]), 2)
         stop_loss = round(float(risk_values.iloc[1]), 2)
         target = round(float(risk_values.iloc[2]), 2)
-        risk_reward = round(float(risk_values.iloc[3]), 2)
+        
+        #risk_reward = round(float(risk_values.iloc[3]), 2)
+        
+        risk_reward = float(risk_values.iloc[3]) if pd.notna(risk_values.iloc[3]) else 0
         
         #if risk_reward < 1.5:
             #print(f"SKIP: {ticker} REASON: LOW_RR {risk_reward}")
@@ -484,9 +484,6 @@ for ticker in stocks:
         #    "Signal:", signal
         #)
         
-        # Temporary fallback fixes
-        if pd.isna(risk_reward):
-            risk_reward = 0
 
         # ----------------------------
         # FINAL ROW
@@ -517,7 +514,7 @@ for ticker in stocks:
         
         # Always add WATCHLIST only for WATCH + BUY + STRONG_BUY
         if trade_action in ["WATCH", "BUY", "STRONG_BUY"]:
-            watchlist_data.append([ticker, cmp, rsi, ema20, ema50, trend, score, edge_rating])
+            watchlist_data.append([ticker, cmp, rsi, ema20, ema50, trend, score, edge_rating, trade_action, rs_score, volume_spike])
             
             print(f"📋 Added to Watchlist: {ticker}")
 
@@ -599,7 +596,9 @@ for ticker in stocks:
 # SORT RESULTS
 # ----------------------------
 
-results = sorted(results, key=lambda x: x[7] if x[7] is not None else 0, reverse=True)
+#results = sorted(results, key=lambda x: x[7] if x[7] is not None else 0, reverse=True)
+
+results_sorted = sorted(results, key=lambda x: x[7] if x[7] is not None else 0, reverse=True)
 
 print("Final Results Count:", len(results))
 
@@ -631,7 +630,7 @@ headers = [
     "Breakout"
 ]
 
-scanner_data = [headers] + results
+scanner_data = [headers] + results_sorted
 
 print("Scanner sample row:")
 print(scanner_data[:3])
@@ -702,9 +701,12 @@ try:
 except Exception as e:
     print("FailedLogs Update Failed:", e)
 
+EDGE_RATING_IDX = 8
+ACTION_IDX = 9
+
 top_picks = [headers] + [
-    r for r in results
-    if r[8] >= 8 and r[9] in ["BUY", "STRONG_BUY"]
+    r for r in results_sorted
+    if r[EDGE_RATING_IDX] >= 8 and r[ACTION_IDX] in ["BUY", "STRONG_BUY"]
 ]
 
 top_ws = sheet.worksheet("Top Picks")
