@@ -519,6 +519,10 @@ for ticker, df, error in results_map:
             print(f"📋 Added to Watchlist: {ticker}")
 
         if trade_action == "BUY":
+            
+            print("TG_TOKEN EXISTS:", bool(os.getenv("TG_TOKEN")))
+            print("TG_CHAT_ID EXISTS:", bool(os.getenv("TG_CHAT_ID")))
+
             msg = f"📌 BUY: {ticker}\nEdge: {edge_rating}\nScore: {score}"
             print(msg)
             send_telegram(msg)
