@@ -503,8 +503,10 @@ for ticker, df, error in results_map:
 
         # Regime filter override
         if regime == "BEAR":
+
             if trade_action == "STRONG_BUY":
-                trade_action = "BUY"
+                trade_action = "WATCH"
+        
             elif trade_action == "BUY":
                 trade_action = "WATCH"
         
