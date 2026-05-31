@@ -94,6 +94,15 @@ sheet = client.open_by_key("1qGsaLVDzxxPSuYnY_Qd2vcEiYXE4tWoTEuxLfH38hPI")
 print("Spreadsheet:", sheet.title)
 print("URL:", sheet.url)
 
+print("ALL TABS FOUND:")
+
+for ws in sheet.worksheets():
+    print(
+        ws.title,
+        "| ID:",
+        ws.id
+    )
+    
 scanner_ws = sheet.worksheet("Scanner")
 
 try:
@@ -103,6 +112,18 @@ except:
     
 watchlist_ws = sheet.worksheet("Watchlist")
 
+print("========== WORKSHEET CHECK ==========")
+
+print("Spreadsheet URL:", sheet.url)
+
+print("Scanner:", scanner_ws.title, "ID:", scanner_ws.id)
+
+print("Watchlist:", watchlist_ws.title, "ID:", watchlist_ws.id)
+
+print("FailedLogs:", failed_ws.title, "ID:", failed_ws.id)
+
+print("=====================================")
+
 failed_logs = []
 
 print("Connected")
@@ -110,11 +131,19 @@ print("Connected")
 test_ws = sheet.worksheet("Scanner")
 
 test_ws.update(
-    "A1",
-    [["TEST"], ["GITHUB ACTIONS WRITE CHECK"]]
+    values=[
+        ["TEST"],
+        ["GITHUB ACTIONS WRITE CHECK"]
+    ],
+    range_name="A1"
 )
 
 print("TEST WRITE SUCCESS")
+
+print(
+    "A1 VALUE AFTER TEST:",
+    test_ws.acell("A1").value
+)
 
 # ----------------------------
 # LOAD STOCKS
@@ -599,6 +628,17 @@ try:
     print("Writing Scanner...")
     #scanner_ws.clear()
     safe_update(scanner_ws, scanner_data)
+
+    print(
+        "Scanner A1:",
+        scanner_ws.acell("A1").value
+    )
+
+    print(
+        "Scanner A2:",
+        scanner_ws.acell("A2").value
+    )
+
     print("Scanner Updated")
 
 except Exception as e:
@@ -614,6 +654,17 @@ try:
     #watchlist_ws.clear()
 
     safe_update(watchlist_ws, watchlist_data)
+
+    print(
+        "Watchlist A1:",
+        watchlist_ws.acell("A1").value
+    )
+
+    print(
+        "Watchlist A2:",
+        watchlist_ws.acell("A2").value
+    )
+    
     print("Watchlist Updated")
 
 except Exception as e:
