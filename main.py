@@ -12,6 +12,8 @@ from signals import generate_signal, calculate_atr, apply_risk_engine, add_volum
 from sheets_writer import safe_update
 
 import time
+from alerts import send_telegram
+from concurrent.futures import ThreadPoolExecutor
 
 def safe_download(ticker, period="6mo", interval="1d", retries=2):
 
@@ -275,8 +277,14 @@ for ticker in stocks:
     
     try:
 
-        df, error = safe_download(ticker)
-
+        #df, error = safe_download(ticker)
+        
+        def fetch(ticker):
+            return ticker, safe_download(ticker)
+        
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            results_map = executor.map(fetch, stocks)
+    
         # =========================
         # HARD DATAFRAME NORMALIZATION FIX
         # =========================
@@ -514,10 +522,14 @@ for ticker in stocks:
             print(f"📋 Added to Watchlist: {ticker}")
 
         if trade_action == "BUY":
-            print(f"📌 BUY ALERT: {ticker} Edge: {edge_rating}")
+            msg = f"📌 BUY: {ticker}\nEdge: {edge_rating}\nScore: {score}"
+            print(msg)
+            send_telegram(msg)
 
         elif trade_action == "STRONG_BUY":
-            print(f"🚀 STRONG BUY ALERT: {ticker} Edge: {edge_rating}")
+            msg = f"🚀 STRONG BUY: {ticker}\nEdge: {edge_rating}\nScore: {score}"
+            print(msg)
+            send_telegram(msg)
 
         elif trade_action == "WATCH":
             print(f"👀 WATCH CANDIDATE: {ticker} Edge: {edge_rating}")
@@ -689,5 +701,13 @@ try:
     print("FailedLogs Updated")
 except Exception as e:
     print("FailedLogs Update Failed:", e)
+
+top_picks = [headers] + [
+    r for r in results
+    if r[8] >= 8 and r[9] in ["BUY", "STRONG_BUY"]
+]
+
+top_ws = sheet.worksheet("Top Picks")
+safe_update(top_ws, top_picks)
 
 print("Completed Successfully")
