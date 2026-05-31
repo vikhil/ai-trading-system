@@ -1,4 +1,4 @@
-DEBUG = True
+DEBUG = False
 DEBUG_LOGS = True
 import json
 import os
@@ -161,7 +161,7 @@ print("Stocks:", len(stocks))
 # UPDATE WATCHLIST (1 CALL ONLY)
 # ----------------------------
 
-watchlist_data = [["Ticker", "CMP", "RSI", "EMA20", "EMA50", "Trend", "Score", "Edge Rating"]]
+watchlist_data = [["Ticker", "CMP", "RSI", "EMA20", "EMA50", "Trend", "Score", "Edge Rating",  "Trade Action", "RS Score", "Volume Spike"]]
 
 # ----------------------------
 # MARKET REGIME
@@ -351,7 +351,7 @@ for ticker, df, error in results_map:
         volume_spike = row.get("Volume Spike", 0)
         breakout = row.get("Breakout", 0)
 
-        current_volume = row.get("Volume", 0)
+        raw_volume = row.get("Volume", 0)
         atr_indicator = row.get("ATR", 0)
 
         # ---------------------------
@@ -359,7 +359,7 @@ for ticker, df, error in results_map:
         # ---------------------------
         
         # Safety conversions (important because yfinance + pandas can return NaN/Series)
-        current_volume = float(current_volume) if pd.notna(current_volume) else 0
+        current_volume = float(raw_volume) if pd.notna(raw_volume) else 0
         atr_indicator = float(atr_indicator) if pd.notna(atr_indicator) else 0
         
         # B) Liquidity filter
@@ -591,7 +591,17 @@ for ticker, df, error in results_map:
         ])
     
         continue
-        
+
+# ----------------------------
+# SORT WATCHLIST (NEW ADDITION)
+# ----------------------------
+
+watchlist_data = [watchlist_data[0]] + sorted(
+    watchlist_data[1:],
+    key=lambda x: x[7],
+    reverse=True
+)
+
 # ----------------------------
 # SORT RESULTS
 # ----------------------------
