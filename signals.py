@@ -57,32 +57,57 @@ def calculate_rsi(close, period=14):
 # SCORE ENGINE
 # =========================================================
 
-def calculate_institutional_score(cmp, rsi, ema20, ema50):
+def calculate_institutional_score(cmp, rsi, ema20, ema50, ema200, volume_spike, breakout):
 
     score = 0
 
+    # -------------------
+    # TREND QUALITY (40)
+    # -------------------
+
     if ema20 > ema50:
-        score += 25
-
-    if 55 < rsi < 75:
-        score += 20
-    elif rsi >= 75:
-        score += 10
-
-    if cmp > ema20:
         score += 15
 
-    if cmp > ema50:
+    if ema50 > ema200:
+        score += 15
+
+    if cmp > ema20:
         score += 10
 
-    if 40 < rsi < 70:
+    # -------------------
+    # MOMENTUM (20)
+    # -------------------
+
+    if 55 <= rsi <= 70:
+        score += 20
+
+    elif 50 <= rsi < 55:
         score += 10
 
-    if ema20 < ema50:
-        score -= 15
+    elif rsi > 70:
+        score += 5
 
-    return max(0, min(100, score))
+    # -------------------
+    # VOLUME (20)
+    # -------------------
 
+    if volume_spike >= 2:
+        score += 20
+
+    elif volume_spike >= 1.5:
+        score += 15
+
+    elif volume_spike >= 1.2:
+        score += 10
+
+    # -------------------
+    # BREAKOUT (20)
+    # -------------------
+
+    if str(breakout).upper() == "YES":
+        score += 20
+
+    return min(score, 100)
 
 # =========================================================
 # SIGNAL CLASSIFIER
@@ -145,16 +170,18 @@ def generate_signal(df, regime="BULL"):
         # -------------------------
         ema20 = close.ewm(span=20).mean()
         ema50 = close.ewm(span=50).mean()
+        ema200 = close.ewm(span=50).mean()
         rsi = calculate_rsi(close)
 
         cmp = float(close.iloc[-1])
         ema20_v = float(ema20.iloc[-1])
         ema50_v = float(ema50.iloc[-1])
+        ema200_v = float(ema200.iloc[-1])
         rsi_v = float(rsi.iloc[-1])
 
         trend = "Bullish" if ema20_v > ema50_v else "Bearish"
 
-        score = calculate_institutional_score(cmp, rsi_v, ema20_v, ema50_v)
+        score = calculate_institutional_score(cmp, rsi_v, ema20_v, ema50_v, ema200_v, volume_spike, breakout)
         signal = classify_signal(score, regime)
 
         # -------------------------
