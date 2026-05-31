@@ -475,17 +475,25 @@ for ticker in stocks:
                 trade_action = "WATCH"
         
         # ----------------------------
-        # STREAM ROUTING
+        # STREAM ROUTING (FIXED LOGIC)
         # ----------------------------
         
+        # Always add WATCHLIST only for WATCH + BUY + STRONG_BUY
         if trade_action in ["WATCH", "BUY", "STRONG_BUY"]:
-            print("👀 WATCH:", ticker, "Edge:", edge_rating)
             watchlist_data.append([ticker, cmp, rsi, ema20, ema50, trend, score, edge_rating])
-            
-        elif trade_action in ["STRONG_BUY", "BUY"]:
-            print("🔥 TRADE ALERT:", ticker, trade_action, "Edge:", edge_rating)
+            print("👀 WATCHLIST:", ticker, trade_action, "Edge:", edge_rating)
+        
+        # ALERTS separated cleanly
+        if trade_action == "BUY":
+            print("📌 BUY ALERT:", ticker, "Edge:", edge_rating)
+        
+        elif trade_action == "STRONG_BUY":
+            print("🚀 STRONG BUY ALERT:", ticker, "Edge:", edge_rating)
             # later we can send to Telegram / WhatsApp / email
-    
+        
+        else:
+            pass
+            
         print(
             ticker,
             "Score:", score,
