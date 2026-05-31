@@ -481,14 +481,17 @@ for ticker in stocks:
         # Always add WATCHLIST only for WATCH + BUY + STRONG_BUY
         if trade_action in ["WATCH", "BUY", "STRONG_BUY"]:
             watchlist_data.append([ticker, cmp, rsi, ema20, ema50, trend, score, edge_rating])
-            print("👀 WATCHLIST:", ticker, trade_action, "Edge:", edge_rating)
-        
-        # ALERTS separated cleanly
+            
+            print(f"📋 Added to Watchlist: {ticker}")
+
         if trade_action == "BUY":
-            print("📌 BUY ALERT:", ticker, "Edge:", edge_rating)
-        
+            print(f"📌 BUY ALERT: {ticker} Edge: {edge_rating}")
+
         elif trade_action == "STRONG_BUY":
-            print("🚀 STRONG BUY ALERT:", ticker, "Edge:", edge_rating)
+            print(f"🚀 STRONG BUY ALERT: {ticker} Edge: {edge_rating}")
+
+        elif trade_action == "WATCH":
+            print(f"👀 WATCH CANDIDATE: {ticker} Edge: {edge_rating}")
             # later we can send to Telegram / WhatsApp / email
         
         else:
