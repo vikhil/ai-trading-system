@@ -183,27 +183,27 @@ def generate_signal(df, regime="BULL", rs_score=0):
         # -------------------------
         ema20 = close.ewm(span=20).mean()
         ema50 = close.ewm(span=50).mean()
-        ema200 = close.ewm(span=50).mean()
+        ema200 = close.ewm(span=200).mean()
         rsi = calculate_rsi(close)
-
+        
         cmp = float(close.iloc[-1])
         ema20_v = float(ema20.iloc[-1])
         ema50_v = float(ema50.iloc[-1])
         ema200_v = float(ema200.iloc[-1])
         rsi_v = float(rsi.iloc[-1])
-
+        
         trend = "Bullish" if ema20_v > ema50_v else "Bearish"
 
-        score = calculate_institutional_score(cmp, rsi_v, ema20_v, ema50_v, ema200_v, volume_spike, breakout, rs_score)
-        signal = classify_signal(score, regime)
-
-        # -------------------------
-        # VOLUME / BREAKOUT (SAFE)
-        # -------------------------
+        # VOLUME / BREAKOUT FIRST
         avg_volume = safe_last_value(df["Avg Volume"]) if "Avg Volume" in df.columns else 0
         current_volume = safe_last_value(df["Volume"]) if "Volume" in df.columns else 0
         volume_spike = safe_last_value(df["Volume Spike"]) if "Volume Spike" in df.columns else 0
         breakout = safe_string_last(df["Breakout"]) if "Breakout" in df.columns else "NO"
+
+        # NOW SAFE SCORE
+        score = calculate_institutional_score(cmp, rsi_v, ema20_v, ema50_v, ema200_v, volume_spike, breakout, rs_score)
+        
+        signal = classify_signal(score, regime)
 
         return [
             round(cmp, 2),
