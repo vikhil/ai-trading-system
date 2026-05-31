@@ -7,7 +7,7 @@ def safe_update(ws, data):
         print(f"[SHEETS DEBUG] Writing to {ws.title}")
         print(f"[SHEETS DEBUG] Rows={len(data)}")
 
-        worksheet.update(values=data, range_name="A1")
+        ws.update(values=data, range_name="A1")
         
         print(f"[SHEETS OK] Updated {ws.title} rows={len(data)}")
 
