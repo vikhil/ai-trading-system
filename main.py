@@ -203,12 +203,6 @@ def calculate_edge_score(score, risk_reward, rs_score, volume_spike, breakout, r
 
     base_score = edge * 10
 
-    # regime adjustment (IMPORTANT — keep this)
-    if regime == "BEAR":
-        base_score *= 0.85
-    elif regime == "SIDEWAYS":
-        base_score *= 0.92
-
     return min(base_score, 100)
 
 def calculate_edge_rating(edge_score):
@@ -366,7 +360,7 @@ for ticker in stocks:
         rs_score = (stock_return - nifty_return) * 100
         rs_score = round(max(min(rs_score, 100), -100), 2)
             
-        if rs_score > 1.5:
+        if rs_score >= 50:
             rs_rank = "ELITE"
             
         elif rs_score > 1.0:
@@ -487,7 +481,7 @@ for ticker in stocks:
         # STREAM ROUTING
         # ----------------------------
         
-        if trade_action == "WATCH":
+        if trade_action in ["WATCH", "BUY", "STRONG_BUY"]:
             print("👀 WATCH:", ticker, "Edge:", edge_rating)
             watchlist_data.append([ticker, cmp, rsi, ema20, ema50, trend, score, edge_rating])
             
