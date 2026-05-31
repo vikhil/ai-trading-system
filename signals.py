@@ -57,7 +57,7 @@ def calculate_rsi(close, period=14):
 # SCORE ENGINE
 # =========================================================
 
-def calculate_institutional_score(cmp, rsi, ema20, ema50, ema200, volume_spike, breakout):
+def calculate_institutional_score(cmp, rsi, ema20, ema50, ema200, volume_spike, breakout, rs_score):
 
     score = 0
 
@@ -101,6 +101,19 @@ def calculate_institutional_score(cmp, rsi, ema20, ema50, ema200, volume_spike, 
         score += 10
 
     # -------------------
+    # RELATIVE STRENGTH
+    # -------------------
+    
+    if rs_score >= 50:
+        score += 20
+    
+    elif rs_score >= 25:
+        score += 15
+    
+    elif rs_score >= 10:
+        score += 10
+    
+    # -------------------
     # BREAKOUT (20)
     # -------------------
 
@@ -136,7 +149,7 @@ def classify_signal(score, regime):
 # SIGNAL ENGINE (MAIN OUTPUT)
 # =========================================================
 
-def generate_signal(df, regime="BULL"):
+def generate_signal(df, regime="BULL", rs_score=0):
 
     try:
         # -------------------------
@@ -181,7 +194,7 @@ def generate_signal(df, regime="BULL"):
 
         trend = "Bullish" if ema20_v > ema50_v else "Bearish"
 
-        score = calculate_institutional_score(cmp, rsi_v, ema20_v, ema50_v, ema200_v, volume_spike, breakout)
+        score = calculate_institutional_score(cmp, rsi_v, ema20_v, ema50_v, ema200_v, volume_spike, breakout, rs_score)
         signal = classify_signal(score, regime)
 
         # -------------------------
