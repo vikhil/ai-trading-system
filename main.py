@@ -362,13 +362,10 @@ for ticker in stocks:
             
         if rs_score >= 50:
             rs_rank = "ELITE"
-            
-        elif rs_score > 1.0:
+        elif rs_score >= 25:
             rs_rank = "STRONG"
-            
-        elif rs_score > 0.8:
+        elif rs_score >= 10:
             rs_rank = "AVERAGE"
-            
         else:
             rs_rank = "WEAK"
     
