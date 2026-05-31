@@ -89,10 +89,10 @@ scope = [
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 
+sheet = client.open_by_key("1qGsaLVDzxxPSuYnY_Qd2vcEiYXE4tWoTEuxLfH38hPI")
+
 print("Spreadsheet:", sheet.title)
 print("URL:", sheet.url)
-
-sheet = client.open_by_key("1qGsaLVDzxxPSuYnY_Qd2vcEiYXE4tWoTEuxLfH38hPI")
 
 scanner_ws = sheet.worksheet("Scanner")
 
