@@ -823,7 +823,7 @@ try:
     safe_update(scanner_ws, scanner_data)
 
     if DEBUG_LOGS:
-    print("Scanner A1:", scanner_data[1])
+        print("Scanner A1:", scanner_data[1])
 
     print(
         "Scanner A2:",
