@@ -52,11 +52,17 @@ def get_market_regime():
         auto_adjust=True,
         progress=False
     )
-    
+
     if nifty.empty:
         return "SIDEWAYS", 0, 0, 0, 0.0
 
-    close = pd.Series(nifty["Close"]).dropna()
+    close = nifty["Close"]
+
+    # FIX: handle DataFrame vs Series issue
+    if isinstance(close, pd.DataFrame):
+        close = close.iloc[:, 0]
+
+    close = close.dropna()
 
     ema50 = close.ewm(span=50).mean()
     ema200 = close.ewm(span=200).mean()
@@ -66,7 +72,7 @@ def get_market_regime():
     last_ema200 = float(ema200.iloc[-1])
 
     nifty_return = float((close.iloc[-1] / close.iloc[0]) - 1)
-    
+
     if last_close > last_ema50 and last_ema50 > last_ema200:
         regime = "BULL"
     elif last_close < last_ema50 and last_ema50 < last_ema200:
