@@ -812,7 +812,32 @@ headers = [
     "Breakout"
 ]
 
-scanner_data = [headers] + results_sorted
+scanner_data = [headers]
+
+for r in results_sorted:
+    scanner_data.append([
+        r["ticker"],
+        r["cmp"],
+        r["rsi"],
+        r["ema20"],
+        r["ema50"],
+        r["trend"],
+        r["score"],
+        r["edge_score"],
+        r["edge_rating"],
+        r["trade_action"],
+        r["signal"],
+        r["atr_risk"],
+        r["stop_loss"],
+        r["target"],
+        r["risk_reward"],
+        r["rs_score"],
+        r["rs_rank"],
+        r["avg_volume"],
+        r["current_volume"],
+        r["volume_spike"],
+        r["breakout"]
+    ])
 
 print("Scanner sample row:")
 print(scanner_data[:3])
@@ -884,33 +909,33 @@ except Exception as e:
 print("Unique Trade Actions:")
 print(set(r["trade_action"] for r in results_sorted))
 
-top_picks = [headers] + [
-    [
-        r["ticker"],
-        r["cmp"],
-        r["rsi"],
-        r["ema20"],
-        r["ema50"],
-        r["trend"],
-        r["score"],
-        r["edge_score"],
-        r["edge_rating"],
-        r["trade_action"],
-        r["signal"],
-        r["atr_risk"],
-        r["stop_loss"],
-        r["target"],
-        r["risk_reward"],
-        r["rs_score"],
-        r["rs_rank"],
-        r["avg_volume"],
-        r["current_volume"],
-        r["volume_spike"],
-        r["breakout"]
-    ]
-    for r in results_sorted
-    if r["edge_rating"] >= 8 and r["trade_action"] in ["BUY", "STRONG_BUY"]
-]
+top_picks = [headers]
+
+for r in results_sorted:
+    if r["edge_rating"] >= 8 and r["trade_action"] in ["BUY", "STRONG_BUY"]:
+        top_picks.append([
+            r["ticker"],
+            r["cmp"],
+            r["rsi"],
+            r["ema20"],
+            r["ema50"],
+            r["trend"],
+            r["score"],
+            r["edge_score"],
+            r["edge_rating"],
+            r["trade_action"],
+            r["signal"],
+            r["atr_risk"],
+            r["stop_loss"],
+            r["target"],
+            r["risk_reward"],
+            r["rs_score"],
+            r["rs_rank"],
+            r["avg_volume"],
+            r["current_volume"],
+            r["volume_spike"],
+            r["breakout"]
+        ])
 
 try:
     top_ws = sheet.worksheet("Top Picks")
