@@ -808,11 +808,10 @@ try:
     #scanner_ws.clear()
     safe_update(scanner_ws, scanner_data)
 
-    print(
-        "Scanner A1:",
-        if DEBUG_LOGS:
-            print(scanner_data[1])
-    )
+    print("Scanner A1:")
+
+    if DEBUG_LOGS:
+        print(scanner_data[1])
 
     print(
         "Scanner A2:",
