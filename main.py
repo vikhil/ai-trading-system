@@ -15,6 +15,7 @@ from sheets_writer import safe_update
 import time
 from alerts import send_telegram
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 
 def safe_download(ticker, period="6mo", interval="1d", retries=2):
 
@@ -70,13 +71,28 @@ def get_market_regime():
     last_ema200 = float(ema200.iloc[-1])
 
     if last_close > last_ema50 and last_ema50 > last_ema200:
-        return "BULL"
+        return (
+            "BULL",
+            round(last_close, 2),
+            round(last_ema50, 2),
+            round(last_ema200, 2)
+        )
 
     elif last_close < last_ema50 and last_ema50 < last_ema200:
-        return "BEAR"
+        return (
+            "BEAR",
+            round(last_close, 2),
+            round(last_ema50, 2),
+            round(last_ema200, 2)
+        )
 
     else:
-        return "SIDEWAYS"
+        return (
+            "SIDEWAYS",
+            round(last_close, 2),
+            round(last_ema50, 2),
+            round(last_ema200, 2)
+        )
         
 
 # ----------------------------
@@ -167,7 +183,7 @@ watchlist_data = [["Ticker", "CMP", "RSI", "EMA20", "EMA50", "Trend", "Score", "
 # MARKET REGIME
 # ----------------------------
 
-regime = get_market_regime()
+regime, close, ema50, ema200 = get_market_regime()
 
 # ----------------------------
 # NIFTY DATA FOR RELATIVE STRENGTH
@@ -191,6 +207,35 @@ else:
         nifty_return = float((nifty_close.iloc[-1] / nifty_close.iloc[0]) - 1)
 
 print("Market Regime:", regime)
+
+# ----------------------------
+# MARKET TREND LOGGING
+# ----------------------------
+
+try:
+    market_ws = sheet.worksheet("Market Trend")
+except:
+    market_ws = sheet.add_worksheet(
+        title="Market Trend",
+        rows="5000",
+        cols="5"
+    )
+    
+timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+market_trend_row = [
+    timestamp,
+    regime,
+    close,
+    ema50,
+    ema200,
+    buy_count,
+    watch_count,
+    breadth_score,
+    market_health
+]
+
+print("Market Trend Updated:", timestamp, regime)
 
 # ----------------------------
 # ANALYSIS
@@ -617,6 +662,107 @@ watchlist_data = [watchlist_data[0]] + sorted(
 results_sorted = sorted(results, key=lambda x: x[7] if x[7] is not None else 0, reverse=True)
 
 print("Final Results Count:", len(results))
+
+# ----------------------------
+# BUY COUNT SUMMARY
+# ----------------------------
+
+buy_count = len([
+    r for r in results_sorted
+    if r[9] in ["BUY", "STRONG_BUY"]
+])
+
+watch_count = len([
+    r for r in results_sorted
+    if r[9] == "WATCH"
+])
+
+print(f"BUY Count: {buy_count}")
+print(f"WATCH Count: {watch_count}")
+
+# ----------------------------
+# MARKET BREADTH
+# ----------------------------
+
+if len(results_sorted) > 0:
+    breadth_score = round(
+        (buy_count / len(results_sorted)) * 100,
+        2
+    )
+else:
+    breadth_score = 0
+
+print(f"Breadth Score: {breadth_score}%")
+
+# ----------------------------
+# MARKET HEALTH
+# ----------------------------
+
+if breadth_score >= 15:
+    market_health = "STRONG BULLISH"
+
+elif breadth_score >= 10:
+    market_health = "BULLISH"
+
+elif breadth_score >= 5:
+    market_health = "IMPROVING"
+
+elif breadth_score >= 2:
+    market_health = "WEAK"
+
+else:
+    market_health = "VERY WEAK"
+
+print("Market Health:", market_health)
+
+# ----------------------------
+# MARKET TREND LOGGING
+# ----------------------------
+
+headers_market = [
+    "Timestamp",
+    "Regime",
+    "Nifty Close",
+    "EMA50",
+    "EMA200",
+    "BUY Count",
+    "WATCH Count",
+    "Breadth %",
+    "Market Health"
+]
+
+market_trend_row = [
+    timestamp,
+    regime,
+    close,
+    ema50,
+    ema200,
+    buy_count,
+    watch_count,
+    breadth_score,
+    market_health
+]
+
+existing = market_ws.get_all_values()
+
+if len(existing) == 0:
+    market_ws.append_row(
+        headers_market,
+        value_input_option="RAW"
+    )
+
+market_ws.append_row(
+    market_trend_row,
+    value_input_option="RAW"
+)
+
+print(
+    "Market Trend Updated:",
+    timestamp,
+    regime,
+    breadth_score,
+    market_health
+)
 
 # ----------------------------
 # UPDATE SCANNER
