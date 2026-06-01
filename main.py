@@ -651,7 +651,7 @@ for ticker, df, error in results_map:
 
 watchlist_data = [watchlist_data[0]] + sorted(
     watchlist_data[1:],
-    key=lambda x: x[7],
+    key=lambda x: x[8],
     reverse=True
 )
 
@@ -669,6 +669,14 @@ results_sorted = sorted(
     reverse=True
 )
 
+print("Sample result type:", type(results_sorted[0]) if results_sorted else None)
+
+# SAFETY: ensure no malformed rows
+results_sorted = [
+    r for r in results_sorted
+    if isinstance(r, dict) and "edge_score" in r
+]
+
 print("Final Results Count:", len(results))
 
 # ----------------------------
@@ -677,12 +685,12 @@ print("Final Results Count:", len(results))
 
 buy_count = len([
     r for r in results_sorted
-    if r[9] in ["BUY", "STRONG_BUY"]
+    if r["trade_action"] in ["BUY", "STRONG_BUY"]
 ])
 
 watch_count = len([
     r for r in results_sorted
-    if r[9] == "WATCH"
+    if r["trade_action"] == "WATCH"
 ])
 
 print(f"BUY Count: {buy_count}")
@@ -814,10 +822,8 @@ try:
     #scanner_ws.clear()
     safe_update(scanner_ws, scanner_data)
 
-    print("Scanner A1:")
-
     if DEBUG_LOGS:
-        print(scanner_data[1])
+    print("Scanner A1:", scanner_data[1])
 
     print(
         "Scanner A2:",
@@ -875,15 +881,35 @@ try:
 except Exception as e:
     print("FailedLogs Update Failed:", e)
 
-EDGE_RATING_IDX = 8
-ACTION_IDX = 9
-
 print("Unique Trade Actions:")
-print(set(r[ACTION_IDX] for r in results_sorted))
+print(set(r["trade_action"] for r in results_sorted))
 
 top_picks = [headers] + [
-    r for r in results_sorted
-    if r[EDGE_RATING_IDX] >= 8 and r[ACTION_IDX] in ["BUY", "STRONG_BUY"]
+    [
+        r["ticker"],
+        r["cmp"],
+        r["rsi"],
+        r["ema20"],
+        r["ema50"],
+        r["trend"],
+        r["score"],
+        r["edge_score"],
+        r["edge_rating"],
+        r["trade_action"],
+        r["signal"],
+        r["atr_risk"],
+        r["stop_loss"],
+        r["target"],
+        r["risk_reward"],
+        r["rs_score"],
+        r["rs_rank"],
+        r["avg_volume"],
+        r["current_volume"],
+        r["volume_spike"],
+        r["breakout"]
+    ]
+    for r in results_sorted
+    if r["edge_rating"] >= 8 and r["trade_action"] in ["BUY", "STRONG_BUY"]
 ]
 
 try:
