@@ -54,19 +54,9 @@ def get_market_regime():
     )
     
     if nifty.empty:
-        return (
-            "SIDEWAYS",
-            0,
-            0,
-            0
-        )
+        return "SIDEWAYS", 0, 0, 0, 0.0
 
-    close = nifty["Close"]
-
-    if isinstance(close, pd.DataFrame):
-        close = close.iloc[:, 0]
-
-    close = pd.Series(close).dropna()
+    close = pd.Series(nifty["Close"]).dropna()
 
     ema50 = close.ewm(span=50).mean()
     ema200 = close.ewm(span=200).mean()
@@ -75,31 +65,17 @@ def get_market_regime():
     last_ema50 = float(ema50.iloc[-1])
     last_ema200 = float(ema200.iloc[-1])
 
+    nifty_return = float((close.iloc[-1] / close.iloc[0]) - 1)
+    
     if last_close > last_ema50 and last_ema50 > last_ema200:
-        return (
-            "BULL",
-            round(last_close, 2),
-            round(last_ema50, 2),
-            round(last_ema200, 2)
-        )
-
+        regime = "BULL"
     elif last_close < last_ema50 and last_ema50 < last_ema200:
-        return (
-            "BEAR",
-            round(last_close, 2),
-            round(last_ema50, 2),
-            round(last_ema200, 2)
-        )
-
+        regime = "BEAR"
     else:
-        return (
-            "SIDEWAYS",
-            round(last_close, 2),
-            round(last_ema50, 2),
-            round(last_ema200, 2)
-        )
-        
+        regime = "SIDEWAYS"
 
+    return regime, last_close, last_ema50, last_ema200, nifty_return
+        
 # ----------------------------
 # GOOGLE SHEETS AUTH
 # ----------------------------
@@ -188,7 +164,7 @@ watchlist_data = [["Ticker", "CMP", "RSI", "EMA20", "EMA50", "Trend", "Score", "
 # MARKET REGIME
 # ----------------------------
 
-regime, close, ema50, ema200 = get_market_regime()
+regime, close, ema50, ema200, nifty_return = get_market_regime()
 
 # ----------------------------
 # NIFTY DATA FOR RELATIVE STRENGTH
@@ -230,17 +206,43 @@ timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 print("Market Trend Updated:", timestamp, regime)
 
+def batch_download(tickers, chunk_size=20):
+    for i in range(0, len(tickers), chunk_size):
+        batch = tickers[i:i + chunk_size]
+
+        data = yf.download(
+            tickers=batch,
+            period="6mo",
+            interval="1d",
+            group_by="ticker",
+            threads=True,
+            progress=False
+        )
+
+        yield batch, data
+
+results_map = []
+
+for batch, data in batch_download(stocks, chunk_size=20):
+
+    for ticker in batch:
+
+        try:
+            if ticker not in data.columns.get_level_values(0):
+                results_map.append((ticker, None, "NO_DATA"))
+                continue
+
+            df = data[ticker].dropna()
+
+            results_map.append((ticker, df, None))
+
+        except Exception as e:
+            results_map.append((ticker, None, str(e)))
+            
 # ----------------------------
 # ANALYSIS
 # ----------------------------
 results = []
-
-def fetch(ticker):
-    df, error = safe_download(ticker)
-    return ticker, df, error
-
-with ThreadPoolExecutor(max_workers=10) as executor:
-    results_map = list(executor.map(fetch, stocks))
     
 def calculate_edge_score(score, risk_reward, rs_score, volume_spike, breakout, regime):
 
@@ -405,7 +407,7 @@ for ticker, df, error in results_map:
             print(f"SKIP: {ticker} REASON: INVALID_VOLUME {current_volume}")
             continue
 
-        if current_volume < 50000:   # relaxed threshold
+        if current_volume < avg_volume * 0.5:   # relaxed threshold
             print(f"SKIP: {ticker} REASON: LOW_VOLUME {current_volume}")
             continue
     
@@ -432,8 +434,9 @@ for ticker, df, error in results_map:
         
         stock_return = float((stock_close.iloc[-1] / stock_close.iloc[0]) - 1)
 
-        rs_score = (stock_return - nifty_return) * 100
-        rs_score = round(max(min(rs_score, 100), -100), 2)
+        rs_score = (stock_return - nifty_return)
+        rs_score = rs_score * 100
+        rs_score = max(min(rs_score, 100), -100)
             
         if rs_score >= 50:
             rs_rank = "ELITE"
@@ -594,29 +597,29 @@ for ticker, df, error in results_map:
             f"Edge={edge_score}"
         )
         
-        results.append([
-            ticker,
-            cmp,
-            rsi,
-            ema20,
-            ema50,
-            trend,
-            score,
-            edge_score,   # NEW FIELD (Edge Score replaces Signal-only ranking logic)
-            edge_rating,
-            trade_action,
-            signal,
-            atr_risk,
-            stop_loss,
-            target,
-            risk_reward,
-            rs_score,
-            rs_rank,
-            avg_volume,
-            current_volume,
-            volume_spike,
-            breakout
-        ])
+        results.append({
+            "ticker": ticker,
+            "cmp": cmp,
+            "rsi": rsi,
+            "ema20": ema20,
+            "ema50": ema50,
+            "trend": trend,
+            "score": score,
+            "edge_score": edge_score,
+            "edge_rating": edge_rating,
+            "trade_action": trade_action,
+            "signal": signal,
+            "atr_risk": atr_risk,
+            "stop_loss": stop_loss,
+            "target": target,
+            "risk_reward": risk_reward,
+            "rs_score": rs_score,
+            "rs_rank": rs_rank,
+            "avg_volume": avg_volume,
+            "current_volume": current_volume,
+            "volume_spike": volume_spike,
+            "breakout": breakout
+        })
         print("RESULTS SIZE:", len(results))
         
     except Exception as e:
@@ -652,7 +655,13 @@ watchlist_data = [watchlist_data[0]] + sorted(
 
 #results = sorted(results, key=lambda x: x[7] if x[7] is not None else 0, reverse=True)
 
-results_sorted = sorted(results, key=lambda x: x[7] if x[7] is not None else 0, reverse=True)
+#results_sorted = sorted(results, key=lambda x: x[7] if x[7] is not None else 0, reverse=True)
+
+results_sorted = sorted(
+    results,
+    key=lambda x: x["edge_score"],
+    reverse=True
+)
 
 print("Final Results Count:", len(results))
 
@@ -801,7 +810,8 @@ try:
 
     print(
         "Scanner A1:",
-        scanner_ws.acell("A1").value
+        if DEBUG_LOGS:
+            print(scanner_data[1])
     )
 
     print(
@@ -862,6 +872,9 @@ except Exception as e:
 
 EDGE_RATING_IDX = 8
 ACTION_IDX = 9
+
+print("Unique Trade Actions:")
+print(set(r[ACTION_IDX] for r in results_sorted))
 
 top_picks = [headers] + [
     r for r in results_sorted
