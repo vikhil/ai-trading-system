@@ -54,7 +54,12 @@ def get_market_regime():
     )
     
     if nifty.empty:
-        return "SIDEWAYS"
+    return (
+        "SIDEWAYS",
+        0,
+        0,
+        0
+    )
 
     close = nifty["Close"]
 
@@ -222,18 +227,6 @@ except:
     )
     
 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-market_trend_row = [
-    timestamp,
-    regime,
-    close,
-    ema50,
-    ema200,
-    buy_count,
-    watch_count,
-    breadth_score,
-    market_health
-]
 
 print("Market Trend Updated:", timestamp, regime)
 
@@ -751,18 +744,22 @@ if len(existing) == 0:
         value_input_option="RAW"
     )
 
-market_ws.append_row(
-    market_trend_row,
-    value_input_option="RAW"
-)
+try:
+    market_ws.append_row(
+        market_trend_row,
+        value_input_option="RAW"
+    )
 
-print(
-    "Market Trend Updated:",
-    timestamp,
-    regime,
-    breadth_score,
-    market_health
-)
+    print(
+        "Market Trend Updated:",
+        timestamp,
+        regime,
+        breadth_score,
+        market_health
+    )
+
+except Exception as e:
+    print("Market Trend Update Failed:", e)
 
 # ----------------------------
 # UPDATE SCANNER
@@ -871,7 +868,15 @@ top_picks = [headers] + [
     if r[EDGE_RATING_IDX] >= 8 and r[ACTION_IDX] in ["BUY", "STRONG_BUY"]
 ]
 
-top_ws = sheet.worksheet("Top Picks")
+try:
+    top_ws = sheet.worksheet("Top Picks")
+except:
+    top_ws = sheet.add_worksheet(
+        title="Top Picks",
+        rows="1000",
+        cols="25"
+    )
+
 safe_update(top_ws, top_picks)
 
 print("Completed Successfully")
