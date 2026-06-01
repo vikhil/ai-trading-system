@@ -54,12 +54,12 @@ def get_market_regime():
     )
     
     if nifty.empty:
-    return (
-        "SIDEWAYS",
-        0,
-        0,
-        0
-    )
+        return (
+            "SIDEWAYS",
+            0,
+            0,
+            0
+        )
 
     close = nifty["Close"]
 
