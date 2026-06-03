@@ -771,12 +771,11 @@ existing = market_ws.get_all_values()
 
 print("===== MARKET TREND DEBUG =====")
 
-for i, v in enumerate(market_row):
-    print(
-        f"Col {i}:",
-        type(v),
-        v
-    )
+try:
+    for i, v in enumerate(market_trend_row):
+        print(f"Col {i}:", type(v), v)
+except Exception as e:
+    print("Market Trend Debug Error:", e)
 
 print("==============================")
 
