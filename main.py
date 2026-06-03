@@ -769,6 +769,17 @@ market_trend_row = [
 
 existing = market_ws.get_all_values()
 
+print("===== MARKET TREND DEBUG =====")
+
+for i, v in enumerate(market_row):
+    print(
+        f"Col {i}:",
+        type(v),
+        v
+    )
+
+print("==============================")
+
 if len(existing) == 0:
     market_ws.append_row(
         headers_market,
