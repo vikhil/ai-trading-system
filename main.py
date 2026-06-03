@@ -165,12 +165,13 @@ print("Stocks:", len(stocks))
 # ----------------------------
 
 watchlist_data = [["Ticker", "CMP", "RSI", "EMA20", "EMA50", "Trend", "Score", "Edge Rating",  "Trade Action", "RS Score", "Volume Spike"]]
+watchlist_seen = set()
 
 # ----------------------------
 # MARKET REGIME
 # ----------------------------
 
-regime, close, ema50, ema200, nifty_return = get_market_regime()
+regime, nifty_close, nifty_ema50, nifty_ema200, nifty_return = get_market_regime()
 
 # ----------------------------
 # NIFTY DATA FOR RELATIVE STRENGTH
@@ -548,13 +549,16 @@ for ticker, df, error in results_map:
         edge_rating = int(calculate_edge_rating(edge_score))
         trade_action = get_trade_action(edge_rating)
 
-        # Regime filter override
         if regime == "BEAR":
 
-            if trade_action == "STRONG_BUY":
-                trade_action = "WATCH"
+            # Elite setups still allowed
+            if score >= 90 and edge_rating >= 8:
+                trade_action = "STRONG_BUY"
         
-            elif trade_action == "BUY":
+            elif score >= 85 and edge_rating >= 7:
+                trade_action = "BUY"
+        
+            elif trade_action in ["BUY", "STRONG_BUY"]:
                 trade_action = "WATCH"
         
         # ----------------------------
@@ -563,9 +567,16 @@ for ticker, df, error in results_map:
         
         # Always add WATCHLIST only for WATCH + BUY + STRONG_BUY
         if trade_action in ["WATCH", "BUY", "STRONG_BUY"]:
-            watchlist_data.append([ticker, cmp, rsi, ema20, ema50, trend, score, edge_rating, trade_action, rs_score, volume_spike])
-            
-            print(f"📋 Added to Watchlist: {ticker}")
+
+            if ticker not in watchlist_seen:
+                watchlist_data.append([
+                    ticker, cmp, rsi, ema20, ema50,
+                    trend, score, edge_rating,
+                    trade_action, rs_score, volume_spike
+                ])
+        
+                watchlist_seen.add(ticker)
+                print(f"📋 Added to Watchlist: {ticker}")
 
         if trade_action == "BUY":
             
@@ -651,7 +662,7 @@ for ticker, df, error in results_map:
 
 watchlist_data = [watchlist_data[0]] + sorted(
     watchlist_data[1:],
-    key=lambda x: x[8],
+    key=lambda x: x[7],
     reverse=True
 )
 
@@ -677,7 +688,7 @@ results_sorted = [
     if isinstance(r, dict) and "edge_score" in r
 ]
 
-print("Final Results Count:", len(results))
+print("Final Results Count:", len(results_sorted))
 
 # ----------------------------
 # BUY COUNT SUMMARY
@@ -701,10 +712,7 @@ print(f"WATCH Count: {watch_count}")
 # ----------------------------
 
 if len(results_sorted) > 0:
-    breadth_score = round(
-        (buy_count / len(results_sorted)) * 100,
-        2
-    )
+    breadth_score = ((buy_count * 1.0) + (watch_count * 0.30)) / len(results_sorted) * 100
 else:
     breadth_score = 0
 
@@ -750,9 +758,9 @@ headers_market = [
 market_trend_row = [
     timestamp,
     regime,
-    close,
-    ema50,
-    ema200,
+    nifty_close,
+    nifty_ema50,
+    nifty_ema200,
     buy_count,
     watch_count,
     breadth_score,
@@ -895,12 +903,14 @@ try:
     print("Writing FailedLogs...")
     #failed_ws.clear()
 
-    failed_headers = [["Ticker", "Error Type", "Reason"]]
+    failed_headers = ["Ticker", "Error Type", "Reason"]
 
+    if failed_ws.acell("A1").value is None:
+        safe_update(failed_ws, [failed_headers])
+    
     if failed_logs:
-        safe_update(failed_ws, failed_headers + failed_logs)
-    else:
-        safe_update(failed_ws, failed_headers)
+        for row in failed_logs:
+            failed_ws.append_row(row, value_input_option="RAW")
 
     print("FailedLogs Updated")
 except Exception as e:
@@ -912,7 +922,10 @@ print(set(r["trade_action"] for r in results_sorted))
 top_picks = [headers]
 
 for r in results_sorted:
-    if r["edge_rating"] >= 8 and r["trade_action"] in ["BUY", "STRONG_BUY"]:
+    if (
+        r["edge_rating"] >= 7
+        and r["score"] >= 80
+    ):
         top_picks.append([
             r["ticker"],
             r["cmp"],
