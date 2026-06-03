@@ -16,4 +16,9 @@ pipeline = Pipeline(
     scoring_engine
 )
 
+from data_loader import load_universe
+
+stocks = load_universe()
+regime, _, _, _, nifty_return = get_market_regime()
+
 results = pipeline.run(stocks, regime, nifty_return)
