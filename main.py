@@ -713,7 +713,7 @@ print(f"WATCH Count: {watch_count}")
 # ----------------------------
 
 if len(results_sorted) > 0:
-    breadth_score = ((buy_count * 1.0) + (watch_count * 0.30)) / len(results_sorted) * 100
+    breadth_score = ((buy_count * 1.0) + (watch_count * 0.5)) / len(results_sorted) * 100
 else:
     breadth_score = 0
 
@@ -865,16 +865,15 @@ print(scanner_data[:3])
 
 try:
     print("Writing Scanner...")
-    #scanner_ws.clear()
     safe_update(scanner_ws, scanner_data)
-
+    
     if DEBUG_LOGS:
-        print("Scanner A1:", scanner_data[1])
-
-    print(
-        "Scanner A2:",
-        scanner_ws.acell("A2").value
-    )
+        import time
+        time.sleep(1)
+        
+        values = scanner_ws.get("A1:A5")
+        for i, row in enumerate(values, start=1):
+            print(f"Row {i}:", row)
 
     print("Scanner Updated")
 
