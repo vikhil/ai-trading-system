@@ -182,17 +182,18 @@ nifty_df = yf.download("^NSEI", period="6mo", interval="1d", auto_adjust=True, p
 if nifty_df.empty or "Close" not in nifty_df.columns:
     nifty_return = 0.0
 else:
-    nifty_close = nifty_df["Close"]
+    nifty_series = nifty_df["Close"]
 
-    if isinstance(nifty_close, pd.DataFrame):
-        nifty_close = nifty_close.iloc[:, 0]
+    if isinstance(nifty_series, pd.DataFrame):
+        nifty_series = nifty_series.iloc[:, 0]
 
-    nifty_close = pd.Series(nifty_close).dropna()
+    nifty_series = nifty_series.dropna()
 
-    if len(nifty_close) < 2:
+    if len(nifty_series) < 2:
         nifty_return = 0.0
     else:
-        nifty_return = float((nifty_close.iloc[-1] / nifty_close.iloc[0]) - 1)
+        nifty_return = float(
+            (nifty_series.iloc[-1] / nifty_series.iloc[0]) - 1)
 
 print("Market Regime:", regime)
 
@@ -755,16 +756,18 @@ headers_market = [
     "Market Health"
 ]
 
+breadth_score = round(float(breadth_score), 2)
+
 market_trend_row = [
-    timestamp,
-    regime,
-    nifty_close,
-    nifty_ema50,
-    nifty_ema200,
-    buy_count,
-    watch_count,
-    breadth_score,
-    market_health
+    str(timestamp),
+    str(regime),
+    float(nifty_close),
+    float(nifty_ema50),
+    float(nifty_ema200),
+    int(buy_count),
+    int(watch_count),
+    float(breadth_score),
+    str(market_health)
 ]
 
 existing = market_ws.get_all_values()
