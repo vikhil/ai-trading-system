@@ -1,3 +1,5 @@
+from signals import apply_risk_engine
+
 class Pipeline:
 
     def __init__(self, data_engine, feature_engine, signal_engine, scoring_engine):
