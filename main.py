@@ -3,6 +3,7 @@ from feature_engine import FeatureEngine
 from signal_engine import SignalEngine
 from scoring_engine import ScoringEngine
 from pipeline import Pipeline
+from market import get_market_regime
 
 data_engine = DataEngine()
 feature_engine = FeatureEngine()
