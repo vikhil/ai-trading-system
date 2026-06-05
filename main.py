@@ -914,8 +914,8 @@ print(failed_logs[:3])
 try:
     print("Writing FailedLogs...")
     #failed_ws.clear()
-
-   failed_data = [["Ticker", "Error Type", "Reason"]]
+    
+    failed_data = [["Ticker", "Error Type", "Reason"]]
 
     if failed_logs:
         failed_data.extend(failed_logs)
