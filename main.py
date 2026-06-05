@@ -1,5 +1,5 @@
 DEBUG = False
-DEBUG_LOGS = True
+DEBUG_LOGS = True 
 import json
 import os
 import pandas as pd
@@ -915,16 +915,15 @@ try:
     print("Writing FailedLogs...")
     #failed_ws.clear()
 
-    failed_headers = ["Ticker", "Error Type", "Reason"]
-
-    if failed_ws.acell("A1").value is None:
-        safe_update(failed_ws, [failed_headers])
+    failed_data = ["Ticker", "Error Type", "Reason"]
     
-    if failed_logs:
-        for row in failed_logs:
-            failed_ws.append_row(row, value_input_option="RAW")
+    for row in failed_logs:
+       failed_data.append(row)
 
+    safe_update(failed_ws, failed_data)
+    
     print("FailedLogs Updated")
+    
 except Exception as e:
     print("FailedLogs Update Failed:", e)
 
