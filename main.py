@@ -1,5 +1,12 @@
 DEBUG = False
 DEBUG_LOGS = True 
+
+# ----------------------------
+# GLOBAL RISK SETTINGS (ADD HERE)
+# ----------------------------
+CAPITAL = 100000
+RISK_PER_TRADE = 0.01
+
 import json
 import os
 import pandas as pd
@@ -310,10 +317,8 @@ def get_trade_action(edge_rating):
         return "STRONG_BUY"
     elif edge_rating >= 7:
         return "BUY"
-    elif edge_rating >= 6:
-        return "WATCH"
-    elif edge_rating >= 4:
-        return "IGNORE_WATCH"
+    elif edge_rating >= 5:
+        return "HOLD"
     else:
         return "IGNORE"
 
@@ -501,11 +506,10 @@ for ticker, df, error in results_map:
         
         atr_risk = round(float(risk_values.iloc[0]), 2)
         stop_loss = round(float(risk_values.iloc[1]), 2)
-        target = round(float(risk_values.iloc[2]), 2)
-        
-        #risk_reward = round(float(risk_values.iloc[3]), 2)
-        
+        target = round(float(risk_values.iloc[2]), 2)        
         risk_reward = float(risk_values.iloc[3]) if pd.notna(risk_values.iloc[3]) else 0
+
+        position_size = calculate_position_size(CAPITAL, atr_risk)
         
         #if risk_reward < 1.5:
             #print(f"SKIP: {ticker} REASON: LOW_RR {risk_reward}")
@@ -554,21 +558,13 @@ for ticker, df, error in results_map:
         edge_rating = int(calculate_edge_rating(edge_score))
         trade_action = get_trade_action(edge_rating)
 
-        position_size = 100
+def calculate_position_size(capital, atr_risk, risk_per_trade=0.01):
+    if atr_risk <= 0 or pd.isna(atr_risk):
+        return 0
 
-        if regime == "SIDEWAYS":
-            position_size = 75
+    risk_amount = capital * risk_per_trade
+    return round(risk_amount / atr_risk, 2)
 
-        elif regime == "BEAR":
-            position_size = 50
-    
-        if trade_action == "BUY" and regime == "BEAR":
-            position_size = 25
-
-        if trade_action == "STRONG_BUY" and regime == "BEAR":
-            position_size = 50
-
-        
         # ----------------------------
         # STREAM ROUTING (FIXED LOGIC)
         # ----------------------------
@@ -828,7 +824,7 @@ headers = [
     "Edge Score",
     "Edge Rating",
     "Trade Action",
-    "Position Size %"
+    "Position Size %",
     "Signal",
     "ATR",
     "Stop Loss",
@@ -856,7 +852,7 @@ for r in results_sorted:
         r["edge_score"],
         r["edge_rating"],
         r["trade_action"],
-        position_size,        
+        r["position_size"],        
         r["signal"],
         r["atr_risk"],
         r["stop_loss"],
@@ -958,6 +954,7 @@ for r in results_sorted:
             r["edge_score"],
             r["edge_rating"],
             r["trade_action"],
+            r["position_sizing"],
             r["signal"],
             r["atr_risk"],
             r["stop_loss"],
