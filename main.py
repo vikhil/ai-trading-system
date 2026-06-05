@@ -915,11 +915,11 @@ try:
     print("Writing FailedLogs...")
     #failed_ws.clear()
 
-    failed_data = ["Ticker", "Error Type", "Reason"]
-    
-    for row in failed_logs:
-       failed_data.append(row)
+   failed_data = [["Ticker", "Error Type", "Reason"]]
 
+    if failed_logs:
+        failed_data.extend(failed_logs)
+    
     safe_update(failed_ws, failed_data)
     
     print("FailedLogs Updated")
