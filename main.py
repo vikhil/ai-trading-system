@@ -24,6 +24,13 @@ from alerts import send_telegram
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
+def calculate_position_size(capital, atr_risk, risk_per_trade=0.01):
+    if atr_risk <= 0 or pd.isna(atr_risk):
+        return 0
+
+    risk_amount = capital * risk_per_trade
+    return round(risk_amount / atr_risk, 2)
+
 def safe_download(ticker, period="6mo", interval="1d", retries=2):
 
     for attempt in range(retries + 1):
@@ -509,7 +516,7 @@ for ticker, df, error in results_map:
         target = round(float(risk_values.iloc[2]), 2)        
         risk_reward = float(risk_values.iloc[3]) if pd.notna(risk_values.iloc[3]) else 0
 
-        position_size = calculate_position_size(CAPITAL, atr_risk)
+        position_size = calculate_position_size(CAPITAL, atr_risk, RISK_PER_TRADE)
         
         #if risk_reward < 1.5:
             #print(f"SKIP: {ticker} REASON: LOW_RR {risk_reward}")
@@ -557,13 +564,6 @@ for ticker, df, error in results_map:
 
         edge_rating = int(calculate_edge_rating(edge_score))
         trade_action = get_trade_action(edge_rating)
-
-        def calculate_position_size(capital, atr_risk, risk_per_trade=0.01):
-            if atr_risk <= 0 or pd.isna(atr_risk):
-                return 0
-
-        risk_amount = capital * risk_per_trade
-        return round(risk_amount / atr_risk, 2)
 
         # ----------------------------
         # STREAM ROUTING (FIXED LOGIC)
@@ -954,7 +954,7 @@ for r in results_sorted:
             r["edge_score"],
             r["edge_rating"],
             r["trade_action"],
-            r["position_sizing"],
+            r["position_size"],
             r["signal"],
             r["atr_risk"],
             r["stop_loss"],
