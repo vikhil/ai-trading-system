@@ -7,6 +7,9 @@ DEBUG_LOGS = True
 CAPITAL = 100000
 RISK_PER_TRADE = 0.01
 
+MAX_BUYS = 5
+MAX_WATCH = 10
+
 import json
 import os
 import pandas as pd
@@ -27,9 +30,13 @@ from datetime import datetime
 def calculate_position_size(capital, atr_risk, risk_per_trade=0.01):
     if atr_risk <= 0 or pd.isna(atr_risk):
         return 0
-
     risk_amount = capital * risk_per_trade
-    return round(risk_amount / atr_risk, 2)
+    
+    # ATR risk is per-share loss
+    qty = risk_amount / atr_risk
+
+    # optional: cap extreme positions
+    return max(0, round(qty, 2))
 
 def safe_download(ticker, period="6mo", interval="1d", retries=2):
 
@@ -132,6 +139,36 @@ except:
     
 watchlist_ws = sheet.worksheet("Watchlist")
 
+try:
+    portfolio_ws = sheet.worksheet("Portfolio")
+except:
+    portfolio_ws = sheet.add_worksheet(
+        title="Portfolio",
+        rows="1000",
+        cols="5"
+    )
+
+# ----------------------------
+# PORTFOLIO EXPOSURE CONTROL
+# ----------------------------
+
+portfolio_data = portfolio_ws.get_all_records()
+
+open_positions = len([
+    row for row in portfolio_data
+    if str(row.get("Status", "")).upper() == "OPEN"
+])
+
+MAX_OPEN_POSITIONS = 5
+
+available_slots = max(
+    0,
+    MAX_OPEN_POSITIONS - open_positions
+)
+
+print("Open Positions:", open_positions)
+print("Available Slots:", available_slots)
+
 print("========== WORKSHEET CHECK ==========")
 
 print("Spreadsheet URL:", sheet.url)
@@ -156,14 +193,7 @@ stocks = load_universe()
 stocks = sorted(list(set(stocks)))
 
 print("Stocks:", len(stocks))
-
-# ----------------------------
-# UPDATE WATCHLIST (1 CALL ONLY)
-# ----------------------------
-
-watchlist_data = [["Ticker", "CMP", "RSI", "EMA20", "EMA50", "Trend", "Score", "Edge Rating",  "Trade Action", "RS Score", "Volume Spike"]]
-watchlist_seen = set()
-
+    
 # ----------------------------
 # MARKET REGIME
 # ----------------------------
@@ -322,10 +352,10 @@ def calculate_edge_rating(edge_score):
 def get_trade_action(edge_rating):
     if edge_rating >= 8:
         return "STRONG_BUY"
-    elif edge_rating >= 7:
+    elif edge_rating == 7:
         return "BUY"
     elif edge_rating >= 5:
-        return "HOLD"
+        return "WATCH"
     else:
         return "IGNORE"
 
@@ -569,19 +599,6 @@ for ticker, df, error in results_map:
         # STREAM ROUTING (FIXED LOGIC)
         # ----------------------------
         
-        # Always add WATCHLIST only for WATCH + BUY + STRONG_BUY
-        if trade_action in ["WATCH", "BUY", "STRONG_BUY"]:
-
-            if ticker not in watchlist_seen:
-                watchlist_data.append([
-                    ticker, cmp, rsi, ema20, ema50,
-                    trend, score, edge_rating,
-                    trade_action, rs_score, volume_spike
-                ])
-        
-                watchlist_seen.add(ticker)
-                print(f"📋 Added to Watchlist: {ticker}")
-
         if trade_action == "BUY":
             
             print("TG_TOKEN EXISTS:", bool(os.getenv("TG_TOKEN")))
@@ -675,16 +692,56 @@ watchlist_data = [watchlist_data[0]] + sorted(
 # SORT RESULTS
 # ----------------------------
 
-#results = sorted(results, key=lambda x: x[7] if x[7] is not None else 0, reverse=True)
-
-#results_sorted = sorted(results, key=lambda x: x[7] if x[7] is not None else 0, reverse=True)
-
 results_sorted = sorted(
     results,
     key=lambda x: x["edge_score"],
     reverse=True
 )
+    
+buy_candidates = [
+    r for r in results_sorted
+    if r["trade_action"] in ["BUY", "STRONG_BUY"]
+]
 
+watch_candidates = [
+    r for r in results_sorted
+    if r["trade_action"] == "WATCH"
+]
+
+buy_limit = min(
+    MAX_BUYS,
+    available_slots
+)
+
+#buy_candidates = buy_candidates[:buy_limit]
+buy_candidates = buy_candidates[:MAX_BUYS]
+executed_buys = buy_candidates[:available_slots]
+
+watch_candidates = watch_candidates[:MAX_WATCH]
+
+# ----------------------------
+# UPDATE WATCHLIST (1 CALL ONLY)
+# ----------------------------
+
+watchlist_data = [["Ticker", "CMP", "RSI", "EMA20", "EMA50", "Trend", "Score", "Edge Rating",  "Trade Action", "RS Score", "Volume Spike"]]
+watchlist_seen = set()
+
+for r in buy_candidates + watch_candidates:
+
+    watchlist_data.append([
+        r["ticker"],
+        r["cmp"],
+        r["rsi"],
+        r["ema20"],
+        r["ema50"],
+        r["trend"],
+        r["score"],
+        r["edge_rating"],
+        r["trade_action"],
+        r["rs_score"],
+        r["volume_spike"]
+    ])
+    
 print("Sample result type:", type(results_sorted[0]) if results_sorted else None)
 
 # SAFETY: ensure no malformed rows
