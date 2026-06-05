@@ -558,12 +558,12 @@ for ticker, df, error in results_map:
         edge_rating = int(calculate_edge_rating(edge_score))
         trade_action = get_trade_action(edge_rating)
 
-def calculate_position_size(capital, atr_risk, risk_per_trade=0.01):
-    if atr_risk <= 0 or pd.isna(atr_risk):
-        return 0
+        def calculate_position_size(capital, atr_risk, risk_per_trade=0.01):
+            if atr_risk <= 0 or pd.isna(atr_risk):
+                return 0
 
-    risk_amount = capital * risk_per_trade
-    return round(risk_amount / atr_risk, 2)
+        risk_amount = capital * risk_per_trade
+        return round(risk_amount / atr_risk, 2)
 
         # ----------------------------
         # STREAM ROUTING (FIXED LOGIC)
