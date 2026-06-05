@@ -633,6 +633,7 @@ for ticker, df, error in results_map:
             "edge_score": edge_score,
             "edge_rating": edge_rating,
             "trade_action": trade_action,
+            "position_size": position_size,
             "signal": signal,
             "atr_risk": atr_risk,
             "stop_loss": stop_loss,
