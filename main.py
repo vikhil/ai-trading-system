@@ -154,10 +154,18 @@ except:
 
 portfolio_data = portfolio_ws.get_all_records()
 
-open_positions = len([
+open_positions_data = [
     row for row in portfolio_data
-    if str(row.get("Status", "")).upper() == "OPEN"
-])
+    if str(row.get("Status", "")).upper().strip() == "OPEN"
+    and row.get("Ticker")
+]
+
+open_positions = len(open_positions_data)
+
+open_tickers = {
+    str(row.get("Ticker", "")).strip().upper()
+    for row in open_positions_data
+}
 
 MAX_OPEN_POSITIONS = 5
 
@@ -363,7 +371,15 @@ for ticker, df, error in results_map:
     error_reason = None
     
     try:
-
+        
+        # ----------------------------
+        # EXISTING POSITIONS FILTER (PORTFOLIO SAFETY)
+        # ----------------------------
+        if ticker.upper() in open_tickers:
+            if DEBUG_LOGS:
+                print(f"SKIP: {ticker} already in OPEN portfolio")
+            continue
+            
         #df, error = safe_download(ticker)
     
         # =========================
