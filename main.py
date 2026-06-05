@@ -134,23 +134,6 @@ failed_logs = []
 
 print("Connected")
 
-test_ws = sheet.worksheet("Scanner")
-
-test_ws.update(
-    values=[
-        ["TEST"],
-        ["GITHUB ACTIONS WRITE CHECK"]
-    ],
-    range_name="A1"
-)
-
-print("TEST WRITE SUCCESS")
-
-print(
-    "A1 VALUE AFTER TEST:",
-    test_ws.acell("A1").value
-)
-
 # ----------------------------
 # LOAD STOCKS
 # ----------------------------
@@ -375,6 +358,13 @@ for ticker, df, error in results_map:
         
         if len(df) < 60:
             print(f"SKIP: {ticker} REASON: INSUFFICIENT_DATA {len(df)}")
+
+            failed_logs.append([
+                ticker,
+                "INSUFFICIENT_DATA",
+                str(len(df))
+            ])
+        
             continue
             
         # 6. Final safety check
@@ -417,6 +407,13 @@ for ticker, df, error in results_map:
 
         if current_volume < avg_volume * 0.5:   # relaxed threshold
             print(f"SKIP: {ticker} REASON: LOW_VOLUME {current_volume}")
+            
+            failed_logs.append([
+                ticker,
+                "LOW_VOLUME",
+                str(current_volume)
+            ])
+        
             continue
     
         # C) ATR filter
@@ -520,6 +517,13 @@ for ticker, df, error in results_map:
 
         if risk_reward < 1.0:   # relax temporarily
             print(f"SKIP: {ticker} REASON: LOW_RR {risk_reward}")
+
+            failed_logs.append([
+                ticker,
+                "LOW_RR",
+                str(risk_reward)
+            ])
+        
             continue
             
         # ----------------------------
@@ -550,17 +554,20 @@ for ticker, df, error in results_map:
         edge_rating = int(calculate_edge_rating(edge_score))
         trade_action = get_trade_action(edge_rating)
 
-        if regime == "BEAR":
+        position_size = 100
 
-            # Elite setups still allowed
-            if score >= 90 and edge_rating >= 8:
-                trade_action = "STRONG_BUY"
-        
-            elif score >= 85 and edge_rating >= 7:
-                trade_action = "BUY"
-        
-            elif trade_action in ["BUY", "STRONG_BUY"]:
-                trade_action = "WATCH"
+        if regime == "SIDEWAYS":
+            position_size = 75
+
+        elif regime == "BEAR":
+            position_size = 50
+    
+        if trade_action == "BUY" and regime == "BEAR":
+            position_size = 25
+
+        if trade_action == "STRONG_BUY" and regime == "BEAR":
+            position_size = 50
+
         
         # ----------------------------
         # STREAM ROUTING (FIXED LOGIC)
@@ -820,6 +827,7 @@ headers = [
     "Edge Score",
     "Edge Rating",
     "Trade Action",
+    "Position Size %"
     "Signal",
     "ATR",
     "Stop Loss",
@@ -847,6 +855,7 @@ for r in results_sorted:
         r["edge_score"],
         r["edge_rating"],
         r["trade_action"],
+        position_size,        
         r["signal"],
         r["atr_risk"],
         r["stop_loss"],
