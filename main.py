@@ -176,6 +176,7 @@ available_slots = max(
 
 print("Open Positions:", open_positions)
 print("Available Slots:", available_slots)
+print("Open Tickers:", open_tickers)
 
 print("========== WORKSHEET CHECK ==========")
 
@@ -719,9 +720,19 @@ buy_candidates = [
     if r["trade_action"] in ["BUY", "STRONG_BUY"]
 ]
 
+buy_candidates = [
+    r for r in buy_candidates
+    if r["ticker"].upper() not in open_tickers
+]
+
 watch_candidates = [
     r for r in results_sorted
     if r["trade_action"] == "WATCH"
+]
+
+watch_candidates = [
+    r for r in watch_candidates
+    if r["ticker"].upper() not in open_tickers
 ]
 
 buy_limit = min(
@@ -729,8 +740,10 @@ buy_limit = min(
     available_slots
 )
 
-#buy_candidates = buy_candidates[:buy_limit]
+buy_limit = min(MAX_BUYS, available_slots)
+
 buy_candidates = buy_candidates[:MAX_BUYS]
+
 executed_buys = buy_candidates[:available_slots]
 
 watch_candidates = watch_candidates[:MAX_WATCH]
