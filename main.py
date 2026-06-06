@@ -31,17 +31,43 @@ from portfolio_manager import enrich_portfolio
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
-def log_trade(event, ticker, details):
+def log_trade(
+    action,
+    ticker,
+    cmp_price="",
+    edge_score="",
+    edge_rating="",
+    position_size="",
+    stop_loss="",
+    target="",
+    risk_reward="",
+    rs_score="",
+    signal=""
+):
+
     try:
         journal = sheet.worksheet("Trade Journal")
+
     except:
-        journal = sheet.add_worksheet("Trade Journal", rows="5000", cols="10")
+        journal = sheet.add_worksheet(
+            "Trade Journal",
+            rows="5000",
+            cols="20"
+        )
 
     journal.append_row([
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        event,
         ticker,
-        str(details)
+        action,
+        cmp_price,
+        edge_score,
+        edge_rating,
+        position_size,
+        stop_loss,
+        target,
+        risk_reward,
+        rs_score,
+        signal
     ], value_input_option="RAW")
     
 def calculate_position_size(capital, atr_risk, risk_per_trade=0.01):
@@ -814,13 +840,17 @@ for r in sorted_buys:
     allocated_risk += trade_risk
 
     log_trade(
-        "BUY",
-        r["ticker"],
-        {
-            "Price": r["cmp"],
-            "Score": r["score"],
-            "Edge": r["edge_rating"]
-        }
+        action="BUY",
+        ticker=r["ticker"],
+        cmp_price=r["cmp"],
+        edge_score=r["edge_score"],
+        edge_rating=r["edge_rating"],
+        position_size=r["position_size"],
+        stop_loss=r["stop_loss"],
+        target=r["target"],
+        risk_reward=r["risk_reward"],
+        rs_score=r["rs_score"],
+        signal=r["signal"]
     )
     
 executed_watches = watch_candidates[:MAX_WATCH]
@@ -915,9 +945,17 @@ for r in executed_watches:
     print(f"👀 WATCH: {r['ticker']} Edge: {r['edge_rating']}")
 
     log_trade(
-        "WATCH",
-        r["ticker"],
-        f"Edge={r['edge_rating']} Score={r['score']}"
+        action="WATCH",
+        ticker=r["ticker"],
+        cmp_price=r["cmp"],
+        edge_score=r["edge_score"],
+        edge_rating=r["edge_rating"],
+        position_size="",
+        stop_loss=r["stop_loss"],
+        target=r["target"],
+        risk_reward=r["risk_reward"],
+        rs_score=r["rs_score"],
+        signal=r["signal"]
     )
     
 # ----------------------------
