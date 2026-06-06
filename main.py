@@ -708,7 +708,38 @@ for ticker, df, error in results_map:
             "breakout": breakout
         })
         print("RESULTS SIZE:", len(results))
+
+        # ----------------------------
+        # FINAL RESULTS SORTING
+        # ----------------------------
         
+        results_sorted = sorted(
+            results,
+            key=lambda x: x.get("edge_score", 0),
+            reverse=True
+        )
+        
+        # safety cleanup
+        results_sorted = [
+            r for r in results_sorted
+            if isinstance(r, dict) and "ticker" in r
+        ]
+
+        # ----------------------------
+        # BUY + WATCH CANDIDATES
+        # ----------------------------
+        
+        buy_candidates = [
+            r for r in results_sorted
+            if r["trade_action"] in ["BUY", "STRONG_BUY"]
+            and r["ticker"].upper() not in open_tickers
+        ]
+        
+        watch_candidates = [
+            r for r in results_sorted
+            if r["trade_action"] == "WATCH"
+            and r["ticker"].upper() not in open_tickers
+        ]
     except Exception as e:
         error_reason = str(e)
     
@@ -725,22 +756,6 @@ for ticker, df, error in results_map:
         ])
     
         continue
-
-# ----------------------------
-# BUY + WATCH CANDIDATES
-# ----------------------------
-
-buy_candidates = [
-    r for r in results_sorted
-    if r["trade_action"] in ["BUY", "STRONG_BUY"]
-    and r["ticker"].upper() not in open_tickers
-]
-
-watch_candidates = [
-    r for r in results_sorted
-    if r["trade_action"] == "WATCH"
-    and r["ticker"].upper() not in open_tickers
-]
 
 # ----------------------------
 # CAPITAL-AWARE EXECUTION ENGINE
