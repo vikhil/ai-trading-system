@@ -696,16 +696,6 @@ for ticker, df, error in results_map:
         continue
 
 # ----------------------------
-# SORT WATCHLIST (NEW ADDITION)
-# ----------------------------
-
-watchlist_data = [watchlist_data[0]] + sorted(
-    watchlist_data[1:],
-    key=lambda x: x[7],
-    reverse=True
-)
-
-# ----------------------------
 # SORT RESULTS
 # ----------------------------
 
