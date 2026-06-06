@@ -2,7 +2,7 @@ DEBUG = False
 DEBUG_LOGS = True 
 
 # ----------------------------
-# GLOBAL RISK SETTINGS (ADD HERE)
+# GLOBAL RISK SETTINGS
 # ----------------------------
 CAPITAL = 100000
 
@@ -148,7 +148,7 @@ for ws in sheet.worksheets():
     )
 
 # ============================
-# SETTINGS SHEET (ADD HERE)
+# SETTINGS SHEET
 # ============================
 
 try:
@@ -876,8 +876,6 @@ for r in executed_buys:
     ])
 
 safe_update(portfolio_ws, existing_portfolio)
-
-# Portfolio V2 retired
 
 # ----------------------------
 # EXECUTION LAYER (CONTROLLED)
