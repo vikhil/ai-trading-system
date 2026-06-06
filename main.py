@@ -31,6 +31,19 @@ from portfolio_manager import enrich_portfolio
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
+def log_trade(event, ticker, details):
+    try:
+        journal = sheet.worksheet("Trade Journal")
+    except:
+        journal = sheet.add_worksheet("Trade Journal", rows="5000", cols="10")
+
+    journal.append_row([
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        event,
+        ticker,
+        str(details)
+    ], value_input_option="RAW")
+    
 def calculate_position_size(capital, atr_risk, risk_per_trade=0.01):
     if atr_risk <= 0 or pd.isna(atr_risk):
         return 0
@@ -133,7 +146,24 @@ for ws in sheet.worksheets():
         "| ID:",
         ws.id
     )
-    
+
+# ============================
+# SETTINGS SHEET (ADD HERE)
+# ============================
+
+try:
+    settings_ws = sheet.worksheet("Settings")
+    settings = settings_ws.get_all_records()
+except:
+    settings_ws = sheet.add_worksheet(
+        title="Settings",
+        rows="500",
+        cols="10"
+    )
+    settings = []
+
+print("Settings Sheet Loaded:", len(settings))
+
 scanner_ws = sheet.worksheet("Scanner")
 
 try:
@@ -174,8 +204,9 @@ open_tickers = {
 current_portfolio_size = open_positions
 
 # Dynamic portfolio sizing
-MAX_OPEN_POSITIONS = round(
-    current_portfolio_size * 1.10
+MAX_OPEN_POSITIONS = max(
+    20,
+    round(current_portfolio_size * 1.10)
 )
 
 available_slots = max(
@@ -722,7 +753,7 @@ for ticker, df, error in results_map:
         # safety cleanup
         results_sorted = [
             r for r in results_sorted
-            if isinstance(r, dict) and "ticker" in r
+            if isinstance(r, dict) and "ticker" in r and "edge_score" in r
         ]
 
         # ----------------------------
@@ -782,7 +813,71 @@ for r in sorted_buys:
     executed_buys.append(r)
     allocated_risk += trade_risk
 
+    log_trade(
+        "BUY",
+        r["ticker"],
+        {
+            "Price": r["cmp"],
+            "Score": r["score"],
+            "Edge": r["edge_rating"]
+        }
+    )
+    
 executed_watches = watch_candidates[:MAX_WATCH]
+
+# ----------------------------
+# PORTFOLIO UPDATE
+# ----------------------------
+
+existing_portfolio = portfolio_ws.get_all_values()
+
+if not existing_portfolio:
+
+    portfolio_headers = [
+        "Ticker",
+        "Status",
+        "Buy Price",
+        "Quantity",
+        "LTP",
+        "P/L %",
+        "RSI",
+        "Trend",
+        "Score",
+        "Edge Score",
+        "Edge Rating",
+        "RS Score",
+        "Stop Loss",
+        "Zone",
+        "Action",
+        "Last Updated"
+    ]
+
+    existing_portfolio = [portfolio_headers]
+
+for r in executed_buys:
+
+    existing_portfolio.append([
+        r["ticker"],
+        "OPEN",
+        r["cmp"],
+        round(r["position_size"], 0),
+        r["cmp"],
+        0,
+        r["rsi"],
+        r["trend"],
+        r["score"],
+        r["edge_score"],
+        r["edge_rating"],
+        r["rs_score"],
+        r["stop_loss"],
+        "",
+        r["trade_action"],
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    ])
+
+safe_update(portfolio_ws, existing_portfolio)
+
+# Portfolio V2 retired
 
 # ----------------------------
 # EXECUTION LAYER (CONTROLLED)
@@ -792,10 +887,40 @@ for r in executed_buys:
 
     msg = f"📌 BUY: {r['ticker']}\nEdge: {r['edge_rating']}\nScore: {r['score']}"
     print(msg)
+    
+try:
+    alerts_ws = sheet.worksheet("Alerts")
+except:
+    alerts_ws = sheet.add_worksheet(
+        title="Alerts",
+        rows="5000",
+        cols="10"
+    )
+
+    alerts_ws.append_row([
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "BUY",
+        r["ticker"],
+        r["edge_rating"],
+        r["score"]
+    ])
+
     send_telegram(msg)
 
+    log_trade(
+        "BUY",
+        r["ticker"],
+        f"Edge={r['edge_rating']} Score={r['score']} RR={r['risk_reward']}"
+    )
+    
 for r in executed_watches:
     print(f"👀 WATCH: {r['ticker']} Edge: {r['edge_rating']}")
+
+    log_trade(
+        "WATCH",
+        r["ticker"],
+        f"Edge={r['edge_rating']} Score={r['score']}"
+    )
     
 # ----------------------------
 # PORTFOLIO SLOT CONTROL
@@ -833,10 +958,10 @@ for r in executed_buys + executed_watches:
 print("Sample result type:", type(results_sorted[0]) if results_sorted else None)
 
 # SAFETY: ensure no malformed rows
-results_sorted = [
-    r for r in results_sorted
-    if isinstance(r, dict) and "edge_score" in r
-]
+#results_sorted = [
+#    r for r in results_sorted
+#    if isinstance(r, dict) and "edge_score" in r
+#]
 
 print("Final Results Count:", len(results_sorted))
 
@@ -1003,7 +1128,7 @@ headers = [
     "Volume Spike",
     "Breakout"
 ]
-
+scanner_ws.clear()
 scanner_data = [headers]
 
 for r in results_sorted:
@@ -1107,7 +1232,7 @@ top_picks = [headers]
 for r in results_sorted:
     if (
         r["edge_rating"] >= 7
-        and r["score"] >= 80
+        and r["score"] >= 75
     ):
         top_picks.append([
             r["ticker"],
