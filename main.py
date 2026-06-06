@@ -645,22 +645,8 @@ for ticker, df, error in results_map:
         # ----------------------------
         # STREAM ROUTING (FIXED LOGIC)
         # ----------------------------
-        
-        if trade_action == "BUY":
-            
-            print("TG_TOKEN EXISTS:", bool(os.getenv("TG_TOKEN")))
-            print("TG_CHAT_ID EXISTS:", bool(os.getenv("TG_CHAT_ID")))
 
-            msg = f"📌 BUY: {ticker}\nEdge: {edge_rating}\nScore: {score}"
-            print(msg)
-            send_telegram(msg)
-
-        elif trade_action == "STRONG_BUY":
-            msg = f"🚀 STRONG BUY: {ticker}\nEdge: {edge_rating}\nScore: {score}"
-            print(msg)
-            send_telegram(msg)
-
-        elif trade_action == "WATCH":
+        if trade_action == "WATCH":
             print(f"👀 WATCH CANDIDATE: {ticker} Edge: {edge_rating}")
             # later we can send to Telegram / WhatsApp / email
         
@@ -734,38 +720,51 @@ results_sorted = sorted(
     key=lambda x: x["edge_score"],
     reverse=True
 )
-    
-buy_candidates = [
+
+buy_limit = min(MAX_BUYS, available_slots)
+
+# ----------------------------
+# BUY PRIORITY SPLIT
+# ----------------------------
+
+strong_buy = [
     r for r in results_sorted
-    if r["trade_action"] in ["BUY", "STRONG_BUY"]
+    if r["trade_action"] == "STRONG_BUY"
+    and r["ticker"].upper() not in open_tickers
 ]
 
-buy_candidates = [
-    r for r in buy_candidates
-    if r["ticker"].upper() not in open_tickers
+buy = [
+    r for r in results_sorted
+    if r["trade_action"] == "BUY"
+    and r["ticker"].upper() not in open_tickers
 ]
 
 watch_candidates = [
     r for r in results_sorted
     if r["trade_action"] == "WATCH"
+    and r["ticker"].upper() not in open_tickers
 ]
 
-watch_candidates = [
-    r for r in watch_candidates
-    if r["ticker"].upper() not in open_tickers
-]
+buy_candidates = strong_buy + buy
+executed_buys = buy_candidates[:buy_limit]
+executed_watches = watch_candidates[:MAX_WATCH]
 
+# ----------------------------
+# EXECUTION LAYER (CONTROLLED)
+# ----------------------------
+
+for r in executed_buys:
+
+    msg = f"📌 BUY: {r['ticker']}\nEdge: {r['edge_rating']}\nScore: {r['score']}"
+    print(msg)
+    send_telegram(msg)
+
+for r in executed_watches:
+    print(f"👀 WATCH: {r['ticker']} Edge: {r['edge_rating']}")
+    
 # ----------------------------
 # PORTFOLIO SLOT CONTROL
 # ----------------------------
-
-buy_limit = min(MAX_BUYS, available_slots)
-
-buy_candidates = buy_candidates[:buy_limit]
-
-executed_buys = buy_candidates
-
-watch_candidates = watch_candidates[:MAX_WATCH]
 
 print(f"Available Slots: {available_slots}")
 print(f"Buy Limit Applied: {buy_limit}")
