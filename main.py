@@ -7,7 +7,7 @@ DEBUG_LOGS = True
 CAPITAL = 100000
 RISK_PER_TRADE = 0.01
 
-MAX_BUYS = 5
+MAX_BUYS = 999
 MAX_WATCH = 10
 
 import json
@@ -755,19 +755,21 @@ watch_candidates = [
     if r["ticker"].upper() not in open_tickers
 ]
 
-buy_limit = min(
-    MAX_BUYS,
-    available_slots
-)
+# ----------------------------
+# PORTFOLIO SLOT CONTROL
+# ----------------------------
 
 buy_limit = min(MAX_BUYS, available_slots)
 
 buy_candidates = buy_candidates[:buy_limit]
 
-#executed_buys = buy_candidates[:available_slots]
-executed_buys = buy_candidates[:buy_limit]
+executed_buys = buy_candidates
 
 watch_candidates = watch_candidates[:MAX_WATCH]
+
+print(f"Available Slots: {available_slots}")
+print(f"Buy Limit Applied: {buy_limit}")
+print(f"Final Buy Candidates: {len(buy_candidates)}")
 
 # ----------------------------
 # UPDATE WATCHLIST (1 CALL ONLY)
@@ -849,6 +851,25 @@ elif breadth_score >= 2:
 else:
     market_health = "VERY WEAK"
 
+# ----------------------------
+# MARKET INTERNAL STRENGTH
+# ----------------------------
+
+if regime == "BEAR" and breadth_score >= 10:
+    internal_strength = "POSITIVE_DIVERGENCE"
+
+elif regime == "BULL" and breadth_score < 5:
+    internal_strength = "NEGATIVE_DIVERGENCE"
+
+elif regime == "BULL" and breadth_score >= 10:
+    internal_strength = "CONFIRMED_BULL"
+
+elif regime == "BEAR" and breadth_score < 5:
+    internal_strength = "CONFIRMED_BEAR"
+
+else:
+    internal_strength = "NEUTRAL"
+
 print("Market Health:", market_health)
 
 # ----------------------------
@@ -864,7 +885,8 @@ headers_market = [
     "BUY Count",
     "WATCH Count",
     "Breadth %",
-    "Market Health"
+    "Market Health",
+    "Internal Strength"
 ]
 
 breadth_score = round(float(breadth_score), 2)
@@ -878,7 +900,8 @@ market_trend_row = [
     int(buy_count),
     int(watch_count),
     float(breadth_score),
-    str(market_health)
+    str(market_health),
+    str(internal_strength)
 ]
 
 existing = market_ws.get_all_values()
