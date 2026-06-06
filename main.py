@@ -5,7 +5,9 @@ DEBUG_LOGS = True
 # GLOBAL RISK SETTINGS (ADD HERE)
 # ----------------------------
 CAPITAL = 100000
+
 RISK_PER_TRADE = 0.01
+MAX_CAPITAL_RISK = 0.20
 
 MAX_BUYS = 999
 MAX_WATCH = 10
@@ -181,6 +183,22 @@ available_slots = max(
     MAX_OPEN_POSITIONS - open_positions
 )
 
+# ----------------------------
+# PORTFOLIO RISK TRACKING (NEW)
+# ----------------------------
+
+current_portfolio_risk = 0.0
+
+for row in open_positions_data:
+    try:
+        atr_risk = row.get("ATR Risk", 0)
+
+        if atr_risk:
+            current_portfolio_risk += float(atr_risk)
+
+    except:
+        continue
+        
 print("Current Portfolio Size:", current_portfolio_size)
 print("Max Portfolio Size:", MAX_OPEN_POSITIONS)
 print("Open Positions:", open_positions)
@@ -514,9 +532,6 @@ for ticker, df, error in results_map:
         # FINAL DATA NORMALIZATION FIX
         # =========================
         
-        if df.empty:
-            continue
-        
         stock_close = df["Close"].dropna()
 
         if len(stock_close) < 2:
@@ -712,30 +727,12 @@ for ticker, df, error in results_map:
         continue
 
 # ----------------------------
-# SORT RESULTS
+# BUY + WATCH CANDIDATES
 # ----------------------------
 
-results_sorted = sorted(
-    results,
-    key=lambda x: x["edge_score"],
-    reverse=True
-)
-
-buy_limit = min(MAX_BUYS, available_slots)
-
-# ----------------------------
-# BUY PRIORITY SPLIT
-# ----------------------------
-
-strong_buy = [
+buy_candidates = [
     r for r in results_sorted
-    if r["trade_action"] == "STRONG_BUY"
-    and r["ticker"].upper() not in open_tickers
-]
-
-buy = [
-    r for r in results_sorted
-    if r["trade_action"] == "BUY"
+    if r["trade_action"] in ["BUY", "STRONG_BUY"]
     and r["ticker"].upper() not in open_tickers
 ]
 
@@ -745,8 +742,31 @@ watch_candidates = [
     and r["ticker"].upper() not in open_tickers
 ]
 
-buy_candidates = strong_buy + buy
-executed_buys = buy_candidates[:buy_limit]
+# ----------------------------
+# CAPITAL-AWARE EXECUTION ENGINE
+# ----------------------------
+
+executed_buys = []
+allocated_risk = 0
+
+max_total_risk = CAPITAL * MAX_CAPITAL_RISK
+
+sorted_buys = sorted(
+    buy_candidates,
+    key=lambda x: x["edge_score"],
+    reverse=True
+)
+
+for r in sorted_buys:
+
+    trade_risk = CAPITAL * RISK_PER_TRADE
+
+    if (allocated_risk + trade_risk + current_portfolio_risk) > max_total_risk:
+        continue
+
+    executed_buys.append(r)
+    allocated_risk += trade_risk
+
 executed_watches = watch_candidates[:MAX_WATCH]
 
 # ----------------------------
@@ -767,17 +787,19 @@ for r in executed_watches:
 # ----------------------------
 
 print(f"Available Slots: {available_slots}")
-print(f"Buy Limit Applied: {buy_limit}")
-print(f"Final Buy Candidates: {len(buy_candidates)}")
+
+print(f"Max Portfolio Risk Allowed: {max_total_risk}")
+print(f"Allocated Risk: {allocated_risk}")
+print(f"Remaining Risk Capacity: {max_total_risk - allocated_risk}")
+print(f"Executed Buy Count: {len(executed_buys)}")
 
 # ----------------------------
 # UPDATE WATCHLIST (1 CALL ONLY)
 # ----------------------------
 
 watchlist_data = [["Ticker", "CMP", "RSI", "EMA20", "EMA50", "Trend", "Score", "Edge Rating",  "Trade Action", "RS Score", "Volume Spike"]]
-watchlist_seen = set()
 
-for r in executed_buys + watch_candidates:
+for r in executed_buys + executed_watches:
     
     watchlist_data.append([
         r["ticker"],
