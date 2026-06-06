@@ -236,6 +236,26 @@ else:
 print("Market Regime:", regime)
 
 # ----------------------------
+# PORTFOLIO ENRICHMENT
+# ----------------------------
+
+try:
+    enriched_portfolio = enrich_portfolio(
+        portfolio_data
+    )
+
+    print(
+        "Portfolio Holdings:",
+        len(enriched_portfolio)
+    )
+
+except Exception as e:
+    print(
+        "Portfolio Enrichment Failed:",
+        e
+    )
+
+# ----------------------------
 # MARKET TREND LOGGING
 # ----------------------------
 
