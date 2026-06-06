@@ -169,15 +169,23 @@ open_tickers = {
     for row in open_positions_data
 }
 
-MAX_OPEN_POSITIONS = 5
+current_portfolio_size = open_positions
+
+# Dynamic portfolio sizing
+MAX_OPEN_POSITIONS = round(
+    current_portfolio_size * 1.10
+)
 
 available_slots = max(
     0,
     MAX_OPEN_POSITIONS - open_positions
 )
 
+print("Current Portfolio Size:", current_portfolio_size)
+print("Max Portfolio Size:", MAX_OPEN_POSITIONS)
 print("Open Positions:", open_positions)
 print("Available Slots:", available_slots)
+
 print("Open Tickers:", open_tickers)
 
 print("========== WORKSHEET CHECK ==========")
@@ -754,9 +762,10 @@ buy_limit = min(
 
 buy_limit = min(MAX_BUYS, available_slots)
 
-buy_candidates = buy_candidates[:MAX_BUYS]
+buy_candidates = buy_candidates[:buy_limit]
 
-executed_buys = buy_candidates[:available_slots]
+#executed_buys = buy_candidates[:available_slots]
+executed_buys = buy_candidates[:buy_limit]
 
 watch_candidates = watch_candidates[:MAX_WATCH]
 
@@ -767,8 +776,8 @@ watch_candidates = watch_candidates[:MAX_WATCH]
 watchlist_data = [["Ticker", "CMP", "RSI", "EMA20", "EMA50", "Trend", "Score", "Edge Rating",  "Trade Action", "RS Score", "Volume Spike"]]
 watchlist_seen = set()
 
-for r in buy_candidates + watch_candidates:
-
+for r in executed_buys + watch_candidates:
+    
     watchlist_data.append([
         r["ticker"],
         r["cmp"],
