@@ -20,10 +20,12 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 from data_loader import load_universe
 from signals import generate_signal, calculate_atr, apply_risk_engine, add_volume_and_breakout
+
 from sheets_writer import safe_update
 
 import time
 from alerts import send_telegram
+from portfolio_manager import enrich_portfolio
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
