@@ -180,6 +180,8 @@ def enrich_portfolio(portfolio_data):
                 "P/L ₹": round(pl_rupees, 2),
             
                 "P/L %": round(pl_pct, 2),
+
+                "ATR Risk": round(atr_risk, 2),
             
                 "Position Risk": round(position_risk, 2),
             
