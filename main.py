@@ -39,8 +39,6 @@ from engine.risk_engine import (
 
 from engine.scanner_engine import run_scanner
 
-from scanner_engine import run_scanner
-
 from sheets_writer import safe_update
 
 import time
