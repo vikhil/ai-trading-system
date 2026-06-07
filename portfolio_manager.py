@@ -86,11 +86,6 @@ def enrich_portfolio(portfolio_data):
 
     enriched = []
 
-    open_tickers = set(
-        row.get("Ticker", "")
-        for row in portfolio_data
-    )
-    
     for row in portfolio_data:
 
         ticker = str(
@@ -155,20 +150,40 @@ def enrich_portfolio(portfolio_data):
 
             position_risk = atr_risk * qty
             
+            invested = qty * buy_price
+
+            current_value = qty * ltp
+            
+            pl_rupees = current_value - invested
+
             pl_pct = 0
 
             if buy_price > 0:
-                pl_pct = ((ltp - buy_price)/ buy_price) * 100
+                pl_pct = ((ltp - buy_price) / buy_price) * 100
             
             enriched.append({
                 **row,
-                "LTP": round(ltp,2),
-                "P/L %": round(pl_pct,2),
+            
+                "LTP": round(ltp, 2),
+            
+                "Invested": round(invested, 2),
+            
+                "Current Value": round(current_value, 2),
+            
+                "P/L ₹": round(pl_rupees, 2),
+            
+                "P/L %": round(pl_pct, 2),
+            
                 "Position Risk": round(position_risk, 2),
-                "RSI": round(rsi,2),
+            
+                "RSI": round(rsi, 2),
+            
                 "Trend": trend,
+            
                 "Score": score,
+            
                 "Health Score": health_score,
+            
                 "Health Status": health_status
             })
 
