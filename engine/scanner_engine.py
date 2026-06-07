@@ -13,6 +13,17 @@ from engine.risk_engine import (
     get_trade_action
 )
 
+def signal_quality_gate(score, rs_score, risk_reward, volume_spike):
+    if score < 40:
+        return False
+    if rs_score < 10:
+        return False
+    if risk_reward < 1.2:
+        return False
+    if volume_spike < 1:
+        return False
+    return True
+
 def run_scanner(
     results_map,
     open_tickers,
@@ -238,7 +249,23 @@ def run_scanner(
             risk_reward = float(risk_values.iloc[3]) if pd.notna(risk_values.iloc[3]) else 0
     
             position_size = calculate_position_size(capital, atr_risk, risk_per_trade)
+
+            # ----------------------------
+            # SIGNAL QUALITY GATE (NEW)
+            # ----------------------------
             
+            if not signal_quality_gate(score, rs_score, risk_reward, volume_spike):
+                if DEBUG_LOGS:
+                    print(f"SKIP QUALITY GATE: {ticker}")
+                
+                failed_logs.append([
+                    ticker,
+                    "QUALITY_GATE_FAIL",
+                    f"score={score}, rs={rs_score}, rr={risk_reward}, vol_spike={volume_spike}"
+                ])
+                
+                continue
+    
             # ✅ NEW: unified risk object (PHASE 2B FIX)
             trade_risk = {
                 "atr_risk": atr_risk,
