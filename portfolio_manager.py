@@ -136,7 +136,7 @@ def enrich_portfolio(portfolio_data):
     
             health_score, health_status = calculate_health_score(
                 trend,
-                row.get("RS Score", 0)
+                row.get("RS Score", 0),
                 rsi,
                 score
             )
