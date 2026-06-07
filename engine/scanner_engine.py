@@ -26,20 +26,6 @@ def run_scanner(
     log_scan,
     log_signal
 ):
-    
-results, failed_logs = run_scanner(
-    results_map,
-    open_tickers,
-    regime,
-    nifty_return,
-    CAPITAL,
-    RISK_PER_TRADE,
-    DEBUG_LOGS,
-    failed_logs,
-    safe_generate_signal,
-    log_scan,
-    log_signal
-)
 
 # ----------------------------
 # ANALYSIS
