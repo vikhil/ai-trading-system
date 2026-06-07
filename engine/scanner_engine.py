@@ -182,6 +182,15 @@ def run_scanner(
             
             try:
                 signal_data = safe_generate_signal(df, regime, rs_score, ticker)
+
+                if score < 40:
+                    continue
+                
+                if rs_score < 10:
+                    continue
+                
+                if risk_reward < 1.2:
+                    continue
     
                 if signal_data is None:
                     failed_logs.append([ticker, "SIGNAL_FAILED", "generate_signal returned None"])
