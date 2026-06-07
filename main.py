@@ -31,6 +31,18 @@ from portfolio_manager import enrich_portfolio
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
+def normalize_trade_action(action):
+    action = str(action).upper()
+
+    if "BUY" in action:
+        return "BUY"
+    if "WATCH" in action:
+        return "WATCH"
+    if "SELL" in action:
+        return "SELL"
+
+    return "NO TRADE"
+    
 def log_trade(
     action,
     ticker,
