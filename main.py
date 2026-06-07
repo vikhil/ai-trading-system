@@ -56,7 +56,25 @@ def log_exec(msg):
 
 def log_error(msg):
     print(f"[ERROR] {msg}")
-    
+
+def safe_generate_signal(df, regime, rs_score, ticker):
+    try:
+        result = generate_signal(df, regime, rs_score)
+
+        if result is None:
+            log_error(f"{ticker} generate_signal returned None")
+            return None
+
+        if not isinstance(result, (list, tuple)) or len(result) < 10:
+            log_error(f"{ticker} invalid signal shape: {type(result)}")
+            return None
+
+        return result
+
+    except Exception as e:
+        log_error(f"{ticker} signal crash: {str(e)}")
+        return None
+
 def normalize_trade_action(action):
     action = str(action).upper()
 
@@ -287,13 +305,11 @@ current_portfolio_risk = 0.0
 
 for row in open_positions_data:
     try:
-        position_risk = row.get("Position Risk", 0)
+        position_risk = float(row.get("Position Risk") or 0)
+        current_portfolio_risk += position_risk
 
-        if position_risk:
-            current_portfolio_risk += float(position_risk)
-
-    except:
-        continue
+    except Exception:
+        log_error(f"Bad portfolio risk row: {row}")
         
 print("Current Portfolio Size:", current_portfolio_size)
 print("Max Portfolio Size:", MAX_OPEN_POSITIONS)
