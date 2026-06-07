@@ -876,7 +876,9 @@ if not existing_portfolio:
         "Edge Score",
         "Edge Rating",
         "RS Score",
+        "Target",
         "Stop Loss",
+        "Risk Reward",
         "Zone",
         "Action",
         "Last Updated"
