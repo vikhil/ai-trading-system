@@ -14,7 +14,7 @@ DEBUG_LOGS = True
 # ----------------------------
 capital = 100000
 
-RISK_PER_TRADE = 0.01
+risk_per_trade = 0.01
 max_capital_risk = 0.20
 
 MAX_BUYS = 999
