@@ -230,6 +230,15 @@ def run_scanner(
     
             position_size = calculate_position_size(capital, atr_risk, risk_per_trade)
             
+            # ✅ NEW: unified risk object (PHASE 2B FIX)
+            trade_risk = {
+                "atr_risk": atr_risk,
+                "risk_reward": risk_reward,
+                "position_size": position_size,
+                "risk_amount": position_size * atr_risk,
+                "stop_loss": stop_loss,
+                "target": target
+            }
             #if risk_reward < 1.5:
                 #print(f"SKIP: {ticker} REASON: LOW_RR {risk_reward}")
                 #continue
@@ -314,12 +323,12 @@ def run_scanner(
                 "edge_score": edge_score,
                 "edge_rating": edge_rating,
                 "trade_action": trade_action,
-                "position_size": position_size,
+                "position_size": trade_risk["position_size"],
                 "signal": signal,
-                "atr_risk": atr_risk,
-                "stop_loss": stop_loss,
-                "target": target,
-                "risk_reward": risk_reward,
+                "atr_risk": trade_risk["atr_risk"],
+                "stop_loss": trade_risk["stop_loss"],
+                "target": trade_risk["target"],
+                "risk_reward": trade_risk["risk_reward"],
                 "rs_score": rs_score,
                 "rs_rank": rs_rank,
                 "avg_volume": avg_volume,
