@@ -349,7 +349,7 @@ try:
     
         try:
             total_portfolio_value += float(
-                row.get("Market Value", 0)
+                row.get("Current Value", 0)
             )
     
         except:
@@ -366,7 +366,7 @@ try:
         try:
     
             market_value = float(
-                row.get("Market Value", 0)
+                row.get("Current Value", 0)
             )
     
             if total_portfolio_value > 0:
