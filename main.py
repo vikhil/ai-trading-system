@@ -28,7 +28,6 @@ from sheets_writer import safe_update
 import time
 from alerts import send_telegram
 from portfolio_manager import enrich_portfolio
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 def normalize_trade_action(action):
@@ -228,22 +227,22 @@ portfolio_data = portfolio_ws.get_all_records()
             
 open_positions_data = [
     row for row in portfolio_data
-    if str(row.get("Status", "")).upper().strip() == "OPEN"
-    and row.get("Ticker")
+    if row.get("Ticker")
 ]
 
 open_positions = len(open_positions_data)
 
 open_tickers = {
-    str(row.get("Ticker", "")).strip().upper()
-    for row in open_positions_data
+    str(row.get("Ticker")).strip().upper()
+    for row in portfolio_data
+    if row.get("Ticker") and str(row.get("Quantity", "1")) != "0"
 }
 
 current_portfolio_size = open_positions
 
 # Dynamic portfolio sizing
 MAX_OPEN_POSITIONS = max(
-    20,
+    70,
     round(current_portfolio_size * 1.10)
 )
 
@@ -1259,8 +1258,8 @@ print(watchlist_data[:3])
 
 try:
     print("Writing Watchlist...")
-    #watchlist_ws.clear()
-
+    
+    watchlist_ws.clear()
     safe_update(watchlist_ws, watchlist_data)
 
     print(
