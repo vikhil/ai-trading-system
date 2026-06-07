@@ -86,6 +86,11 @@ def enrich_portfolio(portfolio_data):
 
     enriched = []
 
+    open_tickers = set(
+        row.get("Ticker", "")
+        for row in portfolio_data
+    )
+    
     for row in portfolio_data:
 
         ticker = str(
@@ -110,11 +115,7 @@ def enrich_portfolio(portfolio_data):
             
             df = calculate_atr(df)
 
-            signal_data = generate_signal(
-                df,
-                "BULL",
-                0
-            )
+            signal_data = generate_signal(df, "BULL", open_tickers)
 
             (
                 ltp,
@@ -129,16 +130,16 @@ def enrich_portfolio(portfolio_data):
                 volume_spike,
                 breakout
             ) = signal_data
-
+            
+            if ltp is None or rsi is None:
+                continue
+    
             health_score, health_status = calculate_health_score(
                 trend,
-                row.get("RS Score", 0),
+                row.get("RS Score", 0)
                 rsi,
                 score
             )
-
-            row["Health Score"] = health_score
-            row["Health Status"] = health_status
             
             buy_price = float(
                 row.get("Buy Price", 0)
@@ -164,7 +165,8 @@ def enrich_portfolio(portfolio_data):
                 "Health Status": health_status
             })
 
-        except Exception:
+        except Exception as e:
+            print(f"Portfolio Enrich Error for {ticker}: {e}")
             enriched.append(row)
 
     return enriched
