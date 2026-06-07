@@ -884,26 +884,26 @@ if not existing_portfolio:
 
     existing_portfolio = [portfolio_headers]
 
-for r in executed_buys:
-
-    existing_portfolio.append([
-        r["ticker"],
-        "OPEN",
-        r["cmp"],
-        round(r["position_size"], 0),
-        r["cmp"],
-        0,
-        r["rsi"],
-        r["trend"],
-        r["score"],
-        r["edge_score"],
-        r["edge_rating"],
-        r["rs_score"],
-        r["stop_loss"],
-        "",
-        r["trade_action"],
-        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    ])
+# for r in executed_buys:
+#
+#     existing_portfolio.append([
+#         r["ticker"],
+#         "OPEN",
+#         r["cmp"],
+#         round(r["position_size"], 0),
+#         r["cmp"],
+#         0,
+#         r["rsi"],
+#         r["trend"],
+#         r["score"],
+#         r["edge_score"],
+#         r["edge_rating"],
+#         r["rs_score"],
+#         r["stop_loss"],
+#         "",
+#         r["trade_action"],
+#         datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+#     ])
 
 safe_update(portfolio_ws, existing_portfolio)
 
