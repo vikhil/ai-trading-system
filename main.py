@@ -37,6 +37,8 @@ from engine.risk_engine import (
     get_trade_action
 )
 
+from engine.scanner_engine import run_scanner
+
 from sheets_writer import safe_update
 
 import time
