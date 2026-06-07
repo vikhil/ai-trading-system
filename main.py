@@ -22,6 +22,12 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 from data_loader import load_universe
 from signals import generate_signal, calculate_atr, apply_risk_engine, add_volume_and_breakout
+from engine.risk_engine import (
+    calculate_position_size,
+    calculate_edge_score,
+    calculate_edge_rating,
+    get_trade_action
+)
 
 from sheets_writer import safe_update
 
