@@ -1,3 +1,5 @@
+from datetime import datetime
+
 SYSTEM_VERSION = "2A.1-STABLE"
 RUN_ID = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -40,7 +42,6 @@ from sheets_writer import safe_update
 import time
 from alerts import send_telegram
 from portfolio_manager import enrich_portfolio
-from datetime import datetime
 
 def log_scan(msg):
     print(f"[SCAN] {msg}")
