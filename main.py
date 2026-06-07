@@ -859,55 +859,10 @@ executed_watches = watch_candidates[:MAX_WATCH]
 # PORTFOLIO UPDATE
 # ----------------------------
 
-existing_portfolio = portfolio_ws.get_all_values()
-
-if not existing_portfolio:
-
-    portfolio_headers = [
-        "Ticker",
-        "Status",
-        "Buy Price",
-        "Quantity",
-        "LTP",
-        "P/L %",
-        "RSI",
-        "Trend",
-        "Score",
-        "Edge Score",
-        "Edge Rating",
-        "RS Score",
-        "Target",
-        "Stop Loss",
-        "Risk Reward",
-        "Zone",
-        "Action",
-        "Last Updated"
-    ]
-
-    existing_portfolio = [portfolio_headers]
-
-# for r in executed_buys:
-#
-#     existing_portfolio.append([
-#         r["ticker"],
-#         "OPEN",
-#         r["cmp"],
-#         round(r["position_size"], 0),
-#         r["cmp"],
-#         0,
-#         r["rsi"],
-#         r["trend"],
-#         r["score"],
-#         r["edge_score"],
-#         r["edge_rating"],
-#         r["rs_score"],
-#         r["stop_loss"],
-#         "",
-#         r["trade_action"],
-#         datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-#     ])
-
-safe_update(portfolio_ws, existing_portfolio)
+print(
+    "Portfolio sheet left unchanged "
+    f"({len(portfolio_data)} holdings loaded)"
+)
 
 # ----------------------------
 # EXECUTION LAYER (CONTROLLED)
