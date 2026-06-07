@@ -344,6 +344,37 @@ try:
         len(enriched_portfolio)
     )
 
+    # ----------------------------
+    # WRITE ENRICHED PORTFOLIO
+    # ----------------------------
+    
+    if enriched_portfolio:
+    
+        portfolio_headers = list(
+            enriched_portfolio[0].keys()
+        )
+    
+        portfolio_sheet_data = [
+            portfolio_headers
+        ]
+    
+        for row in enriched_portfolio:
+    
+            portfolio_sheet_data.append([
+                row.get(col, "")
+                for col in portfolio_headers
+            ])
+    
+        safe_update(
+            portfolio_ws,
+            portfolio_sheet_data
+        )
+    
+        print(
+            "Portfolio Updated:",
+            len(enriched_portfolio)
+        )
+        
 except Exception as e:
     print(
         "Portfolio Enrichment Failed:",
