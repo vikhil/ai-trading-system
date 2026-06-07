@@ -932,6 +932,9 @@ for r in sorted_buys:
     executed_buys.append(r)
     allocated_risk += trade_risk
     
+    if len(executed_buys) >= available_slots:
+        break
+        
 executed_watches = watch_candidates[:MAX_WATCH]
 
 # ----------------------------
@@ -1187,7 +1190,7 @@ headers = [
     "Edge Score",
     "Edge Rating",
     "Trade Action",
-    "Position Size %",
+    "Position Size",
     "Signal",
     "ATR",
     "Stop Loss",
