@@ -18,8 +18,8 @@ def run_scanner(
     open_tickers,
     regime,
     nifty_return,
-    CAPITAL,
-    RISK_PER_TRADE,
+    capital,
+    risk_per_trade,
     DEBUG_LOGS,
     failed_logs,
     safe_generate_signal,
@@ -110,7 +110,8 @@ def run_scanner(
             df = add_volume_and_breakout(df)
             
             row = df.iloc[-1]
-            
+
+            avg_volume = float(row.get("Avg Volume", 0) or 0)
             avg_volume = row.get("Avg Volume", 0)
             volume_spike = row.get("Volume Spike", 0)
             breakout = row.get("Breakout", 0)
@@ -227,7 +228,7 @@ def run_scanner(
             target = round(float(risk_values.iloc[2]), 2)        
             risk_reward = float(risk_values.iloc[3]) if pd.notna(risk_values.iloc[3]) else 0
     
-            position_size = calculate_position_size(CAPITAL, atr_risk, RISK_PER_TRADE)
+            position_size = calculate_position_size(capital, atr_risk, risk_per_trade)
             
             #if risk_reward < 1.5:
                 #print(f"SKIP: {ticker} REASON: LOW_RR {risk_reward}")
