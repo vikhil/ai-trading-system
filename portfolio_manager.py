@@ -136,17 +136,24 @@ def enrich_portfolio(portfolio_data):
                 score
             )
             
-            buy_price = float(
-                row.get("Buy Price", 0)
+            buy_price = pd.to_numeric(
+                row.get("Buy Price", 0),
+                errors="coerce"
             )
-
-            qty = float(
-                row.get("Quantity", 0)
+            
+            qty = pd.to_numeric(
+                row.get("Quantity", 0),
+                errors="coerce"
             )
-
-            atr_risk = float(
-                row.get("ATR Risk", 0)
+            
+            atr_risk = pd.to_numeric(
+                row.get("ATR Risk", 0),
+                errors="coerce"
             )
+            
+            buy_price = 0 if pd.isna(buy_price) else float(buy_price)
+            qty = 0 if pd.isna(qty) else float(qty)
+            atr_risk = 0 if pd.isna(atr_risk) else float(atr_risk)
 
             position_risk = atr_risk * qty
             
