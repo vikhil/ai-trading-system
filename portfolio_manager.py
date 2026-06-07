@@ -115,7 +115,7 @@ def enrich_portfolio(portfolio_data):
             
             df = calculate_atr(df)
 
-            signal_data = generate_signal(df, "BULL", open_tickers)
+            signal_data = generate_signal(df, "BULL", 0)
 
             (
                 ltp,
@@ -149,6 +149,12 @@ def enrich_portfolio(portfolio_data):
                 row.get("Quantity", 0)
             )
 
+            atr_risk = float(
+                row.get("ATR Risk", 0)
+            )
+
+            position_risk = atr_risk * qty
+            
             pl_pct = 0
 
             if buy_price > 0:
@@ -158,6 +164,7 @@ def enrich_portfolio(portfolio_data):
                 **row,
                 "LTP": round(ltp,2),
                 "P/L %": round(pl_pct,2),
+                "Position Risk": round(position_risk, 2),
                 "RSI": round(rsi,2),
                 "Trend": trend,
                 "Score": score,
