@@ -27,15 +27,19 @@ def run_scanner(
     log_signal
 ):
     
-def analyze_ticker(
-    ticker,
-    df,
+results, failed_logs = run_scanner(
+    results_map,
+    open_tickers,
     regime,
     nifty_return,
-    capital,
-    risk_per_trade,
-    safe_generate_signal
-):
+    CAPITAL,
+    RISK_PER_TRADE,
+    DEBUG_LOGS,
+    failed_logs,
+    safe_generate_signal,
+    log_scan,
+    log_signal
+)
 
 # ----------------------------
 # ANALYSIS
@@ -354,3 +358,5 @@ for ticker, df, error in results_map:
         ])
     
         continue
+
+     return results, failed_logs
