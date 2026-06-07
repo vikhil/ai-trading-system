@@ -586,7 +586,7 @@ sorted_buys = sorted(
 
 for r in sorted_buys:
 
-    trade_risk = capital * risk_per_trade
+    trade_risk = r["position_size"] * r["atr_risk"]
     if (allocated_risk + trade_risk + current_portfolio_risk) > max_total_risk:
         continue
 
