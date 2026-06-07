@@ -225,13 +225,6 @@ except:
 # ----------------------------
 
 portfolio_data = portfolio_ws.get_all_records()
-
-if portfolio_data and len(portfolio_data) > 1:
-    header_len = len(portfolio_data[0])
-
-    for i in range(1, len(portfolio_data)):
-        while len(portfolio_data[i]) < header_len:
-            portfolio_data[i].append("")
             
 open_positions_data = [
     row for row in portfolio_data
@@ -267,10 +260,10 @@ current_portfolio_risk = 0.0
 
 for row in open_positions_data:
     try:
-        atr_risk = row.get("ATR Risk", 0)
+        position_risk = row.get("Position Risk", 0)
 
-        if atr_risk:
-            current_portfolio_risk += float(atr_risk)
+        if position_risk:
+            current_portfolio_risk += float(position_risk)
 
     except:
         continue
@@ -901,6 +894,8 @@ except:
         cols="10"
     )
 
+for r in executed_buys:
+
     alerts_ws.append_row([
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "BUY",
@@ -909,24 +904,22 @@ except:
         r["score"]
     ])
 
+    msg = (
+        f"📌 BUY: {r['ticker']}\n"
+        f"Edge: {r['edge_rating']}\n"
+        f"Score: {r['score']}\n"
+        f"RR: {r['risk_reward']}"
+    )
+
     send_telegram(msg)
 
     log_trade(
-        "BUY",
-        r["ticker"],
-        f"Edge={r['edge_rating']} Score={r['score']} RR={r['risk_reward']}"
-    )
-    
-for r in executed_watches:
-    print(f"👀 WATCH: {r['ticker']} Edge: {r['edge_rating']}")
-
-    log_trade(
-        action="WATCH",
+        action="BUY",
         ticker=r["ticker"],
         cmp_price=r["cmp"],
         edge_score=r["edge_score"],
         edge_rating=r["edge_rating"],
-        position_size="",
+        position_size=r["position_size"],
         stop_loss=r["stop_loss"],
         target=r["target"],
         risk_reward=r["risk_reward"],
