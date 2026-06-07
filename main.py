@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 SYSTEM_VERSION = "2A.1-STABLE"
 RUN_ID = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -17,17 +17,20 @@ capital = 100000
 risk_per_trade = 0.01
 max_capital_risk = 0.20
 
+STATE_FILE = "trade_state.json"
+STATE_EXPIRY_HOURS = 24
+    
 MAX_BUYS = 999
 MAX_WATCH = 10
-
+    
 import json
 import os
+import time
 import pandas as pd
 import gspread
 import yfinance as yf
 
 from oauth2client.service_account import ServiceAccountCredentials
-
 from data_loader import load_universe
 from signals import generate_signal, calculate_atr, apply_risk_engine, add_volume_and_breakout
 from engine.risk_engine import (
@@ -36,14 +39,25 @@ from engine.risk_engine import (
     calculate_edge_rating,
     get_trade_action
 )
-
 from engine.scanner_engine import run_scanner
-
 from sheets_writer import safe_update
-
-import time
 from alerts import send_telegram
 from portfolio_manager import enrich_portfolio
+
+state = load_state()
+
+def load_state():
+    try:
+        if os.path.exists(STATE_FILE):
+            with open(STATE_FILE, "r") as f:
+                return json.load(f)
+    except:
+        print("[STATE] Corrupted file detected. Resetting state.")
+    return {}
+
+def save_state(state):
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f)
 
 def log_scan(msg):
     print(f"[SCAN] {msg}")
@@ -60,6 +74,13 @@ def log_exec(msg):
 def log_error(msg):
     print(f"[ERROR] {msg}")
 
+def is_state_expired(entry_time):
+    try:
+        entry_dt = datetime.strptime(entry_time, "%Y-%m-%d %H:%M:%S")
+        return datetime.now() - entry_dt > timedelta(hours=STATE_EXPIRY_HOURS)
+    except:
+        return True
+        
 def safe_generate_signal(df, regime, rs_score, ticker):
     try:
         result = generate_signal(df, regime, rs_score)
@@ -592,6 +613,22 @@ sorted_buys = sorted(
 
 for r in sorted_buys:
 
+    ticker = r["ticker"]
+    
+    # ----------------------------
+    # STATE CHECK (NEW LOGIC)
+    # ----------------------------
+    if ticker in state:
+        entry = state.get(ticker, {})
+    
+        if entry and not is_state_expired(entry.get("timestamp", "")):
+        continue
+        
+    entry = state.get(ticker)
+
+    if entry and entry.get("status") == "RECENT_BUY":
+        continue
+    
     trade_risk = r["position_size"] * r["atr_risk"]
     if (allocated_risk + trade_risk + current_portfolio_risk) > max_total_risk:
         continue
@@ -649,7 +686,14 @@ for r in executed_buys:
     )
 
     send_telegram(msg)
-
+    
+    state[r["ticker"]] = {
+        "status": "RECENT_BUY",
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    save_state(state)
+    
     log_trade(
         action="BUY",
         ticker=r["ticker"],
@@ -1012,4 +1056,7 @@ except:
 
 safe_update(top_ws, top_picks)
 
+with open(STATE_FILE, "w") as f:
+    json.dump(state, f)
+    
 print("Completed Successfully")
