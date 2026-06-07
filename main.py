@@ -1,3 +1,9 @@
+SYSTEM_VERSION = "2A.1-STABLE"
+RUN_ID = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+print(f"[SYSTEM] Version: {SYSTEM_VERSION}")
+print(f"[SYSTEM] Run ID: {RUN_ID}")
+
 DEBUG = False
 DEBUG_LOGS = True 
 
@@ -36,6 +42,21 @@ from alerts import send_telegram
 from portfolio_manager import enrich_portfolio
 from datetime import datetime
 
+def log_scan(msg):
+    print(f"[SCAN] {msg}")
+
+def log_signal(msg):
+    print(f"[SIGNAL] {msg}")
+
+def log_risk(msg):
+    print(f"[RISK] {msg}")
+
+def log_exec(msg):
+    print(f"[EXECUTION] {msg}")
+
+def log_error(msg):
+    print(f"[ERROR] {msg}")
+    
 def normalize_trade_action(action):
     action = str(action).upper()
 
@@ -110,6 +131,18 @@ def safe_download(ticker, period="6mo", interval="1d", retries=2):
                 return None, str(e)
 
     return None, "Unknown failure"
+
+def validate_download_output(ticker, df, error):
+    if error:
+        return ticker, None, error
+
+    if df is None or len(df) == 0:
+        return ticker, None, "EMPTY_DF"
+
+    if not isinstance(df, pd.DataFrame):
+        return ticker, None, "INVALID_TYPE"
+
+    return ticker, df, None
     
 print("Script Started")
 
@@ -465,7 +498,7 @@ for batch, data in batch_download(stocks, chunk_size=20):
 
             df = data[ticker].dropna()
 
-            results_map.append((ticker, df, None))
+            results_map.append(validate_download_output(ticker, df, None))
 
         except Exception as e:
             results_map.append((ticker, None, str(e)))
@@ -575,7 +608,7 @@ for ticker, df, error in results_map:
             continue
 
         if current_volume < avg_volume * 0.5:   # relaxed threshold
-            print(f"SKIP: {ticker} REASON: LOW_VOLUME {current_volume}")
+            log_scan(f"{ticker} skipped - LOW_VOLUME {current_volume}")
             
             failed_logs.append([
                 ticker,
@@ -623,7 +656,7 @@ for ticker, df, error in results_map:
         # ----------------------------
         
         try:
-            signal_data = generate_signal(df, regime, rs_score)
+            signal_data = safe_generate_signal(df, regime, rs_score, ticker)
 
             if signal_data is None:
                 failed_logs.append([ticker, "SIGNAL_FAILED", "generate_signal returned None"])
@@ -651,7 +684,7 @@ for ticker, df, error in results_map:
         ) = signal_data
 
         if DEBUG_LOGS:
-            print("SIGNAL OK:", ticker)
+            log_signal(f"{ticker} signal generated successfully")
     
         rsi = float(rsi) if pd.notna(rsi) else 0
         ema20 = float(ema20) if pd.notna(ema20) else 0
