@@ -214,6 +214,13 @@ except:
 
 portfolio_data = portfolio_ws.get_all_records()
 
+if portfolio_data and len(portfolio_data) > 1:
+    header_len = len(portfolio_data[0])
+
+    for i in range(1, len(portfolio_data)):
+        while len(portfolio_data[i]) < header_len:
+            portfolio_data[i].append("")
+            
 open_positions_data = [
     row for row in portfolio_data
     if str(row.get("Status", "")).upper().strip() == "OPEN"
