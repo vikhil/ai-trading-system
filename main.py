@@ -12,10 +12,10 @@ DEBUG_LOGS = True
 # ----------------------------
 # GLOBAL RISK SETTINGS
 # ----------------------------
-CAPITAL = 100000
+capital = 100000
 
 RISK_PER_TRADE = 0.01
-MAX_CAPITAL_RISK = 0.20
+max_capital_risk = 0.20
 
 MAX_BUYS = 999
 MAX_WATCH = 10
@@ -38,6 +38,8 @@ from engine.risk_engine import (
 )
 
 from engine.scanner_engine import run_scanner
+
+from scanner_engine import run_scanner
 
 from sheets_writer import safe_update
 
@@ -527,8 +529,8 @@ results, failed_logs = run_scanner(
     open_tickers,
     regime,
     nifty_return,
-    CAPITAL,
-    RISK_PER_TRADE,
+    capital,
+    risk_per_trade,
     DEBUG_LOGS,
     failed_logs,
     safe_generate_signal,
@@ -576,7 +578,7 @@ watch_candidates = [
 executed_buys = []
 allocated_risk = 0
 
-max_total_risk = CAPITAL * MAX_CAPITAL_RISK
+max_total_risk = capital * max_capital_risk
 
 sorted_buys = sorted(
     buy_candidates,
@@ -586,8 +588,7 @@ sorted_buys = sorted(
 
 for r in sorted_buys:
 
-    trade_risk = CAPITAL * RISK_PER_TRADE
-
+    trade_risk = capital * risk_per_trade
     if (allocated_risk + trade_risk + current_portfolio_risk) > max_total_risk:
         continue
 
