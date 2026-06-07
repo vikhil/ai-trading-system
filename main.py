@@ -344,6 +344,51 @@ try:
         len(enriched_portfolio)
     )
 
+    total_portfolio_value = 0
+
+    for row in enriched_portfolio:
+    
+        try:
+            total_portfolio_value += float(
+                row.get("Market Value", 0)
+            )
+    
+        except:
+            pass
+
+        
+    print(
+        "Portfolio Value:",
+        total_portfolio_value
+    )
+
+    for row in enriched_portfolio:
+
+        try:
+    
+            market_value = float(
+                row.get("Market Value", 0)
+            )
+    
+            if total_portfolio_value > 0:
+    
+                weight = (
+                    market_value
+                    / total_portfolio_value
+                ) * 100
+    
+            else:
+                weight = 0
+    
+            row["Portfolio Weight %"] = round(
+                weight,
+                2
+            )
+    
+        except:
+    
+            row["Portfolio Weight %"] = 0
+    
     # ----------------------------
     # WRITE ENRICHED PORTFOLIO
     # ----------------------------
@@ -364,7 +409,7 @@ try:
                 row.get(col, "")
                 for col in portfolio_headers
             ])
-    
+
         safe_update(
             portfolio_ws,
             portfolio_sheet_data
@@ -435,7 +480,10 @@ for batch, data in batch_download(stocks, chunk_size=20):
 # ANALYSIS
 # ----------------------------
 results = []
-    
+results_sorted = []
+buy_candidates = []
+watch_candidates = []
+
 def calculate_edge_score(score, risk_reward, rs_score, volume_spike, breakout, regime):
 
     if pd.isna(score) or score < 60:
@@ -809,37 +857,6 @@ for ticker, df, error in results_map:
         })
         print("RESULTS SIZE:", len(results))
 
-        # ----------------------------
-        # FINAL RESULTS SORTING
-        # ----------------------------
-        
-        results_sorted = sorted(
-            results,
-            key=lambda x: x.get("edge_score", 0),
-            reverse=True
-        )
-        
-        # safety cleanup
-        results_sorted = [
-            r for r in results_sorted
-            if isinstance(r, dict) and "ticker" in r and "edge_score" in r
-        ]
-
-        # ----------------------------
-        # BUY + WATCH CANDIDATES
-        # ----------------------------
-        
-        buy_candidates = [
-            r for r in results_sorted
-            if r["trade_action"] in ["BUY", "STRONG_BUY"]
-            and r["ticker"].upper() not in open_tickers
-        ]
-        
-        watch_candidates = [
-            r for r in results_sorted
-            if r["trade_action"] == "WATCH"
-            and r["ticker"].upper() not in open_tickers
-        ]
     except Exception as e:
         error_reason = str(e)
     
@@ -856,6 +873,39 @@ for ticker, df, error in results_map:
         ])
     
         continue
+
+# ----------------------------
+# FINAL RESULTS SORTING
+# ----------------------------
+
+results_sorted = sorted(
+    results,
+    key=lambda x: x.get("edge_score", 0),
+    reverse=True
+)
+
+results_sorted = [
+    r for r in results_sorted
+    if isinstance(r, dict)
+    and "ticker" in r
+    and "edge_score" in r
+]
+
+# ----------------------------
+# BUY + WATCH CANDIDATES
+# ----------------------------
+
+buy_candidates = [
+    r for r in results_sorted
+    if r["trade_action"] in ["BUY", "STRONG_BUY"]
+    and r["ticker"].upper() not in open_tickers
+]
+
+watch_candidates = [
+    r for r in results_sorted
+    if r["trade_action"] == "WATCH"
+    and r["ticker"].upper() not in open_tickers
+]
 
 # ----------------------------
 # CAPITAL-AWARE EXECUTION ENGINE
@@ -881,20 +931,6 @@ for r in sorted_buys:
 
     executed_buys.append(r)
     allocated_risk += trade_risk
-
-    log_trade(
-        action="BUY",
-        ticker=r["ticker"],
-        cmp_price=r["cmp"],
-        edge_score=r["edge_score"],
-        edge_rating=r["edge_rating"],
-        position_size=r["position_size"],
-        stop_loss=r["stop_loss"],
-        target=r["target"],
-        risk_reward=r["risk_reward"],
-        rs_score=r["rs_score"],
-        signal=r["signal"]
-    )
     
 executed_watches = watch_candidates[:MAX_WATCH]
 
