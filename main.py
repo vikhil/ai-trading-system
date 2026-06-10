@@ -44,8 +44,6 @@ from sheets_writer import safe_update
 from alerts import send_telegram
 from portfolio_manager import enrich_portfolio
 
-state = load_state()
-
 def load_state():
     try:
         if os.path.exists(STATE_FILE):
@@ -58,6 +56,8 @@ def load_state():
 def save_state(state):
     with open(STATE_FILE, "w") as f:
         json.dump(state, f)
+
+state = load_state()
 
 def log_scan(msg):
     print(f"[SCAN] {msg}")
@@ -622,12 +622,7 @@ for r in sorted_buys:
         entry = state.get(ticker, {})
     
         if entry and not is_state_expired(entry.get("timestamp", "")):
-        continue
-        
-    entry = state.get(ticker)
-
-    if entry and entry.get("status") == "RECENT_BUY":
-        continue
+            continue
     
     trade_risk = r["position_size"] * r["atr_risk"]
     if (allocated_risk + trade_risk + current_portfolio_risk) > max_total_risk:
@@ -1056,7 +1051,6 @@ except:
 
 safe_update(top_ws, top_picks)
 
-with open(STATE_FILE, "w") as f:
-    json.dump(state, f)
+save_state(state)
     
 print("Completed Successfully")
