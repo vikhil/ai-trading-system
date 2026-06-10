@@ -123,7 +123,6 @@ def run_scanner(
             row = df.iloc[-1]
 
             avg_volume = float(row.get("Avg Volume", 0) or 0)
-            avg_volume = row.get("Avg Volume", 0)
             volume_spike = row.get("Volume Spike", 0)
             breakout = row.get("Breakout", 0)
     
@@ -192,19 +191,19 @@ def run_scanner(
             # ----------------------------
             
             try:
-                signal_data = safe_generate_signal(df, regime, rs_score, ticker)
-
-                if score < 40:
-                    continue
-                
-                if rs_score < 10:
-                    continue
-                
-                if risk_reward < 1.2:
-                    continue
-    
+                signal_data = safe_generate_signal(
+                    df,
+                    regime,
+                    rs_score,
+                    ticker
+                )
+            
                 if signal_data is None:
-                    failed_logs.append([ticker, "SIGNAL_FAILED", "generate_signal returned None"])
+                    failed_logs.append([
+                        ticker,
+                        "SIGNAL_FAILED",
+                        "generate_signal returned None"
+                    ])
                     continue
             
             except Exception as e:
@@ -227,6 +226,12 @@ def run_scanner(
                 volume_spike,
                 breakout
             ) = signal_data
+
+            if score < 40:
+                continue
+            
+            if rs_score < 10:
+                continue
     
             if DEBUG_LOGS:
                 log_signal(f"{ticker} signal generated successfully")
