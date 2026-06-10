@@ -60,6 +60,13 @@ def calculate_edge_score(score, risk_reward, rs_score, volume_spike, breakout, r
     elif volume_spike >= 1.0:
         edge += 1
 
+    # 5. Regime
+    if regime == "BEAR":
+        edge -= 1
+    
+    elif regime == "SIDEWAYS":
+        edge -= 0.5
+
     base_score = edge * 10
 
     return min(base_score, 100)
