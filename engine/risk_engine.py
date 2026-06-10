@@ -36,20 +36,28 @@ def calculate_edge_score(score, risk_reward, rs_score, volume_spike, breakout, r
 
     # 2. Risk-reward quality
     if risk_reward >= 3:
-        edge += 2
+    edge += 3
+
     elif risk_reward >= 2:
+        edge += 2
+    
+    elif risk_reward >= 1.5:
         edge += 1
 
     # 3. Relative strength
     if rs_score >= 50:
-        edge += 2
+    edge += 3
+
     elif rs_score >= 25:
+        edge += 2
+    
+    elif rs_score >= 10:
         edge += 1
 
     # 4. Volume + breakout
     if volume_spike >= 1.5 and str(breakout).upper() == "YES":
         edge += 2
-    elif volume_spike >= 1.2:
+    elif volume_spike >= 1.0:
         edge += 1
 
     base_score = edge * 10
