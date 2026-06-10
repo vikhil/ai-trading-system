@@ -326,6 +326,15 @@ def run_scanner(
     
             edge_rating = int(calculate_edge_rating(edge_score))
             trade_action = get_trade_action(edge_rating)
+
+            # HARD SIGNAL OVERRIDE
+            
+            if signal == "NO TRADE":
+                trade_action = "IGNORE"
+            
+            elif signal == "WATCHLIST":
+                if trade_action in ["BUY", "STRONG_BUY"]:
+                    trade_action = "WATCH"
     
             # ----------------------------
             # STREAM ROUTING (FIXED LOGIC)
