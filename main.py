@@ -779,19 +779,19 @@ print(f"Breadth Score: {breadth_score}%")
 # ----------------------------
 
 if breadth_score >= 15:
-    market_health = "STRONG BREADTH"
+    market_health = "STRONG INTERNALS"
 
 elif breadth_score >= 10:
-    market_health = "BULLISH BREADTH"
+    market_health = "BULLISH INTERNALS"
 
 elif breadth_score >= 5:
-    market_health = "IMPROVING BREADTH"
+    market_health = "IMPROVING INTERNALS"
 
 elif breadth_score >= 2:
-    market_health = "WEAK BREADTH"
+    market_health = "WEAK INTERNAL"
 
 else:
-    market_health = "VERY WEAK BREADTH"
+    market_health = "VERY WEAK INTERNALS"
 
 # ----------------------------
 # MARKET INTERNAL STRENGTH
