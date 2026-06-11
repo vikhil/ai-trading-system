@@ -14,7 +14,7 @@ DEBUG_LOGS = True
 # ----------------------------
 capital = total_portfolio_value
 
-risk_per_trade = 0.01
+risk_per_trade = 0.005
 max_capital_risk = 0.20
 
 STATE_FILE = "trade_state.json"
