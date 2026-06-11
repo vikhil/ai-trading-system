@@ -12,7 +12,7 @@ DEBUG_LOGS = True
 # ----------------------------
 # GLOBAL RISK SETTINGS
 # ----------------------------
-capital = 0
+capital = total_portfolio_value
 
 risk_per_trade = 0.01
 max_capital_risk = 0.20
@@ -427,6 +427,13 @@ try:
     print(
         "Portfolio Value:",
         total_portfolio_value
+    )
+
+    capital = total_portfolio_value
+
+    print(
+        "Risk Capital:",
+        capital
     )
 
     # ----------------------------
