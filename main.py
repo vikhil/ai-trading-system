@@ -12,7 +12,7 @@ DEBUG_LOGS = True
 # ----------------------------
 # GLOBAL RISK SETTINGS
 # ----------------------------
-capital = 100000
+capital = 0
 
 risk_per_trade = 0.01
 max_capital_risk = 0.20
@@ -428,6 +428,19 @@ try:
         "Portfolio Value:",
         total_portfolio_value
     )
+
+    # ----------------------------
+    # DYNAMIC CAPITAL BASE
+    # ----------------------------
+    
+    capital = max(
+        total_portfolio_value,
+        100000
+    )
+    
+    print("Capital Base:", capital)
+    print("Risk Per Trade:", capital * risk_per_trade)
+    print("Max Portfolio Risk:", capital * max_capital_risk)
 
     for row in enriched_portfolio:
 
