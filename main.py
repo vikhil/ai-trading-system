@@ -750,15 +750,9 @@ print("Final Results Count:", len(results_sorted))
 # BUY COUNT SUMMARY
 # ----------------------------
 
-buy_count = len([
-    r for r in results_sorted
-    if r["trade_action"] in ["BUY", "STRONG_BUY"]
-])
+buy_count = len(executed_buys)
 
-watch_count = len([
-    r for r in results_sorted
-    if r["trade_action"] == "WATCH"
-])
+watch_count = len(executed_watches)
 
 print(f"BUY Count: {buy_count}")
 print(f"WATCH Count: {watch_count}")
@@ -778,17 +772,17 @@ print(f"Breadth Score: {breadth_score}%")
 # MARKET HEALTH
 # ----------------------------
 
-if breadth_score >= 15:
+if breadth_score >= 40:
     market_health = "STRONG INTERNALS"
 
-elif breadth_score >= 10:
+elif breadth_score >= 25:
     market_health = "BULLISH INTERNALS"
 
-elif breadth_score >= 5:
+elif breadth_score >= 15:
     market_health = "IMPROVING INTERNALS"
 
-elif breadth_score >= 2:
-    market_health = "WEAK INTERNAL"
+elif breadth_score >= 5:
+    market_health = "WEAK INTERNALS"
 
 else:
     market_health = "VERY WEAK INTERNALS"
@@ -797,16 +791,16 @@ else:
 # MARKET INTERNAL STRENGTH
 # ----------------------------
 
-if regime == "BEAR" and breadth_score >= 10:
+if regime == "BEAR" and breadth_score >= 25:
     internal_strength = "POSITIVE_DIVERGENCE"
 
-elif regime == "BULL" and breadth_score < 5:
+elif regime == "BULL" and breadth_score < 10:
     internal_strength = "NEGATIVE_DIVERGENCE"
 
-elif regime == "BULL" and breadth_score >= 10:
+elif regime == "BULL" and breadth_score >= 25:
     internal_strength = "CONFIRMED_BULL"
 
-elif regime == "BEAR" and breadth_score < 5:
+elif regime == "BEAR" and breadth_score < 10:
     internal_strength = "CONFIRMED_BEAR"
 
 else:
