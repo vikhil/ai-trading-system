@@ -7,6 +7,14 @@ def calculate_position_size(capital, atr_risk, risk_per_trade=0.01):
     risk_amount = capital * risk_per_trade
     qty = risk_amount / atr_risk
 
+    max_position_value = capital * 0.10
+    
+    if qty > 0:
+        qty = min(
+            qty,
+            max_position_value / capital
+        )
+
     return max(0, round(qty, 2))
 
 
