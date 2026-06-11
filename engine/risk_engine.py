@@ -1,6 +1,6 @@
 import pandas as pd
 
-def calculate_position_size(capital, cmp_price, atr_risk, edge_rating, risk_per_trade=0.01):
+def calculate_position_size(capital, cmp_price, atr_risk, edge_rating, risk_per_trade=0.005):
     if atr_risk <= 0 or cmp_price <= 0 or pd.isna(atr_risk) or pd.isna(cmp_price):
         return 0
 
@@ -8,35 +8,54 @@ def calculate_position_size(capital, cmp_price, atr_risk, edge_rating, risk_per_
     # RISK-BASED POSITION
     # ----------------------------
 
-    risk_amount = capital * risk_per_trade
-    risk_qty = risk_amount / atr_risk
+    #risk_amount = capital * risk_per_trade
+    #risk_qty = risk_amount / atr_risk
 
     # ----------------------------
-    # EDGE-BASED ALLOCATION
+    # CONVICTION RISK
     # ----------------------------
 
     if edge_rating >= 9:
-        allocation_pct = 0.08
+        risk_multiplier = 1.50
 
     elif edge_rating >= 8:
-        allocation_pct = 0.06
+        risk_multiplier = 1.25
 
     elif edge_rating >= 7:
-        allocation_pct = 0.04
+        risk_multiplier = 1.00
 
     else:
-        allocation_pct = 0.02
+        risk_multiplier = 0.75
 
-    capital_limit_qty = (capital * allocation_pct) / cmp_price
-
-    # ----------------------------
-    # FINAL POSITION SIZE
-    # ----------------------------
-
-    final_qty = min(
-        risk_qty,
-        capital_limit_qty
+    risk_amount = (
+        capital
+        * risk_per_trade
+        * risk_multiplier
     )
+
+    # ATR sizing
+
+    risk_qty = risk_amount / atr_risk
+
+    # ----------------------------
+    # POSITION CAP
+    # ----------------------------
+
+    if edge_rating >= 9:
+        max_position_pct = 0.06
+
+    elif edge_rating >= 8:
+        max_position_pct = 0.05
+
+    elif edge_rating >= 7:
+        max_position_pct = 0.04
+
+    else:
+        max_position_pct = 0.03
+
+    capital_qty = (capital * max_position_pct) / cmp_price
+
+    final_qty = min(risk_qty, capital_qty)
 
     return max(0, int(final_qty))
 
