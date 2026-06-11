@@ -325,7 +325,15 @@ def run_scanner(
             )
     
             edge_rating = int(calculate_edge_rating(edge_score))
-            trade_action = get_trade_action(edge_rating)
+            
+            if signal == "TACTICAL BUY":
+                trade_action = "STRONG_BUY"
+            
+            elif signal == "WATCHLIST":
+                trade_action = "WATCH"
+            
+            else:
+                trade_action = get_trade_action(edge_rating)
 
             # HARD SIGNAL OVERRIDE
             
