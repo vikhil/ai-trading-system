@@ -1,6 +1,6 @@
 import pandas as pd
 
-calculate_position_size(capital, cmp, atr_risk, edge_rating, risk_per_trade=0.01):
+def calculate_position_size(capital, cmp_price, atr_risk, edge_rating, risk_per_trade=0.01):
     if atr_risk <= 0 or cmp_price <= 0 or pd.isna(atr_risk) or pd.isna(cmp_price):
         return 0
 
