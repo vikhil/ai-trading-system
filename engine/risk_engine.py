@@ -1,22 +1,44 @@
 import pandas as pd
 
-def calculate_position_size(capital, atr_risk, risk_per_trade=0.01):
-    if atr_risk <= 0 or pd.isna(atr_risk):
+calculate_position_size(capital, cmp, atr_risk, edge_rating, risk_per_trade=0.01):
+    if atr_risk <= 0 or cmp_price <= 0 or pd.isna(atr_risk) or pd.isna(cmp_price):
         return 0
 
+    # ----------------------------
+    # RISK-BASED POSITION
+    # ----------------------------
+
     risk_amount = capital * risk_per_trade
-    qty = risk_amount / atr_risk
+    risk_qty = risk_amount / atr_risk
 
-    max_position_value = capital * 0.10
-    
-    if qty > 0:
-        qty = min(
-            qty,
-            max_position_value / capital
-        )
+    # ----------------------------
+    # EDGE-BASED ALLOCATION
+    # ----------------------------
 
-    return max(0, round(qty, 2))
+    if edge_rating >= 9:
+        allocation_pct = 0.08
 
+    elif edge_rating >= 8:
+        allocation_pct = 0.06
+
+    elif edge_rating >= 7:
+        allocation_pct = 0.04
+
+    else:
+        allocation_pct = 0.02
+
+    capital_limit_qty = (capital * allocation_pct) / cmp_price
+
+    # ----------------------------
+    # FINAL POSITION SIZE
+    # ----------------------------
+
+    final_qty = min(
+        risk_qty,
+        capital_limit_qty
+    )
+
+    return max(0, int(final_qty))
 
 def calculate_edge_score(score, risk_reward, rs_score, volume_spike, breakout, regime):
 
@@ -103,7 +125,6 @@ def calculate_edge_rating(edge_score):
         return 1
     else:
         return 0
-
 
 def get_trade_action(edge_rating):
     if edge_rating >= 8:
