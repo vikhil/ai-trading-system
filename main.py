@@ -12,7 +12,7 @@ DEBUG_LOGS = True
 # ----------------------------
 # GLOBAL RISK SETTINGS
 # ----------------------------
-capital = total_portfolio_value
+capital = 100000
 
 risk_per_trade = 0.005
 max_capital_risk = 0.20
@@ -428,8 +428,15 @@ try:
         "Portfolio Value:",
         total_portfolio_value
     )
-
-    capital = total_portfolio_value
+    
+    # ---------------------------------
+    # DYNAMIC CAPITAL
+    # ---------------------------------
+    
+    if total_portfolio_value > 0:
+        capital = total_portfolio_value
+    
+    print("Capital For Position Sizing:", capital)
 
     print(
         "Risk Capital:",
