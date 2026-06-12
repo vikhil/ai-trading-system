@@ -13,19 +13,12 @@ from engine.risk_engine import (
     get_trade_action
 )
 
-def signal_quality_gate(score, rs_score, risk_reward, volume_spike):
     if score < 40:
         return False
     if rs_score < 10:
         return False
     if risk_reward < 1.2:
         return False
-    if volume_spike < 0.8:
-        return False
-    return True
-
-def run_scanner(
-    results_map,
     open_tickers,
     regime,
     nifty_return,
@@ -222,7 +215,7 @@ def run_scanner(
                 continue
     
             (
-                cmp,
+                cmp_price,
                 rsi,
                 ema20,
                 ema50,
@@ -261,11 +254,17 @@ def run_scanner(
             target = round(float(risk_values.iloc[2]), 2)        
             risk_reward = float(risk_values.iloc[3]) if pd.notna(risk_values.iloc[3]) else 0
     
-            position_size = calculate_position_size(capital, atr_risk, risk_per_trade)
-
             # ----------------------------
             # SIGNAL QUALITY GATE (NEW)
             # ----------------------------
+
+            print(
+            f"[QUALITY] {ticker} | "
+            f"Score={score} | "
+            f"RS={rs_score:.2f} | "
+            f"RR={risk_reward:.2f} | "
+            f"VolSpike={volume_spike:.2f}"
+        )
             
             if not signal_quality_gate(score, rs_score, risk_reward, volume_spike):
                 if DEBUG_LOGS:
@@ -279,15 +278,7 @@ def run_scanner(
                 
                 continue
     
-            # ✅ NEW: unified risk object (PHASE 2B FIX)
-            trade_risk = {
-                "atr_risk": atr_risk,
-                "risk_reward": risk_reward,
-                "position_size": position_size,
-                "risk_amount": position_size * atr_risk,
-                "stop_loss": stop_loss,
-                "target": target
-            }
+            
             #if risk_reward < 1.5:
                 #print(f"SKIP: {ticker} REASON: LOW_RR {risk_reward}")
                 #continue
@@ -334,6 +325,8 @@ def run_scanner(
     
             edge_rating = int(calculate_edge_rating(edge_score))
             
+            position_size = calculate_position_size(capital, cmp_price, atr_risk, edge_rating, risk_per_trade)
+        
             if signal == "TACTICAL BUY":
                 trade_action = "STRONG_BUY"
             
