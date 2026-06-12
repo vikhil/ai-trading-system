@@ -259,12 +259,12 @@ from engine.risk_engine import (
             # ----------------------------
 
             print(
-            f"[QUALITY] {ticker} | "
-            f"Score={score} | "
-            f"RS={rs_score:.2f} | "
-            f"RR={risk_reward:.2f} | "
-            f"VolSpike={volume_spike:.2f}"
-        )
+                f"[QUALITY] {ticker} | "
+                f"Score={score} | "
+                f"RS={rs_score:.2f} | "
+                f"RR={risk_reward:.2f} | "
+                f"VolSpike={volume_spike:.2f}"
+            )
             
             if not signal_quality_gate(score, rs_score, risk_reward, volume_spike):
                 if DEBUG_LOGS:
@@ -326,7 +326,16 @@ from engine.risk_engine import (
             edge_rating = int(calculate_edge_rating(edge_score))
             
             position_size = calculate_position_size(capital, cmp_price, atr_risk, edge_rating, risk_per_trade)
-        
+
+            trade_risk = {
+                "atr_risk": atr_risk,
+                "risk_reward": risk_reward,
+                "position_size": position_size,
+                "risk_amount": position_size * atr_risk,
+                "stop_loss": stop_loss,
+                "target": target
+            }
+            
             if signal == "TACTICAL BUY":
                 trade_action = "STRONG_BUY"
             
@@ -373,7 +382,7 @@ from engine.risk_engine import (
             
             results.append({
                 "ticker": ticker,
-                "cmp": cmp,
+                "cmp": cmp_price,
                 "rsi": rsi,
                 "ema20": ema20,
                 "ema50": ema50,
