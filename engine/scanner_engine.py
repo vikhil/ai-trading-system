@@ -13,6 +13,7 @@ from engine.risk_engine import (
     get_trade_action
 )
 
+def signal_quality_gate(score, rs_score, risk_reward, volume_spike):
     if score < 40:
         return False
         
@@ -21,7 +22,14 @@ from engine.risk_engine import (
         
     if risk_reward < 1.2:
         return False
-        
+
+    if volume_spike < 0.8:
+        return False
+
+    return True
+    
+def run_scanner(
+    results_map,
     open_tickers,
     regime,
     nifty_return,
