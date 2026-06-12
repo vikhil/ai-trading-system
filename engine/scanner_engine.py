@@ -136,13 +136,21 @@ def run_scanner(
             # Safety conversions (important because yfinance + pandas can return NaN/Series)
             current_volume = float(raw_volume) if pd.notna(raw_volume) else 0
             atr_indicator = float(atr_indicator) if pd.notna(atr_indicator) else 0
+
+            print(
+                f"[VOLUME DEBUG] {ticker} | "
+                f"Current={current_volume} | "
+                f"Avg20={avg_volume} | "
+                f"Spike={volume_spike}"
+            )
             
             # B) Liquidity filter
             if current_volume <= 0:
                 print(f"SKIP: {ticker} REASON: INVALID_VOLUME {current_volume}")
                 continue
     
-            if current_volume < avg_volume * 0.5:   # relaxed threshold
+            #if current_volume < avg_volume * 0.5:   # relaxed threshold
+            if current_volume < 100000:    
                 log_scan(f"{ticker} skipped - LOW_VOLUME {current_volume}")
                 
                 failed_logs.append([
