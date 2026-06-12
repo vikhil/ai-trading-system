@@ -15,10 +15,13 @@ from engine.risk_engine import (
 
     if score < 40:
         return False
+        
     if rs_score < 10:
         return False
+        
     if risk_reward < 1.2:
         return False
+        
     open_tickers,
     regime,
     nifty_return,
