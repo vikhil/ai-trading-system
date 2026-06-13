@@ -7,6 +7,8 @@ from signals import (
     apply_risk_engine
 )
 
+import math
+
 def calculate_health_score(trend, rs_score, rsi, score):
 
     # -------------------------
@@ -81,7 +83,23 @@ def calculate_health_score(trend, rs_score, rsi, score):
         health_status = "EXIT_CANDIDATE"
 
     return health_score, health_status
-    
+
+def safe_number(value, default=0):
+
+    try:
+        value = float(value)
+
+        if math.isnan(value):
+            return default
+
+        if math.isinf(value):
+            return default
+
+        return value
+
+    except:
+        return default
+        
 def enrich_portfolio(portfolio_data):
 
     enriched = []
@@ -115,24 +133,24 @@ def enrich_portfolio(portfolio_data):
                 df=df
             )
             
-            atr_risk = float(risk_values.iloc[0])
-            stop_loss = float(risk_values.iloc[1])
-            target = float(risk_values.iloc[2])
-            risk_reward = float(risk_values.iloc[3])
+            atr_risk = safe_number(risk_values.iloc[0])
+            stop_loss = safe_number(risk_values.iloc[1])
+            target = safe_number(risk_values.iloc[2])
+            risk_reward = safe_number(risk_values.iloc[3])
 
             signal_data = generate_signal(df, "BULL", 0)
 
             (
-                ltp,
-                rsi,
-                ema20,
-                ema50,
+                ltp = safe_number(ltp),
+                rsi = safe_number(rsi),
+                ema20 = safe_number(ema20),
+                ema50 = safe_number(ema50),
                 trend,
-                score,
+                score = safe_number(score),
                 signal,
-                avg_volume,
-                current_volume,
-                volume_spike,
+                avg_volume = safe_number(avg_volume)
+                current_volume = safe_number(current_volume)
+                volume_spike = safe_number(volume_spike)
                 breakout
             ) = signal_data
             
@@ -172,7 +190,31 @@ def enrich_portfolio(portfolio_data):
 
             if buy_price > 0:
                 pl_pct = ((ltp - buy_price) / buy_price) * 100
+
+            invested = safe_number(invested)
+            current_value = safe_number(current_value)
             
+            pl_rupees = safe_number(pl_rupees)
+            pl_pct = safe_number(pl_pct)
+            
+            position_risk = safe_number(position_risk)
+            
+            health_score = safe_number(health_score)
+
+            if any([
+                math.isnan(x) if isinstance(x, float) else False
+                for x in [
+                    ltp,
+                    invested,
+                    current_value,
+                    pl_rupees,
+                    pl_pct,
+                    atr_risk,
+                    position_risk
+                ]
+            ]):
+                print(f"BAD VALUE FOUND: {ticker}")
+
             enriched.append({
                 **row,
             
