@@ -23,7 +23,7 @@ def signal_quality_gate(score, rs_score, risk_reward, volume_spike):
     if risk_reward < 1.2:
         return False
 
-    if volume_spike < 0.5:
+    if volume_spike < 0.4:
         return False
 
     return True
