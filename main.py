@@ -529,6 +529,12 @@ try:
         f"Portfolio Updated: {len(enriched_portfolio)} holdings"
     )
 
+except Exception as e:
+    print(
+        "Portfolio Enrichment Failed:",
+        e
+    )
+    
 # ----------------------------
 # MARKET TREND LOGGING
 # ----------------------------
