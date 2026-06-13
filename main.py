@@ -294,7 +294,11 @@ except:
 # ----------------------------
 
 portfolio_data = portfolio_ws.get_all_records()
-            
+
+print("===== PORTFOLIO DEBUG =====")
+print(portfolio_ws.get_all_values()[:10])
+print("===========================")
+
 open_positions_data = [
     row for row in portfolio_data
     if row.get("Ticker")
