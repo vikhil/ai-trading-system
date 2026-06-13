@@ -209,7 +209,14 @@ def run_scanner(
                     rs_score,
                     ticker
                 )
-            
+
+                print(
+                    f"[SIGNAL DEBUG] {ticker} | "
+                    f"Signal={signal} | "
+                    f"Score={score} | "
+                    f"RS={rs_score:.2f}"
+                )
+                
                 if signal_data is None:
                     failed_logs.append([
                         ticker,
@@ -289,7 +296,6 @@ def run_scanner(
                 
                 continue
     
-            
             #if risk_reward < 1.5:
                 #print(f"SKIP: {ticker} REASON: LOW_RR {risk_reward}")
                 #continue
