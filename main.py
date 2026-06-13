@@ -295,6 +295,16 @@ except:
 
 portfolio_data = portfolio_ws.get_all_records()
 
+if not portfolio_data:
+
+    print(
+        "WARNING: No holdings found in Portfolio sheet."
+    )
+
+    print(
+        "Portfolio analytics disabled."
+    )
+    
 print("===== PORTFOLIO DEBUG =====")
 print(portfolio_ws.get_all_values()[:10])
 print("===========================")
@@ -409,7 +419,7 @@ try:
     enriched_portfolio = enrich_portfolio(
         portfolio_data
     )
-
+    
     print(
         "Portfolio Holdings:",
         len(enriched_portfolio)
@@ -519,9 +529,21 @@ try:
         portfolio_sheet_data.append(
             [row.get(col, "") for col in portfolio_headers]
         )
+
+    try:
+    portfolio_analytics_ws = sheet.worksheet(
+        "Portfolio Analytics"
+    )
+
+    except:
+        portfolio_analytics_ws = sheet.add_worksheet(
+            title="Portfolio Analytics",
+            rows="2000",
+            cols="50"
+        )
     
     safe_update(
-        portfolio_ws,
+        portfolio_analytics_ws,
         portfolio_sheet_data
     )
     
