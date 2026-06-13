@@ -110,6 +110,16 @@ def enrich_portfolio(portfolio_data):
             
             df = calculate_atr(df)
 
+            risk_values = apply_risk_engine(
+                df.iloc[-1],
+                df=df
+            )
+            
+            atr_risk = float(risk_values.iloc[0])
+            stop_loss = float(risk_values.iloc[1])
+            target = float(risk_values.iloc[2])
+            risk_reward = float(risk_values.iloc[3])
+
             signal_data = generate_signal(df, "BULL", 0)
 
             (
@@ -146,11 +156,6 @@ def enrich_portfolio(portfolio_data):
                 errors="coerce"
             )
             
-            atr_risk = pd.to_numeric(
-                row.get("ATR Risk", 0),
-                errors="coerce"
-            )
-            
             buy_price = 0 if pd.isna(buy_price) else float(buy_price)
             qty = 0 if pd.isna(qty) else float(qty)
             atr_risk = 0 if pd.isna(atr_risk) else float(atr_risk)
@@ -184,7 +189,13 @@ def enrich_portfolio(portfolio_data):
                 "ATR Risk": round(atr_risk, 2),
             
                 "Position Risk": round(position_risk, 2),
+
+                "Stop Loss": round(stop_loss, 2),
+
+                "Target": round(target, 2),
             
+                "Risk Reward": round(risk_reward, 2),
+                
                 "RSI": round(rsi, 2),
             
                 "Trend": trend,
