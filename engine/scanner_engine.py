@@ -209,12 +209,6 @@ def run_scanner(
                     rs_score,
                     ticker
                 )
-
-                print(
-                    f"[SIGNAL DEBUG] {ticker} | "
-                    f"SignalData={signal_data} | "
-                    f"RS={rs_score:.2f}"
-                )
                 
                 if signal_data is None:
                     failed_logs.append([
