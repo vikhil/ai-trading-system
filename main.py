@@ -531,9 +531,9 @@ try:
         )
 
     try:
-    portfolio_analytics_ws = sheet.worksheet(
-        "Portfolio Analytics"
-    )
+        portfolio_analytics_ws = sheet.worksheet(
+            "Portfolio Analytics"
+        )
 
     except:
         portfolio_analytics_ws = sheet.add_worksheet(
