@@ -140,6 +140,13 @@ def enrich_portfolio(portfolio_data):
 
             signal_data = generate_signal(df, "BULL", 0)
 
+            if (
+                signal_data is None
+                or not isinstance(signal_data, (list, tuple))
+                or len(signal_data) < 11
+            ):
+                raise Exception("Invalid signal data")
+                
             (
                 ltp,
                 rsi,
@@ -193,9 +200,14 @@ def enrich_portfolio(portfolio_data):
             atr_risk = 0 if pd.isna(atr_risk) else float(atr_risk)
 
             position_risk = atr_risk * qty
+
+            print(
+                f"{ticker} | Qty={qty} | Buy={buy_price} | "
+                f"LTP={ltp} | Invested={qty*buy_price} | "
+                f"Current={qty*ltp}"
+            )
             
             invested = qty * buy_price
-
             current_value = qty * ltp
             
             pl_rupees = current_value - invested
@@ -268,7 +280,26 @@ def enrich_portfolio(portfolio_data):
             })
 
         except Exception as e:
+
             print(f"Portfolio Enrich Error for {ticker}: {e}")
-            enriched.append(row)
+        
+            enriched.append({
+                **row,
+                "LTP": 0,
+                "Invested": 0,
+                "Current Value": 0,
+                "P/L ₹": 0,
+                "P/L %": 0,
+                "ATR Risk": 0,
+                "Position Risk": 0,
+                "Stop Loss": 0,
+                "Target": 0,
+                "Risk Reward": 0,
+                "RSI": 0,
+                "Trend": "ERROR",
+                "Score": 0,
+                "Health Score": 0,
+                "Health Status": "ERROR"
+            })
 
     return enriched
