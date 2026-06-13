@@ -212,8 +212,7 @@ def run_scanner(
 
                 print(
                     f"[SIGNAL DEBUG] {ticker} | "
-                    f"Signal={signal} | "
-                    f"Score={score} | "
+                    f"SignalData={signal_data} | "
                     f"RS={rs_score:.2f}"
                 )
                 
