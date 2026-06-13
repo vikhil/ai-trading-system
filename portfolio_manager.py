@@ -141,20 +141,34 @@ def enrich_portfolio(portfolio_data):
             signal_data = generate_signal(df, "BULL", 0)
 
             (
-                ltp = safe_number(ltp),
-                rsi = safe_number(rsi),
-                ema20 = safe_number(ema20),
-                ema50 = safe_number(ema50),
+                ltp,
+                rsi,
+                ema20,
+                ema50,
                 trend,
-                score = safe_number(score),
+                score,
                 signal,
-                avg_volume = safe_number(avg_volume)
-                current_volume = safe_number(current_volume)
-                volume_spike = safe_number(volume_spike)
+                avg_volume,
+                current_volume,
+                volume_spike,
                 breakout
             ) = signal_data
             
-            if ltp is None or rsi is None:
+            ltp = safe_number(ltp)
+            rsi = safe_number(rsi)
+            
+            ema20 = safe_number(ema20)
+            ema50 = safe_number(ema50)
+            
+            score = safe_number(score)
+            
+            avg_volume = safe_number(avg_volume)
+            current_volume = safe_number(current_volume)
+            
+            volume_spike = safe_number(volume_spike)
+            breakout = str(breakout)
+            
+            if ltp <= 0:
                 continue
     
             health_score, health_status = calculate_health_score(
@@ -199,7 +213,7 @@ def enrich_portfolio(portfolio_data):
             
             position_risk = safe_number(position_risk)
             
-            health_score = safe_number(health_score)
+            health_score = int(safe_number(health_score))
 
             if any([
                 math.isnan(x) if isinstance(x, float) else False
@@ -214,6 +228,10 @@ def enrich_portfolio(portfolio_data):
                 ]
             ]):
                 print(f"BAD VALUE FOUND: {ticker}")
+
+            stop_loss = safe_number(stop_loss)
+            target = safe_number(target)
+            risk_reward = safe_number(risk_reward)
 
             enriched.append({
                 **row,
