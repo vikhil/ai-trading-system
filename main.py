@@ -366,6 +366,15 @@ print("Watchlist:", watchlist_ws.title, "ID:", watchlist_ws.id)
 
 print("FailedLogs:", failed_ws.title, "ID:", failed_ws.id)
 
+print("===== PORTFOLIO RAW =====")
+
+for row in portfolio_data:
+    if row.get("Ticker") in [
+        "OLAELEC.NS",
+        "OLECTRA.NS"
+    ]:
+        print(row)
+        
 print("=====================================")
 
 failed_logs = []
