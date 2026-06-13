@@ -488,40 +488,45 @@ try:
             row["Portfolio Weight %"] = 0
     
     # ----------------------------
-    # WRITE ENRICHED PORTFOLIO
+    # WRITE PORTFOLIO ALWAYS
     # ----------------------------
     
-    if enriched_portfolio:
+    portfolio_headers = [
+        "Ticker",
+        "Buy Price",
+        "Quantity",
+        "LTP",
+        "Invested",
+        "Current Value",
+        "P/L ₹",
+        "P/L %",
+        "ATR Risk",
+        "Position Risk",
+        "Stop Loss",
+        "Target",
+        "Risk Reward",
+        "RSI",
+        "Trend",
+        "Score",
+        "Health Score",
+        "Health Status",
+        "Portfolio Weight %"
+    ]
     
-        portfolio_headers = list(
-            enriched_portfolio[0].keys()
+    portfolio_sheet_data = [portfolio_headers]
+    
+    for row in enriched_portfolio:
+        portfolio_sheet_data.append(
+            [row.get(col, "") for col in portfolio_headers]
         )
     
-        portfolio_sheet_data = [
-            portfolio_headers
-        ]
+    safe_update(
+        portfolio_ws,
+        portfolio_sheet_data
+    )
     
-        for row in enriched_portfolio:
-    
-            portfolio_sheet_data.append([
-                row.get(col, "")
-                for col in portfolio_headers
-            ])
-
-        safe_update(
-            portfolio_ws,
-            portfolio_sheet_data
-        )
-    
-        print(
-            "Portfolio Updated:",
-            len(enriched_portfolio)
-        )
-        
-except Exception as e:
     print(
-        "Portfolio Enrichment Failed:",
-        e
+        f"Portfolio Updated: {len(enriched_portfolio)} holdings"
     )
 
 # ----------------------------
