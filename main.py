@@ -554,7 +554,16 @@ try:
             rows="2000",
             cols="50"
         )
-    
+
+    # Update Portfolio tab
+
+    safe_update(
+        portfolio_ws,
+        portfolio_sheet_data
+    )
+
+    # Update Portfolio Analytics tab
+
     safe_update(
         portfolio_analytics_ws,
         portfolio_sheet_data
