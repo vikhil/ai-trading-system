@@ -132,6 +132,10 @@ def enrich_portfolio(portfolio_data):
                 df.iloc[-1],
                 df=df
             )
+
+            print(
+                f"{ticker} Risk Values = {risk_values}"
+            )
             
             atr_risk = safe_number(risk_values.iloc[0])
             stop_loss = safe_number(risk_values.iloc[1])
