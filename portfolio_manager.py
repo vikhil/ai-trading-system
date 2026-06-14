@@ -123,12 +123,31 @@ def enrich_portfolio(portfolio_data):
                 progress=False
             )
 
+            # Fix Yahoo MultiIndex issue
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+    
             print(f"{ticker} Columns = {df.columns}")
             
             if df.empty:
+                print(f"{ticker}: No data")
                 continue
-            
+
+            required_cols = ["High", "Low", "Close"]
+
+            if not all(col in df.columns for col in required_cols):
+                print(f"{ticker}: Missing OHLC columns")
+                continue
+    
             df = calculate_atr(df)
+
+            print(df.tail(3)[["High","Low","Close","ATR"]])
+
+            print(
+                ticker,
+                "Latest ATR =",
+                df["ATR"].iloc[-1]
+            )
 
             risk_values = apply_risk_engine(
                 df.iloc[-1],
@@ -138,6 +157,9 @@ def enrich_portfolio(portfolio_data):
             print(
                 f"{ticker} Risk Values = {risk_values}"
             )
+
+            if risk_values is None or len(risk_values) < 4:
+                raise Exception("Invalid risk values")
             
             atr_risk = safe_number(risk_values.iloc[0])
             stop_loss = safe_number(risk_values.iloc[1])
@@ -183,10 +205,14 @@ def enrich_portfolio(portfolio_data):
             
             if ltp <= 0:
                 continue
-    
+
+            rs_score = safe_number(
+                row.get("RS Score", 0)
+            )
+
             health_score, health_status = calculate_health_score(
                 trend,
-                row.get("RS Score", 0),
+                rs_score,
                 rsi,
                 score
             )
@@ -275,11 +301,13 @@ def enrich_portfolio(portfolio_data):
                 "Risk Reward": round(risk_reward, 2),
                 
                 "RSI": round(rsi, 2),
-            
+
+                "RS Score": round(rs_score, 2),
+                
                 "Trend": trend,
             
                 "Score": score,
-            
+                
                 "Health Score": health_score,
             
                 "Health Status": health_status
@@ -302,6 +330,7 @@ def enrich_portfolio(portfolio_data):
                 "Target": 0,
                 "Risk Reward": 0,
                 "RSI": 0,
+                "RS Score": 0,
                 "Trend": "ERROR",
                 "Score": 0,
                 "Health Score": 0,
