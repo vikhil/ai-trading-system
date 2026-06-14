@@ -51,7 +51,7 @@ def generate_rotation_plan(portfolio_data, top_picks):
 
         if (
             health_status == "EXIT_CANDIDATE"
-            or health_score < 20
+            and current_value > 0
         ):
             action = "EXIT"
 
