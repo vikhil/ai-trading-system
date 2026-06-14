@@ -123,6 +123,8 @@ def enrich_portfolio(portfolio_data):
                 progress=False
             )
 
+            print(f"{ticker} Columns = {df.columns}")
+            
             if df.empty:
                 continue
             
