@@ -41,13 +41,15 @@ def calculate_health_score(trend, rs_score, rsi, score):
     # 3. RSI Quality (20)
     # -------------------------
     rsi = float(rsi) if rsi is not None else 0
-
-    if 55 <= rsi <= 75:
+    
+    if rsi >= 60:
         rsi_points = 20
-    elif 50 <= rsi < 55:
+    elif rsi >= 50:
         rsi_points = 15
-    elif 40 <= rsi < 50:
+    elif rsi >= 40:
         rsi_points = 10
+    elif rsi >= 30:
+        rsi_points = 5
     else:
         rsi_points = 0
 
@@ -55,13 +57,15 @@ def calculate_health_score(trend, rs_score, rsi, score):
     # 4. Signal Score (20)
     # -------------------------
     score = float(score) if score is not None else 0
-
+    
     if score >= 80:
         score_points = 20
-    elif score >= 70:
-        score_points = 15
     elif score >= 60:
+        score_points = 15
+    elif score >= 40:
         score_points = 10
+    elif score >= 20:
+        score_points = 5
     else:
         score_points = 0
 
