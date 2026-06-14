@@ -43,6 +43,7 @@ from engine.scanner_engine import run_scanner
 from sheets_writer import safe_update
 from alerts import send_telegram
 from portfolio_manager import enrich_portfolio
+from engine.portfolio_rotation import generate_rotation_plan
 
 def load_state():
     try:
@@ -563,6 +564,22 @@ try:
         f"Portfolio Updated: {len(enriched_portfolio)} holdings"
     )
 
+    # ----------------------------
+    # PORTFOLIO ROTATION
+    # ----------------------------
+    
+    try:
+        rotation_ws = sheet.worksheet(
+            "Portfolio Rotation"
+        )
+    
+    except:
+        rotation_ws = sheet.add_worksheet(
+            title="Portfolio Rotation",
+            rows="2000",
+            cols="20"
+        )
+    
 except Exception as e:
     print(
         "Portfolio Enrichment Failed:",
@@ -1120,6 +1137,59 @@ except:
     )
 
 safe_update(top_ws, top_picks)
+
+# ----------------------------
+# EXCLUDE EXISTING HOLDINGS
+# ----------------------------
+
+owned_tickers = {
+    str(x.get("Ticker", "")).strip().upper()
+    for x in enriched_portfolio
+}
+
+rotation_candidates = []
+
+for row in top_picks[1:]:
+
+    ticker = str(row[0]).strip().upper()
+
+    if ticker in owned_tickers:
+        continue
+
+    rotation_candidates.append({
+        "Ticker": ticker,
+        "Score": row[6],
+        "Edge Rating": row[8]
+    })
+
+rotation_rows = generate_rotation_plan(
+    enriched_portfolio,
+    rotation_candidates
+)
+
+rotation_data = [[
+    "Ticker",
+    "Health Score",
+    "Health Status",
+    "Current Value",
+    "Action",
+    "Replacement",
+    "Replacement Score",
+    "Replacement Edge",
+    "Comments"
+]]
+
+rotation_data.extend(rotation_rows)
+
+safe_update(
+    rotation_ws,
+    rotation_data
+)
+
+print(
+    f"Portfolio Rotation Updated: "
+    f"{len(rotation_rows)} rows"
+)
 
 save_state(state)
     
