@@ -1181,10 +1181,16 @@ rotation_data = [[
     "Health Score",
     "Health Status",
     "Current Value",
+    "Portfolio Weight %",
+    "P/L %",
+    "Position Risk",
     "Action",
+    "Priority",
     "Replacement",
     "Replacement Score",
     "Replacement Edge",
+    "Switch Score",
+    "Capital Freed",
     "Comments"
 ]]
 
