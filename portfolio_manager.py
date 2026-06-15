@@ -210,9 +210,15 @@ def enrich_portfolio(portfolio_data):
             if ltp <= 0:
                 continue
 
-            rs_score = safe_number(
-                row.get("RS Score", 0)
-            )
+            #rs_score = safe_number(
+            #    row.get("RS Score", 0)
+            #)
+
+            # ---------------------------------
+            # TEMP RS SCORE DERIVED FROM SCORE
+            # ---------------------------------
+            
+            rs_score = safe_number(score)
 
             health_score, health_status = calculate_health_score(
                 trend,
