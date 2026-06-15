@@ -74,19 +74,11 @@ def generate_rotation_plan(portfolio_data, top_picks):
             health_status == "EXIT_CANDIDATE"
             and current_value > 0
         ):
-            action = "EXIT"
-
-        # ----------------------------
-        # REDUCE
-        # ----------------------------
-
-        elif health_score < 50:
-            action = "REDUCE"
-
-        # ----------------------------
-        # HOLD
-        # ----------------------------
-
+            action = "ROTATE NOW"
+        
+        elif health_score < 60:
+            action = "CONSIDER ROTATION"
+        
         else:
             action = "HOLD"
 
@@ -99,7 +91,10 @@ def generate_rotation_plan(portfolio_data, top_picks):
         # Assign replacement
         # ----------------------------
 
-        if action in ["EXIT", "REDUCE"]:
+        if action in [
+            "ROTATE NOW",
+            "CONSIDER ROTATION"
+        ]:
 
             if replacement_index < len(top_sorted):
 
@@ -113,11 +108,18 @@ def generate_rotation_plan(portfolio_data, top_picks):
 
                 replacement_edge = candidate["Edge Rating"]
 
-                switch_score = (
+                switch_score = round(
                     float(candidate["Score"])
-                    - health_score
+                    - health_score,
+                    2
                 )
-                
+
+                if switch_score < 20:
+                    replacement = ""
+                    replacement_score = ""
+                    replacement_edge = ""
+                    switch_score = ""
+    
                 replacement_index += 1
 
         # ----------------------------
