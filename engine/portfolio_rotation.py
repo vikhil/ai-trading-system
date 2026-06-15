@@ -39,10 +39,31 @@ def generate_rotation_plan(portfolio_data, top_picks):
             row.get("Current Value", 0)
         )
 
+        weight = float(
+            row.get("Portfolio Weight %", 0)
+        )
+        
+        pl_pct = float(
+            row.get("P/L %", 0)
+        )
+        
+        position_risk = float(
+            row.get("Position Risk", 0)
+        )
+
         action = "HOLD"
+
+        priority = 0
+        
         replacement = ""
         replacement_score = ""
+        
         replacement_edge = ""
+        
+        switch_score = ""
+        
+        capital_freed = current_value
+        
         comments = ""
 
         # ----------------------------
@@ -69,6 +90,11 @@ def generate_rotation_plan(portfolio_data, top_picks):
         else:
             action = "HOLD"
 
+        priority = (
+            (100 - health_score)
+            + abs(min(pl_pct, 0))
+        )
+                
         # ----------------------------
         # Assign replacement
         # ----------------------------
@@ -87,6 +113,11 @@ def generate_rotation_plan(portfolio_data, top_picks):
 
                 replacement_edge = candidate["Edge Rating"]
 
+                switch_score = (
+                    float(candidate["Score"])
+                    - health_score
+                )
+                
                 replacement_index += 1
 
         # ----------------------------
@@ -104,6 +135,12 @@ def generate_rotation_plan(portfolio_data, top_picks):
 
             if weight < 1:
                 comments = "CONSOLIDATE"
+            
+            elif weight > 10:
+                comments = "OVERWEIGHT"
+            
+            elif position_risk > 1000:
+                comments = "HIGH RISK"
 
         except:
             pass
@@ -113,10 +150,16 @@ def generate_rotation_plan(portfolio_data, top_picks):
             health_score,
             health_status,
             current_value,
+            weight,
+            pl_pct,
+            position_risk,
             action,
+            round(priority, 2),
             replacement,
             replacement_score,
             replacement_edge,
+            switch_score,
+            round(capital_freed, 2),
             comments
         ])
 
