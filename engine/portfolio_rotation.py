@@ -62,31 +62,33 @@ def generate_rotation_plan(portfolio_data, top_picks):
         
         switch_score = ""
         
-        capital_freed = current_value
+        capital_freed = 0
+
+        if action in ["ROTATE NOW", "CONSIDER ROTATION"]:
+            capital_freed = current_value
         
         comments = ""
 
-        # ----------------------------
-        # EXIT
-        # ----------------------------
-
+        # EXIT immediately
         if (
             health_status == "EXIT_CANDIDATE"
             and current_value > 0
         ):
             action = "ROTATE NOW"
         
-        elif health_score < 60:
+        # Weak stocks
+        elif health_status == "WEAK":
             action = "CONSIDER ROTATION"
         
+        # Healthy & Strong
         else:
             action = "HOLD"
 
         priority = (
             (100 - health_score)
-            + abs(min(pl_pct, 0))
+            + (abs(min(pl_pct, 0)) * 0.5)
         )
-                
+        
         # ----------------------------
         # Assign replacement
         # ----------------------------
