@@ -62,11 +62,6 @@ def generate_rotation_plan(portfolio_data, top_picks):
         
         switch_score = ""
         
-        capital_freed = 0
-
-        if action in ["ROTATE NOW", "CONSIDER ROTATION"]:
-            capital_freed = current_value
-        
         comments = ""
 
         # EXIT immediately
@@ -84,6 +79,11 @@ def generate_rotation_plan(portfolio_data, top_picks):
         else:
             action = "HOLD"
 
+        capital_freed = 0
+
+        if action in ["ROTATE NOW", "CONSIDER ROTATION"]:
+            capital_freed = current_value
+            
         priority = (
             (100 - health_score)
             + (abs(min(pl_pct, 0)) * 0.5)
@@ -137,14 +137,18 @@ def generate_rotation_plan(portfolio_data, top_picks):
                 )
             )
 
+            comments_list = []
+            
             if weight < 1:
-                comments = "CONSOLIDATE"
+                comments_list.append("CONSOLIDATE")
             
-            elif weight > 10:
-                comments = "OVERWEIGHT"
+            if weight > 10 and health_score >= 80:
+                comments_list.append("TRIM PROFITS")
             
-            elif position_risk > 1000:
-                comments = "HIGH RISK"
+            if position_risk > 1000:
+                comments_list.append("HIGH RISK")
+            
+            comments = ", ".join(comments_list)
 
         except:
             pass
