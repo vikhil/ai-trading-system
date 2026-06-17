@@ -126,11 +126,16 @@ def enrich_portfolio(portfolio_data):
                 auto_adjust=True,
                 progress=False
             )
-
+            
             # Fix Yahoo MultiIndex issue
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = df.columns.get_level_values(0)
-    
+            
+            # REMOVE Yahoo rows containing NaN prices
+            df = df.dropna(
+                subset=["High", "Low", "Close"]
+            )
+            
             print(f"{ticker} Columns = {df.columns}")
             
             if df.empty:
@@ -153,8 +158,14 @@ def enrich_portfolio(portfolio_data):
                 df["ATR"].iloc[-1]
             )
 
+            last_valid_row = (
+                df.dropna(
+                    subset=["High", "Low", "Close", "ATR"]
+                ).iloc[-1]
+            )
+            
             risk_values = apply_risk_engine(
-                df.iloc[-1],
+                last_valid_row,
                 df=df
             )
 
