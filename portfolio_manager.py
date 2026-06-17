@@ -287,6 +287,17 @@ def enrich_portfolio(portfolio_data):
             target = safe_number(target)
             risk_reward = safe_number(risk_reward)
 
+            print(
+                f"{ticker} FINAL VALUES -> "
+                f"ATR={atr_risk}, "
+                f"PosRisk={position_risk}, "
+                f"SL={stop_loss}, "
+                f"Target={target}, "
+                f"RR={risk_reward}"
+            )
+
+            print(f"{ticker} APPENDING SUCCESS ROW")
+            
             enriched.append({
                 **row,
             
@@ -324,7 +335,7 @@ def enrich_portfolio(portfolio_data):
             })
 
         except Exception as e:
-
+            print(f"{ticker} APPENDING ERROR ROW")
             print(f"Portfolio Enrich Error for {ticker}: {e}")
         
             enriched.append({
