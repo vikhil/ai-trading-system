@@ -170,6 +170,14 @@ def enrich_portfolio(portfolio_data):
             target = safe_number(risk_values.iloc[2])
             risk_reward = safe_number(risk_values.iloc[3])
 
+            print(
+                f"{ticker} AFTER EXTRACTION -> "
+                f"ATR={atr_risk}, "
+                f"SL={stop_loss}, "
+                f"TARGET={target}, "
+                f"RR={risk_reward}"
+            )
+            
             signal_data = generate_signal(df, "BULL", 0)
 
             if (
@@ -239,10 +247,25 @@ def enrich_portfolio(portfolio_data):
             
             buy_price = 0 if pd.isna(buy_price) else float(buy_price)
             qty = 0 if pd.isna(qty) else float(qty)
+            
+            print(
+                f"{ticker} AFTER EXTRACTION -> "
+                f"ATR={atr_risk}, "
+                f"SL={stop_loss}, "
+                f"TARGET={target}, "
+                f"RR={risk_reward}"
+            )
+            
             atr_risk = 0 if pd.isna(atr_risk) else float(atr_risk)
 
             position_risk = atr_risk * qty
 
+            print(
+                f"{ticker} AFTER POSITION RISK -> "
+                f"ATR={atr_risk}, "
+                f"POS={position_risk}"
+            )
+            
             print(
                 f"{ticker} | Qty={qty} | Buy={buy_price} | "
                 f"LTP={ltp} | Invested={qty*buy_price} | "
@@ -337,7 +360,16 @@ def enrich_portfolio(portfolio_data):
         except Exception as e:
             print(f"{ticker} APPENDING ERROR ROW")
             print(f"Portfolio Enrich Error for {ticker}: {e}")
-        
+
+            print(
+                f"{ticker} FINAL APPEND -> "
+                f"ATR={atr_risk}, "
+                f"POS={position_risk}, "
+                f"SL={stop_loss}, "
+                f"TARGET={target}, "
+                f"RR={risk_reward}"
+            )
+            
             enriched.append({
                 **row,
                 "LTP": 0,
