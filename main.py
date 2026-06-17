@@ -547,6 +547,13 @@ try:
             [row.get(col, "") for col in portfolio_headers]
         )
 
+    print("===== PORTFOLIO SHEET SAMPLE =====")
+
+    for r in portfolio_sheet_data[:3]:
+        print(r)
+    
+    print("==================================")
+
     try:
         portfolio_analytics_ws = sheet.worksheet(
             "Portfolio Analytics"
