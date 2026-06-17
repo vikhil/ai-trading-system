@@ -535,7 +535,11 @@ try:
         "Health Status",
         "Portfolio Weight %"
     ]
-    
+
+    print("===== PORTFOLIO SAMPLE =====")
+    print(enriched_portfolio[0])
+    print("============================")
+
     portfolio_sheet_data = [portfolio_headers]
     
     for row in enriched_portfolio:
