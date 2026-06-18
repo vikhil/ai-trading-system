@@ -17,7 +17,13 @@ def generate_rotation_plan(portfolio_data, top_picks):
 
     top_sorted = sorted(
         top_picks,
-        key=lambda x: float(x.get("Edge Rating", 0)),
+        key=lambda x: (
+            float(x.get("Score", 0)),
+            float(x.get("Edge Rating", 0)),
+            float(x.get("RS Score", 0)),
+            float(x.get("Risk Reward", 0)),
+            float(x.get("Volume Spike", 0))
+        ),
         reverse=True
     )
 
@@ -112,18 +118,33 @@ def generate_rotation_plan(portfolio_data, top_picks):
 
                 replacement_edge = candidate["Edge Rating"]
 
+                candidate_score = float(candidate.get("Score", 0))
+                candidate_edge = float(candidate.get("Edge Rating", 0))
+                candidate_rs = float(candidate.get("RS Score", 0))
+                candidate_rr = float(candidate.get("Risk Reward", 0))
+                candidate_volume = float(candidate.get("Volume Spike", 0))
+                
                 switch_score = round(
-                    float(candidate["Score"])
-                    - health_score,
+                
+                    (candidate_score - health_score)
+                
+                    + (candidate_edge * 2)
+                
+                    + (candidate_rs / 5)
+                
+                    + (candidate_rr * 3)
+                
+                    + (candidate_volume / 25),
+                
                     2
                 )
-
-                if switch_score < 20:
+                
+                if switch_score < 40:
                     replacement = ""
                     replacement_score = ""
                     replacement_edge = ""
                     switch_score = ""
-    
+                
                 replacement_index += 1
 
         # ----------------------------
@@ -151,6 +172,18 @@ def generate_rotation_plan(portfolio_data, top_picks):
             if position_risk > 1000:
                 comments_list.append("HIGH RISK")
 
+            # Candidate quality notes
+
+            if replacement != "":
+            
+                if candidate.get("Trend", "") == "Bullish":
+                    comments_list.append("STRONG REPLACEMENT")
+            
+                if candidate.get("Breakout", "") == "YES":
+                    comments_list.append("BREAKOUT")
+            
+                if candidate.get("Volume Spike", 0) >= 2:
+                    comments_list.append("VOLUME SURGE")
         except:
             pass
             
