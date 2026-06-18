@@ -1178,8 +1178,16 @@ for row in top_picks[1:]:
 
     rotation_candidates.append({
         "Ticker": ticker,
-        "Score": row[6],
-        "Edge Rating": row[8]
+        "Score": float(row[6]),
+        "Edge Rating": float(row[8]),
+
+        # New fields
+        "RS Score": float(row[16]),
+        "Trend": row[5],
+        "RSI": float(row[2]),
+        "Risk Reward": float(row[15]),
+        "Volume Spike": float(row[20]),
+        "Breakout": row[21]
     })
 
 rotation_rows = generate_rotation_plan(
