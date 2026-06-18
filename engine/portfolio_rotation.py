@@ -1,3 +1,9 @@
+from engine.rotation_engine import (
+    calculate_replacement_quality,
+    calculate_switch_score,
+    generate_comments,
+)
+
 def generate_rotation_plan(portfolio_data, top_picks):
 
     rotation_rows = []
