@@ -62,8 +62,9 @@ def generate_rotation_plan(portfolio_data, top_picks):
         
         switch_score = ""
         
-        comments = ""
-
+        #comments = ""
+        comments_list = []
+        
         # EXIT immediately
         if (
             health_status == "EXIT_CANDIDATE"
@@ -87,7 +88,7 @@ def generate_rotation_plan(portfolio_data, top_picks):
         priority = (
             (100 - health_score)
             + abs(pl_pct)
-            + (position_risk / 20)
+            + (position_risk / 100)
         )
         
         # ----------------------------
@@ -138,25 +139,23 @@ def generate_rotation_plan(portfolio_data, top_picks):
                 )
             )
 
-            comments_list = []
-            
             if weight < 1:
                 comments_list.append("CONSOLIDATE")
             
-            if weight > 10 and health_score >= 80:
-                comments = "TRIM PROFITS"
+            if weight > 10:
+                if health_score >= 80:
+                    comments_list.append("TRIM PROFITS")
+                else:
+                    comments_list.append("OVERWEIGHT")
             
-            elif weight > 10:
-                comments = "OVERWEIGHT"
-            
-            elif position_risk > 1000:
-                comments = "HIGH RISK"
-            
-            comments = ", ".join(comments_list)
+            if position_risk > 1000:
+                comments_list.append("HIGH RISK")
 
         except:
             pass
-
+            
+        comments = ", ".join(comments_list)
+        
         rotation_rows.append([
             ticker,
             health_score,
