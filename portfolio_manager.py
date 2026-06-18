@@ -9,28 +9,38 @@ from signals import (
 
 import math
 
-def calculate_health_score(trend, rs_score, rsi, score):
+def calculate_health_score(
+    trend,
+    rs_score,
+    score,
+    risk_reward,
+    breakout,
+    volume_spike
+):
 
     # -------------------------
-    # 1. Trend Score (30)
+    # Trend (30)
     # -------------------------
     trend_points = 0
 
-    if str(trend).lower() in ["bullish", "uptrend", "strong"]:
+    trend = str(trend).lower()
+
+    if trend in ["bullish", "uptrend", "strong"]:
         trend_points = 30
-    elif str(trend).lower() in ["neutral", "sideways"]:
+    elif trend in ["neutral", "sideways"]:
         trend_points = 15
     else:
         trend_points = 0
 
     # -------------------------
-    # 2. Relative Strength (30)
+    # Relative Strength (25)
     # -------------------------
-    rs_score = float(rs_score) if rs_score is not None else 0
 
-    if rs_score >= 50:
-        rs_points = 30
-    elif rs_score >= 25:
+    rs_score = safe_number(rs_score)
+
+    if rs_score >= 30:
+        rs_points = 25
+    elif rs_score >= 20:
         rs_points = 20
     elif rs_score >= 10:
         rs_points = 10
@@ -38,55 +48,86 @@ def calculate_health_score(trend, rs_score, rsi, score):
         rs_points = 0
 
     # -------------------------
-    # 3. RSI Quality (20)
+    # Scanner Score (10)
     # -------------------------
-    rsi = float(rsi) if rsi is not None else 0
-    
-    if rsi >= 60:
-        rsi_points = 20
-    elif rsi >= 50:
-        rsi_points = 15
-    elif rsi >= 40:
-        rsi_points = 10
-    elif rsi >= 30:
-        rsi_points = 5
-    else:
-        rsi_points = 0
 
-    # -------------------------
-    # 4. Signal Score (20)
-    # -------------------------
-    score = float(score) if score is not None else 0
-    
+    score = safe_number(score)
+
     if score >= 80:
-        score_points = 20
-    elif score >= 60:
-        score_points = 15
-    elif score >= 40:
         score_points = 10
-    elif score >= 20:
+    elif score >= 60:
+        score_points = 8
+    elif score >= 40:
         score_points = 5
     else:
         score_points = 0
 
     # -------------------------
-    # FINAL SCORE
+    # Risk Reward (10)
     # -------------------------
-    health_score = trend_points + rs_points + rsi_points + score_points
 
-    # -------------------------
-    # STATUS
-    # -------------------------
-    if health_score >= 80:
-        health_status = "STRONG"
-    elif health_score >= 60:
-        health_status = "HEALTHY"
-    elif health_score >= 40:
-        health_status = "WEAK"
+    risk_reward = safe_number(risk_reward)
+
+    if risk_reward >= 3:
+        rr_points = 10
+    elif risk_reward >= 2:
+        rr_points = 8
+    elif risk_reward >= 1.5:
+        rr_points = 5
     else:
-        health_status = "EXIT_CANDIDATE"
+        rr_points = 0
 
-    return health_score, health_status
+    # -------------------------
+    # Breakout (10)
+    # -------------------------
+
+    breakout_points = 10 if str(breakout).upper() == "YES" else 0
+
+    # -------------------------
+    # Volume Spike (15)
+    # -------------------------
+
+    volume_points = 0
+
+    volume_spike = safe_number(volume_spike)
+
+    if volume_spike >= 2:
+        volume_points = 15
+    elif volume_spike >= 1.5:
+        volume_points = 10
+    elif volume_spike >= 1.2:
+        volume_points = 5
+
+    # -------------------------
+    # Final Score
+    # -------------------------
+
+    health_score = (
+        trend_points
+        + rs_points
+        + score_points
+        + rr_points
+        + breakout_points
+        + volume_points
+    )
+
+    # -------------------------
+    # Health Status
+    # -------------------------
+
+    if health_score >= 85:
+        status = "STRONG"
+
+    elif health_score >= 60:
+        status = "HEALTHY"
+
+    elif health_score >= 40:
+        status = "WEAK"
+
+    else:
+        status = "EXIT_CANDIDATE"
+
+    return health_score, status
 
 def safe_number(value, default=0):
 
@@ -240,10 +281,12 @@ def enrich_portfolio(portfolio_data):
             rs_score = safe_number(score)
 
             health_score, health_status = calculate_health_score(
-                trend,
-                rs_score,
-                rsi,
-                score
+                trend=trend,
+                rs_score=rs_score,
+                score=score,
+                risk_reward=risk_reward,
+                breakout=breakout,
+                volume_spike=volume_spike
             )
             
             buy_price = pd.to_numeric(
