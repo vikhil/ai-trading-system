@@ -1178,10 +1178,11 @@ for row in top_picks[1:]:
 
     rotation_candidates.append({
         "Ticker": ticker,
+    
         "Score": float(row[6]),
         "Edge Rating": float(row[8]),
-
-        # New fields
+    
+        # Existing fields (keep these)
         "RS Score": float(row[16]),
         "Trend": row[5],
         "RSI": float(row[2]),
