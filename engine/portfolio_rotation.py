@@ -23,10 +23,15 @@ def generate_rotation_plan(portfolio_data, top_picks):
 
     top_sorted = sorted(
         top_picks,
-        key=lambda x: calculate_replacement_quality(x),
-        reverse=True
+        key=calculate_replacement_quality,
+        reverse=True,
     )
 
+    current_holdings = {
+        row.get("Ticker", "")
+        for row in portfolio_data
+    }
+    
     for row in holdings_sorted:
 
         ticker = row.get("Ticker", "")
@@ -65,9 +70,8 @@ def generate_rotation_plan(portfolio_data, top_picks):
         replacement_edge = ""
         
         switch_score = ""
-        
-        #comments = ""
-        comments_list = []
+
+        selected_candidate = None
         
         # EXIT immediately
         if (
@@ -91,8 +95,9 @@ def generate_rotation_plan(portfolio_data, top_picks):
             
         priority = (
             (100 - health_score)
-            + abs(pl_pct)
+            + max(0, -pl_pct)
             + (position_risk / 100)
+            + (weight * 2)
         )
         
         # ----------------------------
@@ -102,23 +107,16 @@ def generate_rotation_plan(portfolio_data, top_picks):
         if action in ["ROTATE NOW", "CONSIDER ROTATION"]:
 
             best_candidate = None
-            best_switch_score = -9999
+            best_switch_score = float("-inf")
         
             for candidate in top_sorted:
-        
-                candidate_score = float(candidate.get("Score", 0))
-                candidate_edge = float(candidate.get("Edge Rating", 0))
-                candidate_rs = float(candidate.get("RS Score", 0))
-                candidate_rr = float(candidate.get("Risk Reward", 0))
-                candidate_volume = float(candidate.get("Volume Spike", 0))
-        
-                current_switch = round(
-                    (candidate_score - health_score)
-                    + (candidate_edge * 2)
-                    + (candidate_rs / 5)
-                    + (candidate_rr * 3)
-                    + (candidate_volume / 25),
-                    2
+
+                if candidate.get("Ticker") in current_holdings:
+                    continue
+    
+                current_switch = calculate_switch_score(
+                    row,
+                    candidate,
                 )
         
                 if current_switch > best_switch_score:
@@ -127,14 +125,16 @@ def generate_rotation_plan(portfolio_data, top_picks):
         
             if best_candidate is not None and best_switch_score >= 40:
         
-                candidate = best_candidate
+                selected_candidate = best_candidate
         
-                replacement = candidate["Ticker"]
+                replacement = selected_candidate.get("Ticker", "")
 
-                top_sorted.remove(candidate)
+                if selected_candidate in top_sorted:
+                    top_sorted.remove(selected_candidate)
                 
-                replacement_score = calculate_replacement_quality(candidate)
-                replacement_edge = candidate["Edge Rating"]
+                replacement_score = calculate_replacement_quality(selected_candidate)
+                
+                replacement_edge = float(selected_candidate.get("Edge Rating", 0))
                 switch_score = best_switch_score
 
         # ----------------------------
@@ -142,42 +142,17 @@ def generate_rotation_plan(portfolio_data, top_picks):
         # ----------------------------
 
         try:
-
-            weight = float(
-                row.get(
-                    "Portfolio Weight %",
-                    0
-                )
+        
+            comments = generate_comments(
+                health_score,
+                weight,
+                position_risk,
+                selected_candidate,
+                switch_score,
             )
-
-            if weight < 1:
-                comments_list.append("CONSOLIDATE")
-            
-            if weight > 10:
-                if health_score >= 80:
-                    comments_list.append("TRIM PROFITS")
-                else:
-                    comments_list.append("OVERWEIGHT")
-            
-            if position_risk > 1000:
-                comments_list.append("HIGH RISK")
-
-            # Candidate quality notes
-
-            if replacement != "":
-            
-                if candidate.get("Trend", "") == "Bullish":
-                    comments_list.append("STRONG REPLACEMENT")
-            
-                if candidate.get("Breakout", "") == "YES":
-                    comments_list.append("BREAKOUT")
-            
-                if candidate.get("Volume Spike", 0) >= 2:
-                    comments_list.append("VOLUME SURGE")
-        except:
-            pass
-            
-        comments = ", ".join(comments_list)
+        
+        except Exception:
+            comments = ""
         
         rotation_rows.append([
             ticker,
@@ -196,5 +171,21 @@ def generate_rotation_plan(portfolio_data, top_picks):
             round(capital_freed, 2),
             comments
         ])
-
+        
+    rotation_rows.sort(
+        key=lambda x: x[8],
+        reverse=True
+    )
+            
+    rotate_count = 0
+            
+    for row in rotation_rows:
+            
+        if row[7] == "ROTATE NOW":
+            
+            rotate_count += 1
+            
+            if rotate_count > 5:
+                row[7] = "MONITOR"
+            
     return rotation_rows
