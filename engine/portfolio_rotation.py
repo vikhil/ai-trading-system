@@ -27,8 +27,6 @@ def generate_rotation_plan(portfolio_data, top_picks):
         reverse=True
     )
 
-    replacement_index = 0
-
     for row in holdings_sorted:
 
         ticker = row.get("Ticker", "")
@@ -101,51 +99,43 @@ def generate_rotation_plan(portfolio_data, top_picks):
         # Assign replacement
         # ----------------------------
 
-        if action in [
-            "ROTATE NOW",
-            "CONSIDER ROTATION"
-        ]:
+        if action in ["ROTATE NOW", "CONSIDER ROTATION"]:
 
-            if replacement_index < len(top_sorted):
-
-                candidate = top_sorted[
-                    replacement_index
-                ]
-
-                replacement = candidate["Ticker"]
-
-                replacement_score = candidate["Score"]
-
-                replacement_edge = candidate["Edge Rating"]
-
+            best_candidate = None
+            best_switch_score = -9999
+        
+            for candidate in top_sorted:
+        
                 candidate_score = float(candidate.get("Score", 0))
                 candidate_edge = float(candidate.get("Edge Rating", 0))
                 candidate_rs = float(candidate.get("RS Score", 0))
                 candidate_rr = float(candidate.get("Risk Reward", 0))
                 candidate_volume = float(candidate.get("Volume Spike", 0))
-                
-                switch_score = round(
-                
+        
+                current_switch = round(
                     (candidate_score - health_score)
-                
                     + (candidate_edge * 2)
-                
                     + (candidate_rs / 5)
-                
                     + (candidate_rr * 3)
-                
                     + (candidate_volume / 25),
-                
                     2
                 )
+        
+                if current_switch > best_switch_score:
+                    best_switch_score = current_switch
+                    best_candidate = candidate
+        
+            if best_candidate is not None and best_switch_score >= 40:
+        
+                candidate = best_candidate
+        
+                replacement = candidate["Ticker"]
+
+                top_sorted.remove(candidate)
                 
-                if switch_score < 40:
-                    replacement = ""
-                    replacement_score = ""
-                    replacement_edge = ""
-                    switch_score = ""
-                
-                replacement_index += 1
+                replacement_score = candidate["Score"]
+                replacement_edge = candidate["Edge Rating"]
+                switch_score = best_switch_score
 
         # ----------------------------
         # Concentration check
