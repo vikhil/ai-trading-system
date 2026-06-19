@@ -4,6 +4,8 @@ from engine.rotation_engine import (
     generate_comments,
 )
 
+from engine.portfolio_classifier import classify_bucket
+
 def generate_rotation_plan(portfolio_data, top_picks):
 
     rotation_rows = []
@@ -44,6 +46,8 @@ def generate_rotation_plan(portfolio_data, top_picks):
             row.get("Health Status", "")
         )
 
+        bucket = classify_bucket(row)
+        
         current_value = float(
             row.get("Current Value", 0)
         )
@@ -113,6 +117,11 @@ def generate_rotation_plan(portfolio_data, top_picks):
 
                 if candidate.get("Ticker") in current_holdings:
                     continue
+
+                candidate_bucket = classify_bucket(candidate)
+
+                if candidate_bucket != bucket:
+                    continue
     
                 current_switch = calculate_switch_score(
                     row,
@@ -129,6 +138,8 @@ def generate_rotation_plan(portfolio_data, top_picks):
         
                 replacement = selected_candidate.get("Ticker", "")
 
+                replacement_bucket = classify_bucket(selected_candidate)
+                
                 if selected_candidate in top_sorted:
                     top_sorted.remove(selected_candidate)
                 
