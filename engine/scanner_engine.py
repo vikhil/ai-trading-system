@@ -50,7 +50,7 @@ def run_scanner(
     #buy_candidates = []
     #watch_candidates = []
     
-    for ticker, df, error in results_map:
+    for ticker, sector, df, error in results_map:
         error_reason = None
         
         try:
@@ -392,6 +392,7 @@ def run_scanner(
             
             results.append({
                 "ticker": ticker,
+                "sector": sector,
                 "cmp": cmp_price,
                 "rsi": rsi,
                 "ema20": ema20,
