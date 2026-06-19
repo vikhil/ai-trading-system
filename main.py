@@ -994,6 +994,7 @@ except Exception as e:
 
 headers = [
     "Ticker",
+    "Sector",
     "CMP",
     "RSI",
     "EMA20",
@@ -1124,6 +1125,7 @@ for r in results_sorted:
     ):
         top_picks.append([
             r["ticker"],
+            r["sector"],
             r["cmp"],
             r["rsi"],
             r["ema20"],
@@ -1170,25 +1172,35 @@ owned_tickers = {
 rotation_candidates = []
 
 for row in top_picks[1:]:
-
-    ticker = str(row[0]).strip().upper()
+    
+    row_dict = dict(zip(headers, row))
+    ticker = str(row_dict["Ticker"]).strip().upper()
 
     if ticker in owned_tickers:
         continue
 
     rotation_candidates.append({
-        "Ticker": ticker,
+
+        "Ticker": row_dict["Ticker"],
     
-        "Score": float(row[6]),
-        "Edge Rating": float(row[8]),
+        "Sector": row_dict["Sector"],
     
-        # Existing fields (keep these)
-        "RS Score": float(row[16]),
-        "Trend": row[5],
-        "RSI": float(row[2]),
-        "Risk Reward": float(row[15]),
-        "Volume Spike": float(row[20]),
-        "Breakout": row[21]
+        "Score": float(row_dict["Score"]),
+    
+        "Edge Rating": float(row_dict["Edge Rating"]),
+    
+        "RS Score": float(row_dict["RS Score"]),
+    
+        "Trend": row_dict["Trend"],
+    
+        "RSI": float(row_dict["RSI"]),
+    
+        "Risk Reward": float(row_dict["Risk Reward"]),
+    
+        "Volume Spike": float(row_dict["Volume Spike"]),
+    
+        "Breakout": row_dict["Breakout"],
+    
     })
 
 rotation_rows = generate_rotation_plan(
