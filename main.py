@@ -604,34 +604,35 @@ try:
 
 except Exception as e:
     print("Portfolio Enrichment Failed:", e)
+    raise
     
-    # ----------------------------
-    # PORTFOLIO DASHBOARD
-    # ----------------------------
+# ----------------------------
+# PORTFOLIO DASHBOARD
+# ----------------------------
     
-    dashboard = generate_portfolio_dashboard(
-        enriched_portfolio
-    )
+dashboard = generate_portfolio_dashboard(
+    enriched_portfolio
+)
 
-    dashboard_data = [
+dashboard_data = [
 
-        ["Metric", "Value"],
+    ["Metric", "Value"],
     
-        ["Portfolio Value", dashboard["Portfolio Value"]],
+    ["Portfolio Value", dashboard["Portfolio Value"]],
     
-        ["Average Health", dashboard["Average Health"]],
+    ["Average Health", dashboard["Average Health"]],
     
-        ["Total Portfolio Risk", dashboard["Total Risk"]],
+    ["Total Portfolio Risk", dashboard["Total Risk"]],
     
-        ["Total Holdings", dashboard["Total Holdings"]],
+    ["Total Holdings", dashboard["Total Holdings"]],
     
-        [],
+    [],
     
-        ["Top Winners"],
+    ["Top Winners"],
     
-        ["Ticker", "P/L %"]
+    ["Ticker", "P/L %"]
     
-    ]
+]
 
 for row in dashboard["Top Winners"]:
 
