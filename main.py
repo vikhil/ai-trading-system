@@ -603,156 +603,154 @@ try:
         f"Portfolio Updated: {len(enriched_portfolio)} holdings"
     )
     
-    # ----------------------------
-    # PORTFOLIO DASHBOARD
-    # ----------------------------
-        
-    dashboard = generate_portfolio_dashboard(
-        enriched_portfolio
+except Exception as e:
+    print("Portfolio Enrichment Failed:", e)
+    raise
+    
+# ----------------------------
+# PORTFOLIO DASHBOARD
+# ----------------------------
+
+dashboard = generate_portfolio_dashboard(
+    enriched_portfolio
+)
+
+dashboard_data = [
+
+    ["Metric", "Value"],
+    
+    ["Portfolio Value", dashboard["Portfolio Value"]],
+    
+    ["Average Health", dashboard["Average Health"]],
+    
+    ["Total Portfolio Risk", dashboard["Total Risk"]],
+    
+    ["Total Holdings", dashboard["Total Holdings"]],
+    
+    [],
+    
+    ["Top Winners"],
+    
+    ["Ticker", "P/L %"]
+    
+]
+
+for row in dashboard["Top Winners"]:
+
+    dashboard_data.append([
+        row["Ticker"],
+        row["P/L %"]
+    ])
+
+dashboard_data.append([])
+
+dashboard_data.append(["Top Losers"])
+
+dashboard_data.append([
+    "Ticker",
+    "P/L %"
+])
+
+for row in dashboard["Top Losers"]:
+
+    dashboard_data.append([
+        row["Ticker"],
+        row["P/L %"]
+    ])
+
+dashboard_data.append([])
+
+dashboard_data.append(["Highest Risk Positions"])
+
+dashboard_data.append([
+    "Ticker",
+    "Position Risk"
+])
+
+for row in dashboard["Top Risks"]:
+
+    dashboard_data.append([
+        row["Ticker"],
+        row["Position Risk"]
+    ])
+
+    dashboard_data.append([])
+
+    dashboard_data.append(["Sector Allocation"])
+    
+    dashboard_data.append([
+        "Sector",
+        "Weight %"
+    ])
+
+for row in dashboard["Sector Weights"]:
+
+    dashboard_data.append([
+
+        row["Sector"],
+
+        row["Weight"]
+
+    ])
+
+    dashboard_data.append([])
+    
+    dashboard_data.append([
+    
+        "Largest Sector",
+    
+        dashboard["Largest Sector"]
+    
+    ])
+
+    dashboard_data.append([
+    
+        "Diversification",
+    
+        dashboard["Diversification"]
+    
+    ])
+
+    dashboard_data.append([])
+
+    dashboard_data.append([
+    
+        "Portfolio Risk Score",
+    
+        dashboard["Portfolio Risk Score"]
+    
+    ])
+    
+    dashboard_data.append([
+    
+        "Portfolio Risk Gauge",
+    
+        dashboard["Portfolio Risk Gauge"]
+    
+    ])
+
+    safe_update(
+        portfolio_dashboard_ws,
+        dashboard_data
     )
-    
-    dashboard_data = [
-    
-        ["Metric", "Value"],
-        
-        ["Portfolio Value", dashboard["Portfolio Value"]],
-        
-        ["Average Health", dashboard["Average Health"]],
-        
-        ["Total Portfolio Risk", dashboard["Total Risk"]],
-        
-        ["Total Holdings", dashboard["Total Holdings"]],
-        
-        [],
-        
-        ["Top Winners"],
-        
-        ["Ticker", "P/L %"]
-        
-    ]
 
-    for row in dashboard["Top Winners"]:
-    
-        dashboard_data.append([
-            row["Ticker"],
-            row["P/L %"]
-        ])
-    
-    dashboard_data.append([])
-    
-    dashboard_data.append(["Top Losers"])
-    
-    dashboard_data.append([
-        "Ticker",
-        "P/L %"
-    ])
-    
-    for row in dashboard["Top Losers"]:
-    
-        dashboard_data.append([
-            row["Ticker"],
-            row["P/L %"]
-        ])
-    
-    dashboard_data.append([])
-    
-    dashboard_data.append(["Highest Risk Positions"])
-    
-    dashboard_data.append([
-        "Ticker",
-        "Position Risk"
-    ])
-    
-    for row in dashboard["Top Risks"]:
-    
-        dashboard_data.append([
-            row["Ticker"],
-            row["Position Risk"]
-        ])
-    
-        dashboard_data.append([])
-    
-        dashboard_data.append(["Sector Allocation"])
-        
-        dashboard_data.append([
-            "Sector",
-            "Weight %"
-        ])
-    
-    for row in dashboard["Sector Weights"]:
-    
-        dashboard_data.append([
-    
-            row["Sector"],
-    
-            row["Weight"]
-    
-        ])
+    print("Portfolio Dashboard Updated")
 
-        dashboard_data.append([])
-        
-        dashboard_data.append([
-        
-            "Largest Sector",
-        
-            dashboard["Largest Sector"]
-        
-        ])
-
-        dashboard_data.append([
-        
-            "Diversification",
-        
-            dashboard["Diversification"]
-        
-        ])
+    # ----------------------------
+    # PORTFOLIO ROTATION
+    # ----------------------------
     
-        dashboard_data.append([])
-    
-        dashboard_data.append([
-        
-            "Portfolio Risk Score",
-        
-            dashboard["Portfolio Risk Score"]
-        
-        ])
-        
-        dashboard_data.append([
-        
-            "Portfolio Risk Gauge",
-        
-            dashboard["Portfolio Risk Gauge"]
-        
-        ])
-    
-        safe_update(
-            portfolio_dashboard_ws,
-            dashboard_data
+    try:
+        rotation_ws = sheet.worksheet(
+            "Portfolio Rotation"
         )
     
-        print("Portfolio Dashboard Updated")
-
-        # ----------------------------
-        # PORTFOLIO ROTATION
-        # ----------------------------
-        
-        try:
-            rotation_ws = sheet.worksheet(
-                "Portfolio Rotation"
-            )
-        
-        except:
-            rotation_ws = sheet.add_worksheet(
-                title="Portfolio Rotation",
-                rows="2000",
-                cols="20"
-            )
-    
-except Exception as e:
-    print(
-        "Portfolio Enrichment Failed:",
-        e
-    )
+    except:
+        rotation_ws = sheet.add_worksheet(
+            title="Portfolio Rotation",
+            rows="2000",
+            cols="20"
+        )
     
 # ----------------------------
 # MARKET TREND LOGGING
