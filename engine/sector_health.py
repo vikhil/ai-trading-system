@@ -49,7 +49,7 @@ def calculate_sector_health(portfolio):
             bonus = -8
 
         sector_strength[sector] = {
-            "Average": round(avg,2),
+            "Average Health": round(avg,2),
             "Bonus": bonus
         }
 
