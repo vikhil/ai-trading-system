@@ -3,6 +3,24 @@ import requests
 from io import StringIO
 import yfinance as yf
 
+# ==========================
+# UNIVERSE CONFIGURATION
+# ==========================
+
+UNIVERSE = "NIFTY500"
+
+NIFTY50_URL = (
+    "https://archives.nseindia.com/content/indices/ind_nifty50list.csv"
+)
+
+NIFTYNEXT50_URL = (
+    "https://archives.nseindia.com/content/indices/ind_niftynext50list.csv"
+)
+
+NIFTY500_URL = (
+    "https://archives.nseindia.com/content/indices/ind_nifty500list.csv"
+)
+
 def fetch_nse_index_stocks(url):
 
     headers = {
@@ -40,19 +58,31 @@ def fetch_nse_index_stocks(url):
 
 def load_universe():
 
-    nifty50_url = "https://archives.nseindia.com/content/indices/ind_nifty50list.csv"
-    niftynext50_url = "https://archives.nseindia.com/content/indices/ind_niftynext50list.csv"
-    NIFTY500_URL = "https://archives.nseindia.com/content/indices/ind_nifty500list.csv"
+    if UNIVERSE == "NIFTY50":
 
-    universe = []
+        universe = fetch_nse_index_stocks(
+            NIFTY50_URL
+        )
 
-    universe = (
-        fetch_nse_index_stocks(nifty50_url)
-        +
-        fetch_nse_index_stocks(niftynext50_url)
-        +
-        fetch_nse_index_stocks(NIFTY500_url)
-    )
+    elif UNIVERSE == "NIFTY100":
+
+        universe = (
+            fetch_nse_index_stocks(NIFTY50_URL)
+            +
+            fetch_nse_index_stocks(NIFTYNEXT50_URL)
+        )
+
+    elif UNIVERSE == "NIFTY500":
+
+        universe = fetch_nse_index_stocks(
+            NIFTY500_URL
+        )
+
+    else:
+
+        raise Exception(
+            f"Unknown Universe: {UNIVERSE}"
+        )
 
     cleaned = []
     seen = set()
@@ -70,6 +100,7 @@ def load_universe():
             stock["Ticker"] = ticker
 
             cleaned.append(stock)
+
             seen.add(ticker)
 
     return cleaned
