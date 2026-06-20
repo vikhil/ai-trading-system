@@ -3,12 +3,27 @@ def calculate_institutional_rank(row):
     score = 0
 
     # -----------------------
-    # Health Score (40)
+    # Relative Strength (15)
+    # -----------------------
+    
+    rs = float(row.get("RS Score", 0))
+    
+    if rs >= 30:
+        score += 15
+    
+    elif rs >= 20:
+        score += 10
+    
+    elif rs >= 10:
+        score += 5
+    
+    # -----------------------
+    # Health Score (30)
     # -----------------------
 
     health = float(row.get("Health Score", 0))
 
-    score += health * 0.40
+    score += health * 0.30
 
     # -----------------------
     # Edge Rating (25)
