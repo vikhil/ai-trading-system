@@ -97,12 +97,14 @@ def generate_rotation_plan(portfolio_data, top_picks):
         if action in ["ROTATE NOW", "CONSIDER ROTATION"]:
             capital_freed = current_value
             
-        priority = (
+        priority_score = (
             (100 - health_score)
             + max(0, -pl_pct)
             + (position_risk / 100)
             + (weight * 2)
         )
+
+        priority = round(priority_score, 2)
         
         # ----------------------------
         # Assign replacement
@@ -165,6 +167,15 @@ def generate_rotation_plan(portfolio_data, top_picks):
         except Exception:
             comments = ""
         
+        if switch_score >= 45:
+            priority_label = "HIGH"
+        
+        elif switch_score >= 30:
+            priority_label = "MEDIUM"
+        
+        else:
+            priority_label = "LOW"
+        
         rotation_rows.append([
             ticker,
             health_score,
@@ -174,7 +185,8 @@ def generate_rotation_plan(portfolio_data, top_picks):
             pl_pct,
             position_risk,
             action,
-            round(priority, 2),
+            priority,
+            priority_label,
             replacement,
             replacement_score,
             replacement_edge,
