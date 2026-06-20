@@ -572,7 +572,18 @@ try:
             rows="2000",
             cols="50"
         )
-
+    try:
+        portfolio_dashboard_ws = sheet.worksheet(
+            "Portfolio Dashboard"
+        )
+    
+    except:
+        portfolio_dashboard_ws = sheet.add_worksheet(
+            title="Portfolio Dashboard",
+            rows="500",
+            cols="20"
+        )
+    
     # Update Portfolio tab
 
     safe_update(
