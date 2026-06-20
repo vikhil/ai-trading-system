@@ -51,6 +51,7 @@ from utils.logger import (
     log_exec,
     log_error,
 )
+from engine.portfolio_dashboard import generate_portfolio_dashboard
 
 def load_state():
     try:
