@@ -178,7 +178,119 @@ def generate_portfolio_dashboard(portfolio):
     else:
     
         portfolio_risk = "VERY HIGH"
+
+    # -----------------------
+    # Suggested Rebalancing
+    # -----------------------
     
+    recommendations = []
+    
+    # Sector concentration
+    if largest_sector > 30:
+    
+        top_sector = sector_weights[0]
+    
+        recommendations.append(
+    
+            f"Reduce exposure to {top_sector['Sector']} "
+            f"({top_sector['Weight']}%)"
+    
+        )
+    
+    # Weak holdings
+    weak_count = sum(
+    
+        1
+    
+        for row in holdings
+    
+        if row.get("Health Status") in [
+    
+            "WEAK",
+    
+            "EXIT_CANDIDATE",
+    
+            "URGENT_EXIT"
+    
+        ]
+    
+    )
+    
+    if weak_count > 0:
+    
+        recommendations.append(
+    
+            f"Review {weak_count} weak holdings"
+    
+        )
+    
+    # High risk positions
+    high_risk = [
+    
+        row
+    
+        for row in holdings
+    
+        if float(row.get("Position Risk", 0)) > 1000
+    
+    ]
+    
+    if len(high_risk):
+    
+        recommendations.append(
+    
+            f"Reduce risk in {len(high_risk)} positions"
+    
+        )
+    
+    # Portfolio health
+    if avg_health < 60:
+    
+        recommendations.append(
+    
+            "Increase overall portfolio quality"
+    
+        )
+    
+    # Capital available
+    rotation_capital = round(
+    
+        sum(
+    
+            float(row.get("Current Value", 0))
+    
+            for row in holdings
+    
+            if row.get("Health Status") in [
+    
+                "EXIT_CANDIDATE",
+    
+                "URGENT_EXIT"
+    
+            ]
+    
+        ),
+    
+        2
+    
+    )
+    
+    if rotation_capital > 0:
+    
+        recommendations.append(
+    
+            f"Potential rotation capital: ₹{rotation_capital:,.0f}"
+    
+        )
+    
+    if not recommendations:
+    
+        recommendations.append(
+    
+            "No major rebalancing required"
+    
+        )
+        
     return {
     
         "Portfolio Value": total_value,
@@ -203,6 +315,10 @@ def generate_portfolio_dashboard(portfolio):
 
         "Portfolio Risk Score": risk_score,
 
-        "Portfolio Risk Gauge": portfolio_risk
+        "Portfolio Risk Gauge": portfolio_risk,
+
+        "Recommendations": recommendations,
+
+        "Rotation Capital": rotation_capital
     
     }
