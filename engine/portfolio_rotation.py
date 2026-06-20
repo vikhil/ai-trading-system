@@ -183,6 +183,8 @@ def generate_rotation_plan(portfolio_data, top_picks):
         
         except Exception:
             comments = ""
+
+        switch_score = safe_number(switch_score)
         
         if switch_score >= 45:
             priority_label = "HIGH"
