@@ -419,7 +419,7 @@ def enrich_portfolio(portfolio_data):
                 
                 "Health Score": health_score,
             
-                "Health Status": health_status
+                "Health Status": health_status,
 
                 "Sector Health Bonus": 0
             })
@@ -454,7 +454,7 @@ def enrich_portfolio(portfolio_data):
                 "Trend": "ERROR",
                 "Score": 0,
                 "Health Score": 0,
-                "Health Status": "ERROR"
+                "Health Status": "ERROR",
                 "Sector Health Bonus": 0
             })
     # --------------------------------
@@ -462,6 +462,15 @@ def enrich_portfolio(portfolio_data):
     # --------------------------------
     
     sector_health = calculate_sector_health(enriched)
+
+    print("\nSector Health Summary")
+
+    for sector, values in sector_health.items():
+        print(
+            sector,
+            values["Average Health"],
+            values["Bonus"]
+        )
     
     for row in enriched:
     
@@ -483,7 +492,7 @@ def enrich_portfolio(portfolio_data):
             )
         )
     
-        row["Health Score"] = new_health
+        row["Health Score"] = round(new_health)
 
         row["Sector Health Bonus"] = bonus
     
