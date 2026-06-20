@@ -1,3 +1,38 @@
+def institutional_accumulation(stock):
+
+    score = 0
+
+    volume = float(stock.get("Volume Spike", 0))
+
+    breakout = str(
+        stock.get("Breakout", "NO")
+    ).upper()
+
+    trend = str(
+        stock.get("Trend", "")
+    ).lower()
+
+    health = float(
+        stock.get("Health Score", 0)
+    )
+
+    if volume >= 2:
+        score += 40
+
+    elif volume >= 1.5:
+        score += 25
+
+    if breakout == "YES":
+        score += 25
+
+    if trend in ["bullish", "uptrend", "strong"]:
+        score += 20
+
+    if health >= 70:
+        score += 15
+
+    return min(score, 100)
+    
 def calculate_institutional_rank(row):
 
     score = 0
