@@ -259,7 +259,8 @@ def enrich_portfolio(portfolio_data):
                 avg_volume,
                 current_volume,
                 volume_spike,
-                breakout
+                breakout,
+                trend_persistence
             ) = signal_data
             
             ltp = safe_number(ltp)
@@ -414,6 +415,8 @@ def enrich_portfolio(portfolio_data):
                 "RS Score": round(rs_score, 2),
                 
                 "Trend": trend,
+
+                "Trend Persistence": trend_persistence,
             
                 "Score": score,
                 
