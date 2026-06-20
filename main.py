@@ -390,6 +390,16 @@ print("Connected")
 # ----------------------------
 stocks = load_universe()
 
+stocks = sorted(
+    stocks,
+    key=lambda x: x["Ticker"]
+)
+
+sector_lookup = {
+    stock["Ticker"]: stock["Sector"]
+    for stock in stocks
+}
+
 stocks = sorted(list(set(stocks)))
 
 print("Stocks:", len(stocks))
