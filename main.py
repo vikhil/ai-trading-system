@@ -603,6 +603,80 @@ try:
     )
 
     # ----------------------------
+    # PORTFOLIO DASHBOARD
+    # ----------------------------
+    
+    dashboard = generate_portfolio_dashboard(
+        enriched_portfolio
+    )
+
+    dashboard_data = [
+
+        ["Metric", "Value"],
+    
+        ["Portfolio Value", dashboard["Portfolio Value"]],
+    
+        ["Average Health", dashboard["Average Health"]],
+    
+        ["Total Portfolio Risk", dashboard["Total Risk"]],
+    
+        ["Total Holdings", dashboard["Total Holdings"]],
+    
+        [],
+    
+        ["Top Winners"],
+    
+        ["Ticker", "P/L %"]
+    
+    ]
+
+for row in dashboard["Top Winners"]:
+
+    dashboard_data.append([
+        row["Ticker"],
+        row["P/L %"]
+    ])
+
+dashboard_data.append([])
+
+dashboard_data.append(["Top Losers"])
+
+dashboard_data.append([
+    "Ticker",
+    "P/L %"
+])
+
+for row in dashboard["Top Losers"]:
+
+    dashboard_data.append([
+        row["Ticker"],
+        row["P/L %"]
+    ])
+
+dashboard_data.append([])
+
+dashboard_data.append(["Highest Risk Positions"])
+
+dashboard_data.append([
+    "Ticker",
+    "Position Risk"
+])
+
+for row in dashboard["Top Risks"]:
+
+    dashboard_data.append([
+        row["Ticker"],
+        row["Position Risk"]
+    ])
+
+    safe_update(
+        portfolio_dashboard_ws,
+        dashboard_data
+    )
+    
+    print("Portfolio Dashboard Updated")
+
+    # ----------------------------
     # PORTFOLIO ROTATION
     # ----------------------------
     
