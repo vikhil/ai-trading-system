@@ -1276,6 +1276,7 @@ rotation_data = [[
     "P/L %",
     "Position Risk",
     "Action",
+    "Priority Score",
     "Priority",
     "Replacement",
     "Replacement Score",
