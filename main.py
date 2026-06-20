@@ -541,7 +541,8 @@ try:
         "Score",
         "Health Score",
         "Health Status",
-        "Portfolio Weight %"
+        "Portfolio Weight %",
+        "Sector"
     ]
 
     print("===== PORTFOLIO SAMPLE =====")
