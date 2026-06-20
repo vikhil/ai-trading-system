@@ -139,8 +139,6 @@ def generate_rotation_plan(portfolio_data, top_picks):
                 selected_candidate = best_candidate
         
                 replacement = selected_candidate.get("Ticker", "")
-
-                replacement_bucket = classify_bucket(selected_candidate)
                 
                 if selected_candidate in top_sorted:
                     top_sorted.remove(selected_candidate)
@@ -155,13 +153,32 @@ def generate_rotation_plan(portfolio_data, top_picks):
         # ----------------------------
 
         try:
+
+            if selected_candidate:
+        
+                breakout = selected_candidate.get(
+                    "Breakout",
+                    "NO"
+                )
+        
+                volume = float(
+                    selected_candidate.get(
+                        "Volume Spike",
+                        0
+                    )
+                )
+        
+            else:
+        
+                breakout = "NO"
+                volume = 0
         
             comments = generate_comments(
-                health_score,
                 weight,
                 position_risk,
-                selected_candidate,
-                switch_score,
+                breakout,
+                volume,
+                health_score
             )
         
         except Exception:
