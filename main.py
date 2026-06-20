@@ -174,18 +174,6 @@ def safe_download(ticker, period="6mo", interval="1d", retries=2):
                 return None, str(e)
 
     return None, "Unknown failure"
-
-def validate_download_output(ticker, df, error):
-    if error:
-        return ticker, None, error
-
-    if df is None or len(df) == 0:
-        return ticker, None, "EMPTY_DF"
-
-    if not isinstance(df, pd.DataFrame):
-        return ticker, None, "INVALID_TYPE"
-
-    return ticker, df, None
     
 print("Script Started")
 
@@ -386,16 +374,16 @@ failed_logs = []
 print("Connected")
 
 # ----------------------------
-# LOAD STOCKS
+# LOAD UNIVERSE
 # ----------------------------
-stocks = load_universe()
+universe = load_universe()
 
 # ----------------------------
 # SORT BY TICKER
 # ----------------------------
 
-stocks = sorted(
-    stocks,
+universe = sorted(
+    universe,
     key=lambda x: x["Ticker"]
 )
 
@@ -404,10 +392,20 @@ stocks = sorted(
 # ----------------------------
 
 sector_lookup = {
-    stock["Ticker"]: stock["Sector"]
-    for stock in stocks
+    row["Ticker"]: row["Sector"]
+    for row in universe
 }
 
+# ----------------------------
+# TICKER LIST FOR YFINANCE
+# ----------------------------
+
+stocks = [
+    row["Ticker"]
+    for row in universe
+]
+
+print("Universe Loaded:", len(universe))
 print("Stocks:", len(stocks))
     
 # ----------------------------
@@ -642,11 +640,6 @@ print("Market Trend Updated:", timestamp, regime)
 def batch_download(tickers, chunk_size=20):
     for i in range(0, len(tickers), chunk_size):
         batch = tickers[i:i + chunk_size]
-
-        tickers = [
-            stock["Ticker"]
-            for stock in batch
-        ]
         
         data = yf.download(
             tickers=tickers,
@@ -663,30 +656,64 @@ results_map = []
 
 for batch, data in batch_download(stocks, chunk_size=20):
 
-    for stock in batch:
+    # ----------------------------
+    # EMPTY DOWNLOAD SAFETY
+    # ----------------------------
+
+    if data is None or data.empty:
+
+        print("Batch download returned no data.")
+
+        for ticker in batch:
+
+            results_map.append(
+                (
+                    ticker,
+                    sector_lookup.get(ticker, "UNKNOWN"),
+                    None,
+                    "DOWNLOAD_EMPTY"
+                )
+            )
+
+        continue
         
-        ticker = stock["Ticker"]
-        sector = stock["Sector"]
+    for ticker in batch:
+
+        sector = sector_lookup.get(ticker, "UNKNOWN")
         
         try:
             if ticker not in data.columns.get_level_values(0):
-                results_map.append((ticker, sector, None, "NO_DATA"))
+                results_map.append(
+                    (
+                        ticker,
+                        sector,
+                        None,
+                        "NO_DATA"
+                    )
+                )
                 continue
 
             df = data[ticker].dropna()
 
-            _, df, error = validate_download_output(
-                ticker,
-                df,
-                None
-            )
+            if df.empty:
+            
+                results_map.append(
+                    (
+                        ticker,
+                        sector,
+                        None,
+                        "EMPTY_DF"
+                    )
+                )
+            
+                continue
             
             results_map.append(
                 (
                     ticker,
                     sector,
                     df,
-                    error
+                    None
                 )
             )
 
@@ -896,12 +923,6 @@ for r in executed_buys + executed_watches:
     
 print("Sample result type:", type(results_sorted[0]) if results_sorted else None)
 
-# SAFETY: ensure no malformed rows
-#results_sorted = [
-#    r for r in results_sorted
-#    if isinstance(r, dict) and "edge_score" in r
-#]
-
 print("Final Results Count:", len(results_sorted))
 
 # ----------------------------
@@ -1068,6 +1089,7 @@ scanner_data = [headers]
 for r in results_sorted:
     scanner_data.append([
         r["ticker"],
+        r["sector"],
         r["cmp"],
         r["rsi"],
         r["ema20"],
