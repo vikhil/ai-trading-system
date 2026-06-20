@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-
+from engine.trend_persistence import calculate_trend_persistence
 
 # =========================================================
 # UTILITIES (GLOBAL SAFE HELPERS)
@@ -185,6 +185,15 @@ def generate_signal(df, regime="BULL", rs_score=0):
         ema50 = close.ewm(span=50).mean()
         ema200 = close.ewm(span=200).mean()
         rsi = calculate_rsi(close)
+
+        # ---------------------------------
+        # Trend Persistence
+        # ---------------------------------
+        
+        df["EMA20"] = ema20
+        df["EMA50"] = ema50
+        
+        trend_persistence = calculate_trend_persistence(df)
         
         cmp = float(close.iloc[-1])
         ema20_v = float(ema20.iloc[-1])
@@ -216,7 +225,8 @@ def generate_signal(df, regime="BULL", rs_score=0):
             round(avg_volume, 0),
             round(current_volume, 0),
             round(volume_spike, 2),
-            breakout
+            breakout,
+            trend_persistence
         ]
 
     except Exception as e:
