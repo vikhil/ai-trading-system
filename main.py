@@ -669,6 +669,43 @@ for row in dashboard["Top Risks"]:
         row["Position Risk"]
     ])
 
+    dashboard_data.append([])
+
+    dashboard_data.append(["Sector Allocation"])
+    
+    dashboard_data.append([
+        "Sector",
+        "Weight %"
+    ])
+
+for row in dashboard["Sector Weights"]:
+
+    dashboard_data.append([
+
+        row["Sector"],
+
+        row["Weight"]
+
+    ])
+
+    dashboard_data.append([])
+    
+    dashboard_data.append([
+    
+        "Largest Sector",
+    
+        dashboard["Largest Sector"]
+    
+    ])
+
+    dashboard_data.append([
+    
+        "Diversification",
+    
+        dashboard["Diversification"]
+    
+    ])
+
     safe_update(
         portfolio_dashboard_ws,
         dashboard_data
