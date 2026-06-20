@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 SYSTEM_VERSION = "2A.1-STABLE"
+
 RUN_ID = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 print(f"[SYSTEM] Version: {SYSTEM_VERSION}")
@@ -601,155 +602,151 @@ try:
     print(
         f"Portfolio Updated: {len(enriched_portfolio)} holdings"
     )
-
-except Exception as e:
-    print("Portfolio Enrichment Failed:", e)
-    raise
     
-# ----------------------------
-# PORTFOLIO DASHBOARD
-# ----------------------------
-    
-dashboard = generate_portfolio_dashboard(
-    enriched_portfolio
-)
-
-dashboard_data = [
-
-    ["Metric", "Value"],
-    
-    ["Portfolio Value", dashboard["Portfolio Value"]],
-    
-    ["Average Health", dashboard["Average Health"]],
-    
-    ["Total Portfolio Risk", dashboard["Total Risk"]],
-    
-    ["Total Holdings", dashboard["Total Holdings"]],
-    
-    [],
-    
-    ["Top Winners"],
-    
-    ["Ticker", "P/L %"]
-    
-]
-
-for row in dashboard["Top Winners"]:
-
-    dashboard_data.append([
-        row["Ticker"],
-        row["P/L %"]
-    ])
-
-dashboard_data.append([])
-
-dashboard_data.append(["Top Losers"])
-
-dashboard_data.append([
-    "Ticker",
-    "P/L %"
-])
-
-for row in dashboard["Top Losers"]:
-
-    dashboard_data.append([
-        row["Ticker"],
-        row["P/L %"]
-    ])
-
-dashboard_data.append([])
-
-dashboard_data.append(["Highest Risk Positions"])
-
-dashboard_data.append([
-    "Ticker",
-    "Position Risk"
-])
-
-for row in dashboard["Top Risks"]:
-
-    dashboard_data.append([
-        row["Ticker"],
-        row["Position Risk"]
-    ])
-
-    dashboard_data.append([])
-
-    dashboard_data.append(["Sector Allocation"])
-    
-    dashboard_data.append([
-        "Sector",
-        "Weight %"
-    ])
-
-for row in dashboard["Sector Weights"]:
-
-    dashboard_data.append([
-
-        row["Sector"],
-
-        row["Weight"]
-
-    ])
-
-    dashboard_data.append([])
-    
-    dashboard_data.append([
-    
-        "Largest Sector",
-    
-        dashboard["Largest Sector"]
-    
-    ])
-
-    dashboard_data.append([
-    
-        "Diversification",
-    
-        dashboard["Diversification"]
-    
-    ])
-
-    dashboard_data.append([])
-
-    dashboard_data.append([
-    
-        "Portfolio Risk Score",
-    
-        dashboard["Portfolio Risk Score"]
-    
-    ])
-    
-    dashboard_data.append([
-    
-        "Portfolio Risk Gauge",
-    
-        dashboard["Portfolio Risk Gauge"]
-    
-    ])
-
-    safe_update(
-        portfolio_dashboard_ws,
-        dashboard_data
+    # ----------------------------
+    # PORTFOLIO DASHBOARD
+    # ----------------------------
+        
+    dashboard = generate_portfolio_dashboard(
+        enriched_portfolio
     )
     
-    print("Portfolio Dashboard Updated")
+    dashboard_data = [
+    
+        ["Metric", "Value"],
+        
+        ["Portfolio Value", dashboard["Portfolio Value"]],
+        
+        ["Average Health", dashboard["Average Health"]],
+        
+        ["Total Portfolio Risk", dashboard["Total Risk"]],
+        
+        ["Total Holdings", dashboard["Total Holdings"]],
+        
+        [],
+        
+        ["Top Winners"],
+        
+        ["Ticker", "P/L %"]
+        
+    ]
 
-    # ----------------------------
-    # PORTFOLIO ROTATION
-    # ----------------------------
+    for row in dashboard["Top Winners"]:
     
-    try:
-        rotation_ws = sheet.worksheet(
-            "Portfolio Rotation"
+        dashboard_data.append([
+            row["Ticker"],
+            row["P/L %"]
+        ])
+    
+    dashboard_data.append([])
+    
+    dashboard_data.append(["Top Losers"])
+    
+    dashboard_data.append([
+        "Ticker",
+        "P/L %"
+    ])
+    
+    for row in dashboard["Top Losers"]:
+    
+        dashboard_data.append([
+            row["Ticker"],
+            row["P/L %"]
+        ])
+    
+    dashboard_data.append([])
+    
+    dashboard_data.append(["Highest Risk Positions"])
+    
+    dashboard_data.append([
+        "Ticker",
+        "Position Risk"
+    ])
+    
+    for row in dashboard["Top Risks"]:
+    
+        dashboard_data.append([
+            row["Ticker"],
+            row["Position Risk"]
+        ])
+    
+        dashboard_data.append([])
+    
+        dashboard_data.append(["Sector Allocation"])
+        
+        dashboard_data.append([
+            "Sector",
+            "Weight %"
+        ])
+    
+    for row in dashboard["Sector Weights"]:
+    
+        dashboard_data.append([
+    
+            row["Sector"],
+    
+            row["Weight"]
+    
+        ])
+
+        dashboard_data.append([])
+        
+        dashboard_data.append([
+        
+            "Largest Sector",
+        
+            dashboard["Largest Sector"]
+        
+        ])
+
+        dashboard_data.append([
+        
+            "Diversification",
+        
+            dashboard["Diversification"]
+        
+        ])
+    
+        dashboard_data.append([])
+    
+        dashboard_data.append([
+        
+            "Portfolio Risk Score",
+        
+            dashboard["Portfolio Risk Score"]
+        
+        ])
+        
+        dashboard_data.append([
+        
+            "Portfolio Risk Gauge",
+        
+            dashboard["Portfolio Risk Gauge"]
+        
+        ])
+    
+        safe_update(
+            portfolio_dashboard_ws,
+            dashboard_data
         )
     
-    except:
-        rotation_ws = sheet.add_worksheet(
-            title="Portfolio Rotation",
-            rows="2000",
-            cols="20"
-        )
+        print("Portfolio Dashboard Updated")
+
+        # ----------------------------
+        # PORTFOLIO ROTATION
+        # ----------------------------
+        
+        try:
+            rotation_ws = sheet.worksheet(
+                "Portfolio Rotation"
+            )
+        
+        except:
+            rotation_ws = sheet.add_worksheet(
+                title="Portfolio Rotation",
+                rows="2000",
+                cols="20"
+            )
     
 except Exception as e:
     print(
