@@ -45,39 +45,40 @@ def calculate_switch_score(holding, candidate):
     )
 
 
-def generate_comments(weight,
-                      position_risk,
-                      breakout,
-                      volume,
-                      health):
+def generate_comments(
+    health_score,
+    weight,
+    position_risk,
+    candidate,
+    switch_score
+):
 
     comments = []
 
-    if weight < 1:
-        comments.append("CONSOLIDATE")
+    if health_score < 40:
+        comments.append("Very weak holding")
+
+    elif health_score < 60:
+        comments.append("Weak momentum")
 
     if weight > 10:
-
-        if health >= 80:
-            comments.append("TRIM PROFITS")
-        else:
-            comments.append("OVERWEIGHT")
+        comments.append("Large allocation")
 
     if position_risk > 1000:
-        comments.append("HIGH RISK")
+        comments.append("High portfolio risk")
 
-    if str(breakout).upper() == "YES":
-        comments.append("BREAKOUT")
+    if candidate:
 
-    if volume >= 2:
-        comments.append("VOLUME SURGE")
+        if candidate.get("Breakout") == "YES":
+            comments.append("Replacement breakout")
+
+        if float(candidate.get("Volume Spike",0)) >= 2:
+            comments.append("Strong volume")
+
+        if switch_score >= 70:
+            comments.append("Excellent upgrade")
+
+        elif switch_score >= 55:
+            comments.append("Good upgrade")
 
     return ", ".join(comments)
-
-calculate_replacement_quality()
-
-calculate_holding_quality()
-
-calculate_switch_score()
-
-generate_rotation_comments()
