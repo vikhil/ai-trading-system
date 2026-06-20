@@ -15,119 +15,127 @@ def calculate_health_score(
     score,
     risk_reward,
     breakout,
-    volume_spike
+    volume_spike,
+    pl_pct,
+    position_risk
 ):
 
+    health = 0
+
     # -------------------------
-    # Trend (30)
+    # Trend (20)
     # -------------------------
-    trend_points = 0
 
     trend = str(trend).lower()
 
     if trend in ["bullish", "uptrend", "strong"]:
-        trend_points = 30
+        health += 20
+
     elif trend in ["neutral", "sideways"]:
-        trend_points = 15
-    else:
-        trend_points = 0
+        health += 10
 
     # -------------------------
-    # Relative Strength (25)
+    # Relative Strength (20)
     # -------------------------
 
     rs_score = safe_number(rs_score)
 
     if rs_score >= 30:
-        rs_points = 25
+        health += 20
+
     elif rs_score >= 20:
-        rs_points = 20
+        health += 15
+
     elif rs_score >= 10:
-        rs_points = 10
-    else:
-        rs_points = 0
+        health += 10
 
     # -------------------------
-    # Scanner Score (10)
+    # Scanner Score (20)
     # -------------------------
 
     score = safe_number(score)
 
     if score >= 80:
-        score_points = 10
+        health += 20
+
     elif score >= 60:
-        score_points = 8
+        health += 15
+
     elif score >= 40:
-        score_points = 5
-    else:
-        score_points = 0
+        health += 10
 
     # -------------------------
-    # Risk Reward (10)
+    # P/L Contribution (10)
     # -------------------------
 
-    risk_reward = safe_number(risk_reward)
+    pl_pct = safe_number(pl_pct)
 
-    if risk_reward >= 3:
-        rr_points = 10
-    elif risk_reward >= 2:
-        rr_points = 8
-    elif risk_reward >= 1.5:
-        rr_points = 5
-    else:
-        rr_points = 0
+    if pl_pct >= 20:
+        health += 10
 
-    # -------------------------
-    # Breakout (10)
-    # -------------------------
+    elif pl_pct >= 10:
+        health += 8
 
-    breakout_points = 10 if str(breakout).upper() == "YES" else 0
+    elif pl_pct >= 0:
+        health += 5
+
+    elif pl_pct >= -10:
+        health += 3
 
     # -------------------------
-    # Volume Spike (15)
+    # Position Risk (10)
     # -------------------------
 
-    volume_points = 0
+    position_risk = safe_number(position_risk)
+
+    if position_risk <= 500:
+        health += 10
+
+    elif position_risk <= 1000:
+        health += 7
+
+    elif position_risk <= 2000:
+        health += 4
+
+    # -------------------------
+    # Volume + Breakout (20)
+    # -------------------------
+
+    if str(breakout).upper() == "YES":
+        health += 10
 
     volume_spike = safe_number(volume_spike)
 
     if volume_spike >= 2:
-        volume_points = 15
+        health += 10
+
     elif volume_spike >= 1.5:
-        volume_points = 10
+        health += 6
+
     elif volume_spike >= 1.2:
-        volume_points = 5
+        health += 3
 
-    # -------------------------
-    # Final Score
-    # -------------------------
+    health = round(health)
 
-    health_score = (
-        trend_points
-        + rs_points
-        + score_points
-        + rr_points
-        + breakout_points
-        + volume_points
-    )
+    if health >= 85:
+        status = "ELITE"
 
-    # -------------------------
-    # Health Status
-    # -------------------------
-
-    if health_score >= 85:
+    elif health >= 70:
         status = "STRONG"
 
-    elif health_score >= 60:
+    elif health >= 55:
         status = "HEALTHY"
 
-    elif health_score >= 40:
+    elif health >= 40:
         status = "WEAK"
 
-    else:
+    elif health >= 25:
         status = "EXIT_CANDIDATE"
 
-    return health_score, status
+    else:
+        status = "URGENT_EXIT"
+
+    return health, status
 
 def safe_number(value, default=0):
 
@@ -279,15 +287,6 @@ def enrich_portfolio(portfolio_data):
             # ---------------------------------
             
             rs_score = safe_number(score)
-
-            health_score, health_status = calculate_health_score(
-                trend=trend,
-                rs_score=rs_score,
-                score=score,
-                risk_reward=risk_reward,
-                breakout=breakout,
-                volume_spike=volume_spike
-            )
             
             buy_price = pd.to_numeric(
                 row.get("Buy Price", 0),
@@ -343,6 +342,17 @@ def enrich_portfolio(portfolio_data):
             pl_pct = safe_number(pl_pct)
             
             position_risk = safe_number(position_risk)
+
+            health_score, health_status = calculate_health_score(
+                trend=trend,
+                rs_score=rs_score,
+                score=score,
+                risk_reward=risk_reward,
+                breakout=breakout,
+                volume_spike=volume_spike,
+                pl_pct=pl_pct,
+                position_risk=position_risk
+            )
             
             health_score = int(safe_number(health_score))
 
