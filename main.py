@@ -44,6 +44,13 @@ from sheets_writer import safe_update
 from alerts import send_telegram
 from portfolio_manager import enrich_portfolio
 from engine.portfolio_rotation import generate_rotation_plan
+from utils.logger import (
+    log_scan,
+    log_signal,
+    log_risk,
+    log_exec,
+    log_error,
+)
 
 def load_state():
     try:
@@ -59,21 +66,6 @@ def save_state(state):
         json.dump(state, f)
 
 state = load_state()
-
-def log_scan(msg):
-    print(f"[SCAN] {msg}")
-
-def log_signal(msg):
-    print(f"[SIGNAL] {msg}")
-
-def log_risk(msg):
-    print(f"[RISK] {msg}")
-
-def log_exec(msg):
-    print(f"[EXECUTION] {msg}")
-
-def log_error(msg):
-    print(f"[ERROR] {msg}")
 
 def is_state_expired(entry_time):
     try:
