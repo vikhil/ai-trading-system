@@ -420,6 +420,8 @@ def enrich_portfolio(portfolio_data):
                 "Health Score": health_score,
             
                 "Health Status": health_status
+
+                "Sector Health Bonus": 0
             })
 
         except Exception as e:
@@ -453,6 +455,7 @@ def enrich_portfolio(portfolio_data):
                 "Score": 0,
                 "Health Score": 0,
                 "Health Status": "ERROR"
+                "Sector Health Bonus": 0
             })
     # --------------------------------
     # APPLY SECTOR HEALTH
@@ -481,6 +484,8 @@ def enrich_portfolio(portfolio_data):
         )
     
         row["Health Score"] = new_health
+
+        row["Sector Health Bonus"] = bonus
     
         if new_health >= 85:
             row["Health Status"] = "ELITE"
