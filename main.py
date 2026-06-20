@@ -390,17 +390,23 @@ print("Connected")
 # ----------------------------
 stocks = load_universe()
 
+# ----------------------------
+# SORT BY TICKER
+# ----------------------------
+
 stocks = sorted(
     stocks,
     key=lambda x: x["Ticker"]
 )
 
+# ----------------------------
+# FAST LOOKUP TABLE
+# ----------------------------
+
 sector_lookup = {
     stock["Ticker"]: stock["Sector"]
     for stock in stocks
 }
-
-stocks = sorted(list(set(stocks)))
 
 print("Stocks:", len(stocks))
     
@@ -637,8 +643,13 @@ def batch_download(tickers, chunk_size=20):
     for i in range(0, len(tickers), chunk_size):
         batch = tickers[i:i + chunk_size]
 
+        tickers = [
+            stock["Ticker"]
+            for stock in batch
+        ]
+        
         data = yf.download(
-            tickers=batch,
+            tickers=tickers,
             period="6mo",
             interval="1d",
             group_by="ticker",
@@ -652,19 +663,43 @@ results_map = []
 
 for batch, data in batch_download(stocks, chunk_size=20):
 
-    for ticker in batch:
-
+    for stock in batch:
+        
+        ticker = stock["Ticker"]
+        sector = stock["Sector"]
+        
         try:
             if ticker not in data.columns.get_level_values(0):
-                results_map.append((ticker, None, "NO_DATA"))
+                results_map.append((ticker, sector, None, "NO_DATA"))
                 continue
 
             df = data[ticker].dropna()
 
-            results_map.append(validate_download_output(ticker, df, None))
+            _, df, error = validate_download_output(
+                ticker,
+                df,
+                None
+            )
+            
+            results_map.append(
+                (
+                    ticker,
+                    sector,
+                    df,
+                    error
+                )
+            )
 
         except Exception as e:
-            results_map.append((ticker, None, str(e)))
+            
+            results_map.append(
+                (
+                    ticker,
+                    sector,
+                    None,
+                    str(e)
+                )
+            )
             
 results, failed_logs = run_scanner(
     results_map,
