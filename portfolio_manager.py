@@ -8,6 +8,7 @@ from signals import (
 )
 
 import math
+from engine.sector_health import calculate_sector_health
 
 def calculate_health_score(
     trend,
@@ -453,5 +454,50 @@ def enrich_portfolio(portfolio_data):
                 "Health Score": 0,
                 "Health Status": "ERROR"
             })
-
+    # --------------------------------
+    # APPLY SECTOR HEALTH
+    # --------------------------------
+    
+    sector_health = calculate_sector_health(enriched)
+    
+    for row in enriched:
+    
+        sector = row.get("Sector","UNKNOWN")
+    
+        bonus = sector_health.get(
+            sector,
+            {}
+        ).get(
+            "Bonus",
+            0
+        )
+    
+        new_health = min(
+            100,
+            max(
+                0,
+                row["Health Score"] + bonus
+            )
+        )
+    
+        row["Health Score"] = new_health
+    
+        if new_health >= 85:
+            row["Health Status"] = "ELITE"
+    
+        elif new_health >= 70:
+            row["Health Status"] = "STRONG"
+    
+        elif new_health >= 55:
+            row["Health Status"] = "HEALTHY"
+    
+        elif new_health >= 40:
+            row["Health Status"] = "WEAK"
+    
+        elif new_health >= 25:
+            row["Health Status"] = "EXIT_CANDIDATE"
+    
+        else:
+            row["Health Status"] = "URGENT_EXIT"
+        
     return enriched
