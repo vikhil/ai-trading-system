@@ -706,6 +706,24 @@ for row in dashboard["Sector Weights"]:
     
     ])
 
+    dashboard_data.append([])
+
+    dashboard_data.append([
+    
+        "Portfolio Risk Score",
+    
+        dashboard["Portfolio Risk Score"]
+    
+    ])
+    
+    dashboard_data.append([
+    
+        "Portfolio Risk Gauge",
+    
+        dashboard["Portfolio Risk Gauge"]
+    
+    ])
+
     safe_update(
         portfolio_dashboard_ws,
         dashboard_data
