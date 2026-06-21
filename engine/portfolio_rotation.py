@@ -29,7 +29,9 @@ def generate_rotation_plan(portfolio_data, top_picks):
 
     holdings_sorted = sorted(
         portfolio_data,
-        key=lambda x: float(x.get("Health Score", 0)),
+        key=lambda x: safe_number(
+            x.get("Health Score", 0)
+        ),
     )
 
     # ----------------------------
