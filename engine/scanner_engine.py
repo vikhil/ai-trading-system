@@ -13,7 +13,7 @@ from engine.risk_engine import (
     get_trade_action
 )
 
-from institutional_rank import calculate_institutional_rank
+from engine.institutional_rank import calculate_institutional_rank
 
 def signal_quality_gate(score, rs_score, risk_reward, volume_spike):
     if score < 40:
