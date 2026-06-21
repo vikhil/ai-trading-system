@@ -1419,7 +1419,8 @@ for r in results_sorted:
 
 rotation_rows = generate_rotation_plan(
     enriched_portfolio,
-    rotation_candidates
+    rotation_candidates,
+    sector_rankings
 )
 
 rotation_data = [[
