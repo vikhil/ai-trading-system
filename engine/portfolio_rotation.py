@@ -6,15 +6,15 @@ from engine.rotation_engine import (
 
 from engine.portfolio_classifier import classify_bucket
 
-def safe_number(x, default=0):
+def safe_number(value, default=0.0):
     try:
-        if x is None:
+        if value is None:
             return default
 
-        if str(x).strip() == "":
+        if value == "":
             return default
 
-        return float(x)
+        return float(value)
 
     except:
         return default
