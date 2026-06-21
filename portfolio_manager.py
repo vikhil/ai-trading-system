@@ -168,15 +168,21 @@ def enrich_portfolio(portfolio_data):
             continue
 
         try:
-
+            print(f"DOWNLOADING -> {ticker}")
+            
             df = yf.download(
                 ticker,
                 period="6mo",
                 interval="1d",
                 auto_adjust=True,
-                progress=False
+                progress=False,
+                threads=False
             )
-            
+
+            if df is None or df.empty:
+                print(f"{ticker}: Download returned empty")
+                continue
+    
             # Fix Yahoo MultiIndex issue
             if isinstance(df.columns, pd.MultiIndex):
                 df.columns = df.columns.get_level_values(0)
