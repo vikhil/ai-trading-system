@@ -168,7 +168,7 @@ def enrich_portfolio(portfolio_data):
             continue
 
         try:
-            print(f"DOWNLOADING -> {ticker}")
+            print(f"START DOWNLOAD -> {ticker}")
             
             df = yf.download(
                 ticker,
@@ -178,7 +178,8 @@ def enrich_portfolio(portfolio_data):
                 progress=False,
                 threads=False
             )
-
+            print(f"END DOWNLOAD -> {ticker}")
+            
             if df is None or df.empty:
                 print(f"{ticker}: Download returned empty")
                 continue
