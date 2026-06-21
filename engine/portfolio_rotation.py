@@ -18,7 +18,9 @@ def safe_number(value, default=0.0):
 
     except:
         return default
-        
+
+print("PORTFOLIO_ROTATION VERSION = SAFE_NUMBER_FIX")
+
 def generate_rotation_plan(portfolio_data, top_picks):
 
     rotation_rows = []
