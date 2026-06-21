@@ -45,6 +45,7 @@ from sheets_writer import safe_update
 from alerts import send_telegram
 from portfolio_manager import enrich_portfolio
 from engine.portfolio_rotation import generate_rotation_plan
+from engine.sector_rotation import build_sector_rankings
 from utils.logger import (
     log_scan,
     log_signal,
@@ -752,6 +753,20 @@ except:
         rows="2000",
         cols="20"
     )
+
+# ----------------------------
+# SECTOR ROTATION
+# ----------------------------
+
+try:
+    sector_rotation_ws = sheet.worksheet("Sector Rotation")
+
+except:
+    sector_rotation_ws = sheet.add_worksheet(
+        title="Sector Rotation",
+        rows="1000",
+        cols="20"
+    )
     
 # ----------------------------
 # MARKET TREND LOGGING
@@ -1436,6 +1451,66 @@ safe_update(
 print(
     f"Portfolio Rotation Updated: "
     f"{len(rotation_rows)} rows"
+)
+
+# ----------------------------
+# SECTOR ROTATION
+# ----------------------------
+
+sector_summary = {}
+
+for row in results_sorted:
+
+    sector = row["sector"]
+
+    if sector not in sector_summary:
+
+        sector_summary[sector] = {
+            "Sector": sector,
+            "RS Score": row["rs_score"],
+            "Momentum": row["score"],
+            "Breadth": 1,
+            "Trend": row["trend"],
+            "Breakout": row["breakout"]
+        }
+
+    else:
+
+        sector_summary[sector]["Breadth"] += 1
+
+sector_rankings = build_sector_rankings(
+    list(sector_summary.values())
+)
+
+sector_data = [[
+    "Sector",
+    "Sector Score",
+    "RS Score",
+    "Momentum",
+    "Breadth",
+    "Trend",
+    "Breakout"
+]]
+
+for row in sector_rankings:
+
+    sector_data.append([
+        row["Sector"],
+        row["Sector Score"],
+        row["RS Score"],
+        row["Momentum"],
+        row["Breadth"],
+        row["Trend"],
+        row["Breakout"]
+    ])
+
+safe_update(
+    sector_rotation_ws,
+    sector_data
+)
+
+print(
+    f"Sector Rotation Updated: {len(sector_rankings)} sectors"
 )
 
 save_state(state)
