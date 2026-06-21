@@ -193,7 +193,8 @@ def generate_signal(df, regime="BULL", rs_score=0):
         df["EMA20"] = ema20
         df["EMA50"] = ema50
         
-        trend_persistence = calculate_trend_persistence(df)
+        #trend_persistence = calculate_trend_persistence(df)
+        trend_persistence = 50
         
         cmp = float(close.iloc[-1])
         ema20_v = float(ema20.iloc[-1])
