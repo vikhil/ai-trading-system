@@ -1,6 +1,6 @@
-yfinance
-pandas
-numpy
-gspread
-oauth2client
-openpyxl
+yfinance==0.2.58
+pandas==2.2.3
+numpy==2.2.6
+gspread==6.2.1
+oauth2client==4.1.3
+openpyxl==3.1.5
