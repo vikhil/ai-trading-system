@@ -353,6 +353,7 @@ def run_scanner(
             edge_score = float(edge_score)
             
             edge_rating = int(calculate_edge_rating(edge_score))
+            institutional_rank = calculate_institutional_rank(result)
             
             position_size = calculate_position_size(capital, cmp_price, atr_risk, edge_rating, risk_per_trade)
 
@@ -421,6 +422,7 @@ def run_scanner(
                 "score": score,
                 "edge_score": edge_score,
                 "edge_rating": edge_rating,
+                "institutional_rank": institutional_rank,
                 "trade_action": trade_action,
                 "position_size": trade_risk["position_size"],
                 "signal": signal,
