@@ -261,13 +261,13 @@ def enrich_portfolio(portfolio_data):
                 ema20,
                 ema50,
                 trend,
-                trend_persistence,
                 score,
                 signal,
                 avg_volume,
                 current_volume,
                 volume_spike,
-                breakout
+                breakout,
+                trend_persistence,
             ) = signal_data
             
             ltp = safe_number(ltp)
