@@ -5,6 +5,7 @@ from engine.rotation_engine import (
 )
 
 from engine.portfolio_classifier import classify_bucket
+from engine.sector_rotation import get_sector_strength
 
 def safe_number(value, default=0.0):
     try:
@@ -21,8 +22,11 @@ def safe_number(value, default=0.0):
 
 print("PORTFOLIO_ROTATION VERSION = SAFE_NUMBER_FIX")
 
-def generate_rotation_plan(portfolio_data, top_picks):
-
+def generate_rotation_plan(
+    portfolio_data,
+    top_picks,
+    sector_rankings
+):
     rotation_rows = []
 
     # ----------------------------
@@ -132,9 +136,17 @@ def generate_rotation_plan(portfolio_data, top_picks):
                 if candidate_bucket != bucket:
                     continue
     
-                current_switch = calculate_switch_score(
-                    row,
-                    candidate,
+                sector_strength = get_sector_strength(
+                    candidate.get("Sector"),
+                    sector_rankings
+                )
+                
+                current_switch = (
+                    calculate_switch_score(
+                        row,
+                        candidate,
+                    )
+                    + (sector_strength * 0.20)
                 )
         
                 if current_switch > best_switch_score:
