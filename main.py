@@ -675,14 +675,14 @@ for row in dashboard["Top Risks"]:
         row["Position Risk"]
     ])
 
-    dashboard_data.append([])
+dashboard_data.append([])
 
-    dashboard_data.append(["Sector Allocation"])
-    
-    dashboard_data.append([
-        "Sector",
-        "Weight %"
-    ])
+dashboard_data.append(["Sector Allocation"])
+
+dashboard_data.append([
+    "Sector",
+    "Weight %"
+])
 
 for row in dashboard["Sector Weights"]:
 
@@ -694,64 +694,64 @@ for row in dashboard["Sector Weights"]:
 
     ])
 
-    dashboard_data.append([])
-    
-    dashboard_data.append([
-    
-        "Largest Sector",
-    
-        dashboard["Largest Sector"]
-    
-    ])
+dashboard_data.append([])
 
-    dashboard_data.append([
-    
-        "Diversification",
-    
-        dashboard["Diversification"]
-    
-    ])
+dashboard_data.append([
 
-    dashboard_data.append([])
+    "Largest Sector",
 
-    dashboard_data.append([
-    
-        "Portfolio Risk Score",
-    
-        dashboard["Portfolio Risk Score"]
-    
-    ])
-    
-    dashboard_data.append([
-    
-        "Portfolio Risk Gauge",
-    
-        dashboard["Portfolio Risk Gauge"]
-    
-    ])
+    dashboard["Largest Sector"]
 
-    safe_update(
-        portfolio_dashboard_ws,
-        dashboard_data
+])
+
+dashboard_data.append([
+
+    "Diversification",
+
+    dashboard["Diversification"]
+
+])
+
+dashboard_data.append([])
+
+dashboard_data.append([
+
+    "Portfolio Risk Score",
+
+    dashboard["Portfolio Risk Score"]
+
+])
+
+dashboard_data.append([
+
+    "Portfolio Risk Gauge",
+
+    dashboard["Portfolio Risk Gauge"]
+
+])
+
+safe_update(
+    portfolio_dashboard_ws,
+    dashboard_data
+)
+
+print("Portfolio Dashboard Updated")
+
+# ----------------------------
+# PORTFOLIO ROTATION
+# ----------------------------
+
+try:
+    rotation_ws = sheet.worksheet(
+        "Portfolio Rotation"
     )
 
-    print("Portfolio Dashboard Updated")
-
-    # ----------------------------
-    # PORTFOLIO ROTATION
-    # ----------------------------
-    
-    try:
-        rotation_ws = sheet.worksheet(
-            "Portfolio Rotation"
-        )
-    
-    except:
-        rotation_ws = sheet.add_worksheet(
-            title="Portfolio Rotation",
-            rows="2000",
-            cols="20"
-        )
+except:
+    rotation_ws = sheet.add_worksheet(
+        title="Portfolio Rotation",
+        rows="2000",
+        cols="20"
+    )
     
 # ----------------------------
 # MARKET TREND LOGGING
@@ -1371,36 +1371,35 @@ owned_tickers = {
 
 rotation_candidates = []
 
-for row in top_picks[1:]:
-    
-    row_dict = dict(zip(headers, row))
-    ticker = str(row_dict["Ticker"]).strip().upper()
+for r in results_sorted:
+
+    ticker = str(r["ticker"]).strip().upper()
 
     if ticker in owned_tickers:
         continue
 
     rotation_candidates.append({
 
-        "Ticker": row_dict["Ticker"],
-    
-        "Sector": row_dict["Sector"],
-    
-        "Score": float(row_dict["Score"]),
-    
-        "Edge Rating": float(row_dict["Edge Rating"]),
-    
-        "RS Score": float(row_dict["RS Score"]),
-    
-        "Trend": row_dict["Trend"],
-    
-        "RSI": float(row_dict["RSI"]),
-    
-        "Risk Reward": float(row_dict["Risk Reward"]),
-    
-        "Volume Spike": float(row_dict["Volume Spike"]),
-    
-        "Breakout": row_dict["Breakout"],
-    
+        "Ticker": r["ticker"],
+
+        "Sector": r["sector"],
+
+        "Score": float(r["score"]),
+
+        "Edge Rating": float(r["edge_rating"]),
+
+        "RS Score": float(r["rs_score"]),
+
+        "Trend": r["trend"],
+
+        "RSI": float(r["rsi"]),
+
+        "Risk Reward": float(r["risk_reward"]),
+
+        "Volume Spike": float(r["volume_spike"]),
+
+        "Breakout": r["breakout"]
+
     })
 
 rotation_rows = generate_rotation_plan(
