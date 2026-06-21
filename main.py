@@ -1416,6 +1416,8 @@ for r in results_sorted:
         "Breakout": r["breakout"]
 
     })
+    
+sector_rankings = build_sector_rankings(sector_rows)
 
 rotation_rows = generate_rotation_plan(
     enriched_portfolio,
