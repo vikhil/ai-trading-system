@@ -51,9 +51,7 @@ def generate_rotation_plan(portfolio_data, top_picks):
 
         ticker = row.get("Ticker", "")
 
-        health_score = float(
-            row.get("Health Score", 0)
-        )
+        health_score = safe_number(row.get("Health Score"))
 
         health_status = str(
             row.get("Health Status", "")
@@ -61,21 +59,13 @@ def generate_rotation_plan(portfolio_data, top_picks):
 
         bucket = classify_bucket(row)
         
-        current_value = float(
-            row.get("Current Value", 0)
-        )
+        current_value = safe_number(row.get("Current Value"))
 
-        weight = float(
-            row.get("Portfolio Weight %", 0)
-        )
+        weight = safe_number(row.get("Portfolio Weight %"))
         
-        pl_pct = float(
-            row.get("P/L %", 0)
-        )
+        pl_pct = safe_number(row.get("P/L %"))
         
-        position_risk = float(
-            row.get("Position Risk", 0)
-        )
+        position_risk = safe_number(row.get("Position Risk"))
 
         action = "HOLD"
 
@@ -158,7 +148,7 @@ def generate_rotation_plan(portfolio_data, top_picks):
                 
                 replacement_score = calculate_replacement_quality(selected_candidate)
                 
-                replacement_edge = float(selected_candidate.get("Edge Rating", 0))
+                replacement_edge = safe_number(selected_candidate.get("Edge Rating"))
                 switch_score = best_switch_score
 
         # ----------------------------
