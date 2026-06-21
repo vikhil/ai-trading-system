@@ -240,6 +240,24 @@ def run_scanner(
                 breakout
             ) = signal_data
 
+            #cmp_price = float(cmp_price) if pd.notna(cmp_price) else 0
+            
+            #rsi = float(rsi) if pd.notna(rsi) else 0
+            
+            #ema20 = float(ema20) if pd.notna(ema20) else 0
+            
+            #ema50 = float(ema50) if pd.notna(ema50) else 0
+                        
+            #score = float(score) if pd.notna(score) else 0
+            
+            #avg_volume = float(avg_volume) if pd.notna(avg_volume) else 0
+            
+            #current_volume = float(current_volume) if pd.notna(current_volume) else 0
+            
+            #volume_spike = float(volume_spike) if pd.notna(volume_spike) else 0
+            
+            #breakout = str(breakout)
+            
             if score < 40:
                 continue
             
@@ -248,10 +266,6 @@ def run_scanner(
     
             if DEBUG_LOGS:
                 log_signal(f"{ticker} signal generated successfully")
-        
-            rsi = float(rsi) if pd.notna(rsi) else 0
-            ema20 = float(ema20) if pd.notna(ema20) else 0
-            ema50 = float(ema50) if pd.notna(ema50) else 0
             
             # ----------------------------
             # ATR RISK ENGINE
@@ -333,7 +347,9 @@ def run_scanner(
                 breakout,
                 regime
             )
-    
+            
+            edge_score = float(edge_score)
+            
             edge_rating = int(calculate_edge_rating(edge_score))
             
             position_size = calculate_position_size(capital, cmp_price, atr_risk, edge_rating, risk_per_trade)
