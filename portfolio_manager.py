@@ -8,6 +8,8 @@ from signals import (
 )
 
 import math
+
+from data_loader import load_universe
 from engine.sector_health import calculate_sector_health
 
 def calculate_health_score(
@@ -158,12 +160,21 @@ def enrich_portfolio(portfolio_data):
 
     enriched = []
 
+    sector_lookup = load_universe()
+
+    ticker_to_sector = {
+        row["Ticker"]: row["Sector"]
+        for row in sector_lookup
+    }
+
     for row in portfolio_data:
 
         ticker = str(
             row.get("Ticker", "")
         ).strip()
 
+        sector = ticker_to_sector.get(ticker, "UNKNOWN")
+        
         if not ticker:
             continue
 
@@ -396,7 +407,9 @@ def enrich_portfolio(portfolio_data):
             
             enriched.append({
                 **row,
-            
+
+                "Sector": sector,
+                
                 "LTP": round(ltp, 2),
             
                 "Invested": round(invested, 2),
