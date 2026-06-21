@@ -6,6 +6,19 @@ from engine.rotation_engine import (
 
 from engine.portfolio_classifier import classify_bucket
 
+def safe_number(x, default=0):
+    try:
+        if x is None:
+            return default
+
+        if str(x).strip() == "":
+            return default
+
+        return float(x)
+
+    except:
+        return default
+        
 def generate_rotation_plan(portfolio_data, top_picks):
 
     rotation_rows = []
