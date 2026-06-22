@@ -15,6 +15,8 @@ from engine.risk_engine import (
 
 from engine.institutional_rank import calculate_institutional_rank
 
+from engine.sector_rotation import get_sector_strength
+
 def signal_quality_gate(score, rs_score, risk_reward, volume_spike):
     if score < 40:
         return False
@@ -41,7 +43,8 @@ def run_scanner(
     failed_logs,
     safe_generate_signal,
     log_scan,
-    log_signal
+    log_signal,
+    sector_rankings
 ):
 
     # ----------------------------
@@ -353,6 +356,11 @@ def run_scanner(
             edge_score = float(edge_score)
             
             edge_rating = int(calculate_edge_rating(edge_score))
+
+            sector_strength = get_sector_strength(
+                sector,
+                sector_rankings
+            )
             
             institutional_rank = calculate_institutional_rank(
                 rs_score,
@@ -431,6 +439,7 @@ def run_scanner(
                 "edge_score": edge_score,
                 "edge_rating": edge_rating,
                 "institutional_rank": institutional_rank,
+                "sector_strength": sector_strength,
                 "trade_action": trade_action,
                 "position_size": trade_risk["position_size"],
                 "signal": signal,
