@@ -15,6 +15,8 @@ from engine.risk_engine import (
 
 from engine.institutional_rank import calculate_institutional_rank
 
+from engine.ai_rank import calculate_ai_rank
+
 from engine.sector_rotation import get_sector_strength
 
 def signal_quality_gate(score, rs_score, risk_reward, volume_spike):
@@ -362,14 +364,37 @@ def run_scanner(
                 sector_rankings
             )
             
-            institutional_rank = calculate_institutional_rank(
-                rs_score,
-                score,
-                edge_rating,
-                risk_reward,
-                breakout,
-                volume_spike
-            )
+            institutional_rank = calculate_institutional_rank({
+
+                "RS Score": rs_score,
+            
+                "Health Score": score,
+            
+                "Edge Rating": edge_rating,
+            
+                "Score": score,
+            
+                "Risk Reward": risk_reward,
+            
+                "Breakout": breakout,
+            
+                "Volume Spike": volume_spike
+            
+            })
+
+            ai_rank = calculate_ai_rank({
+
+                "edge_score": edge_score,
+            
+                "institutional_rank": institutional_rank,
+            
+                "sector_strength": sector_strength,
+            
+                "rs_score": rs_score,
+            
+                "trend_persistence": trend_persistence
+            
+            })
             
             position_size = calculate_position_size(capital, cmp_price, atr_risk, edge_rating, risk_per_trade)
 
@@ -439,6 +464,7 @@ def run_scanner(
                 "edge_score": edge_score,
                 "edge_rating": edge_rating,
                 "institutional_rank": institutional_rank,
+                "ai_rank": ai_rank,
                 "sector_strength": sector_strength,
                 "trade_action": trade_action,
                 "position_size": trade_risk["position_size"],
