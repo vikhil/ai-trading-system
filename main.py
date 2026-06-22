@@ -54,6 +54,7 @@ from utils.logger import (
     log_error,
 )
 from engine.portfolio_dashboard import generate_portfolio_dashboard
+from engine.sector_rotation import build_sector_rankings
 
 def load_state():
     try:
@@ -1420,7 +1421,7 @@ for r in results_sorted:
 
     })
     
-sector_rankings = build_sector_rankings(sector_rows)
+sector_rankings = build_sector_rankings(results_sorted)
 
 rotation_rows = generate_rotation_plan(
     enriched_portfolio,
