@@ -24,3 +24,20 @@ def calculate_ai_rank(row):
     )
 
     return round(min(ai_rank, 100), 2)
+
+def get_ai_confidence(ai_rank):
+
+    if ai_rank >= 85:
+        return "VERY HIGH"
+
+    elif ai_rank >= 70:
+        return "HIGH"
+
+    elif ai_rank >= 55:
+        return "MEDIUM"
+
+    elif ai_rank >= 40:
+        return "LOW"
+
+    else:
+        return "VERY LOW"
