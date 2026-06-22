@@ -898,7 +898,7 @@ results, failed_logs = run_scanner(
 
 results_sorted = sorted(
     results,
-    key=lambda x: x.get("edge_score", 0),
+    key=lambda x: x.get("ai_rank", 0),
     reverse=True
 )
 
@@ -1220,6 +1220,8 @@ headers = [
     "Edge Score",
     "Edge Rating",
     "Institutional Rank",
+    "AI Rank",
+    "Sector Strength",
     "Trade Action",
     "Position Size",
     "Signal",
@@ -1250,6 +1252,8 @@ for r in results_sorted:
         r["edge_score"],
         r["edge_rating"],
         r["institutional_rank"],
+        r["ai_rank"],
+        r["sector_strength"],
         r["trade_action"],
         r["position_size"],        
         r["signal"],
