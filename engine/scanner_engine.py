@@ -15,7 +15,10 @@ from engine.risk_engine import (
 
 from engine.institutional_rank import calculate_institutional_rank
 
-from engine.ai_rank import calculate_ai_rank
+from engine.ai_rank import (
+    calculate_ai_rank,
+    get_ai_confidence
+)
 
 from engine.sector_rotation import get_sector_strength
 
@@ -395,6 +398,8 @@ def run_scanner(
                 "trend_persistence": trend_persistence
             
             })
+
+            ai_confidence = get_ai_confidence(ai_rank)
             
             position_size = calculate_position_size(capital, cmp_price, atr_risk, edge_rating, risk_per_trade)
 
@@ -465,6 +470,7 @@ def run_scanner(
                 "edge_rating": edge_rating,
                 "institutional_rank": institutional_rank,
                 "ai_rank": ai_rank,
+                "ai_confidence": ai_confidence,
                 "sector_strength": sector_strength,
                 "trade_action": trade_action,
                 "position_size": trade_risk["position_size"],
