@@ -1,49 +1,69 @@
-# engine/sector_rotation.py
+def build_sector_rankings(results_sorted):
 
-def calculate_sector_score(sector_row):
-    """
-    Returns overall sector strength score.
-    """
+    sector_map = {}
 
-    score = 0
+    for row in results_sorted:
 
-    # Relative strength
-    score += float(sector_row.get("RS Score", 0))
+        sector = row.get("sector", "UNKNOWN")
 
-    # Momentum
-    score += float(sector_row.get("Momentum", 0))
+        if sector not in sector_map:
+            sector_map[sector] = []
 
-    # Breadth
-    score += float(sector_row.get("Breadth", 0))
+        sector_map[sector].append(row)
 
-    # Trend
-    if sector_row.get("Trend") == "Bullish":
-        score += 15
+    rankings = []
 
-    # Breakout
-    if sector_row.get("Breakout") == "YES":
-        score += 10
+    for sector, stocks in sector_map.items():
 
-    return round(score, 2)
+        avg_edge = sum(
+            x.get("edge_rating", 0)
+            for x in stocks
+        ) / len(stocks)
 
+        avg_rs = sum(
+            x.get("rs_score", 0)
+            for x in stocks
+        ) / len(stocks)
 
-def build_sector_rankings(sector_rows):
+        avg_score = sum(
+            x.get("score", 0)
+            for x in stocks
+        ) / len(stocks)
 
-    for row in sector_rows:
-        row["Sector Score"] = calculate_sector_score(row)
+        institutional = sum(
+            x.get("institutional_rank", 0)
+            for x in stocks
+        ) / len(stocks)
 
-    return sorted(
-        sector_rows,
-        key=lambda x: x["Sector Score"],
-        reverse=True,
+        sector_strength = round(
+            avg_edge * 0.35
+            + avg_score * 0.25
+            + avg_rs * 0.20
+            + institutional * 0.20,
+            2
+        )
+
+        rankings.append({
+
+            "Sector": sector,
+
+            "Strength": sector_strength,
+
+            "Average Edge": round(avg_edge,2),
+
+            "Average Score": round(avg_score,2),
+
+            "Average RS": round(avg_rs,2),
+
+            "Institutional": round(institutional,2),
+
+            "Stocks": len(stocks)
+
+        })
+
+    rankings.sort(
+        key=lambda x: x["Strength"],
+        reverse=True
     )
 
-
-def get_sector_strength(sector_name, sector_rankings):
-
-    for row in sector_rankings:
-
-        if row.get("Sector") == sector_name:
-            return row.get("Sector Score", 0)
-
-    return 0
+    return rankings
