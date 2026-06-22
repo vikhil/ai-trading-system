@@ -73,6 +73,6 @@ def get_sector_strength(sector_name, sector_rankings):
     for row in sector_rankings:
 
         if row.get("Sector") == sector_name:
-            return row.get("Sector Score", 0)
+            return row.get("Strength", 0)
 
     return 0
