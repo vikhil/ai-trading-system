@@ -888,7 +888,8 @@ results, failed_logs = run_scanner(
     failed_logs,
     safe_generate_signal,
     log_scan,
-    log_signal
+    log_signal,
+    sector_rankings
 )
 
 # ----------------------------
