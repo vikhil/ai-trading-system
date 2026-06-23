@@ -15,13 +15,6 @@ from engine.risk_engine import (
 
 from engine.institutional_rank import calculate_institutional_rank
 
-from engine.ai_rank import (
-    calculate_ai_rank,
-    get_ai_confidence
-)
-
-from engine.sector_rotation import get_sector_strength
-
 def signal_quality_gate(score, rs_score, risk_reward, volume_spike):
     if score < 40:
         return False
@@ -48,8 +41,7 @@ def run_scanner(
     failed_logs,
     safe_generate_signal,
     log_scan,
-    log_signal,
-    sector_rankings
+    log_signal
 ):
 
     # ----------------------------
@@ -361,11 +353,6 @@ def run_scanner(
             edge_score = float(edge_score)
             
             edge_rating = int(calculate_edge_rating(edge_score))
-
-            sector_strength = get_sector_strength(
-                sector,
-                sector_rankings
-            )
             
             institutional_rank = calculate_institutional_rank({
 
@@ -384,22 +371,6 @@ def run_scanner(
                 "Volume Spike": volume_spike
             
             })
-
-            ai_rank = calculate_ai_rank({
-
-                "edge_score": edge_score,
-            
-                "institutional_rank": institutional_rank,
-            
-                "sector_strength": sector_strength,
-            
-                "rs_score": rs_score,
-            
-                "trend_persistence": trend_persistence
-            
-            })
-
-            ai_confidence = get_ai_confidence(ai_rank)
             
             position_size = calculate_position_size(capital, cmp_price, atr_risk, edge_rating, risk_per_trade)
 
@@ -469,9 +440,6 @@ def run_scanner(
                 "edge_score": edge_score,
                 "edge_rating": edge_rating,
                 "institutional_rank": institutional_rank,
-                "ai_rank": ai_rank,
-                "ai_confidence": ai_confidence,
-                "sector_strength": sector_strength,
                 "trade_action": trade_action,
                 "position_size": trade_risk["position_size"],
                 "signal": signal,
