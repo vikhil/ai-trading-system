@@ -54,7 +54,16 @@ from utils.logger import (
     log_error,
 )
 from engine.portfolio_dashboard import generate_portfolio_dashboard
-from engine.sector_rotation import build_sector_rankings
+
+from engine.sector_rotation import (
+    build_sector_rankings,
+    get_sector_strength
+)
+
+from engine.ai_rank import (
+    calculate_ai_rank,
+    get_ai_confidence
+)
 
 def load_state():
     try:
