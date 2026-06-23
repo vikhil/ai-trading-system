@@ -888,10 +888,68 @@ results, failed_logs = run_scanner(
     failed_logs,
     safe_generate_signal,
     log_scan,
-    log_signal,
-    sector_rankings
+    log_signal
 )
 
+# -----------------------------------
+# Build Sector Rotation Rankings
+# -----------------------------------
+
+sector_rankings = build_sector_rankings(results)
+
+sector_rows = [
+    [
+        "Sector",
+        "Strength",
+        "Average Edge",
+        "Average Score",
+        "Average RS",
+        "Institutional",
+        "Stocks"
+    ]
+]
+
+for r in sector_rankings:
+
+    sector_rows.append([
+        r["Sector"],
+        r["Strength"],
+        r["Average Edge"],
+        r["Average Score"],
+        r["Average RS"],
+        r["Institutional"],
+        r["Stocks"]
+    ])
+    
+# -----------------------------------
+# Attach Sector Strength
+# -----------------------------------
+
+for row in results:
+
+    row["sector_strength"] = get_sector_strength(
+        row["sector"],
+        sector_rankings
+    )
+
+# -----------------------------------
+# AI Rank
+# -----------------------------------
+
+for row in results:
+
+    row["ai_rank"] = calculate_ai_rank(
+        edge_score=row["edge_score"],
+        institutional_rank=row["institutional_rank"],
+        sector_strength=row["sector_strength"],
+        rs_score=row["rs_score"],
+        trend=row["trend"]
+    )
+
+    row["ai_confidence"] = get_ai_confidence(
+        row["ai_rank"]
+    )
+    
 # ----------------------------
 # FINAL RESULTS SORTING
 # ----------------------------
