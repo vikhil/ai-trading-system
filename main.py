@@ -1567,7 +1567,7 @@ print("==============================")
 
 sector_data = [[
     "Sector",
-    "Sector Score",
+    "Strength",
     "RS Score",
     "Momentum",
     "Breadth",
@@ -1579,7 +1579,7 @@ for row in sector_rankings:
 
     sector_data.append([
         row["Sector"],
-        row["Sector Score"],
+        row["Strength"],
         row["RS Score"],
         row["Momentum"],
         row["Breadth"],
