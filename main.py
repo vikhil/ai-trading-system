@@ -1533,34 +1533,10 @@ print(
 # SECTOR ROTATION
 # ----------------------------
 
-sector_summary = {}
-
-for row in results_sorted:
-
-    sector = row["sector"]
-
-    if sector not in sector_summary:
-
-        sector_summary[sector] = {
-            "Sector": sector,
-            "RS Score": row["rs_score"],
-            "Momentum": row["score"],
-            "Breadth": 1,
-            "Trend": row["trend"],
-            "Breakout": row["breakout"]
-        }
-
-    else:
-
-        sector_summary[sector]["Breadth"] += 1
-
 print("===== INPUT TO SECTOR RANKINGS =====")
-print(results_sorted[0])
+print(results[0])
 print("====================================")
 
-sector_rankings = build_sector_rankings(
-    list(sector_summary.values())
-)
 
 print("===== SECTOR RANKINGS DEBUG =====")
 
