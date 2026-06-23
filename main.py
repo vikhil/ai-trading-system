@@ -955,9 +955,12 @@ for row in results:
         trend=row["trend"]
     )
 
-    row["ai_confidence"] = get_ai_confidence(
-        row["ai_rank"]
-    )
+
+for row in results:
+
+    row["ai_rank"] = calculate_ai_rank(row)
+
+    row["ai_confidence"] = get_ai_confidence(row["ai_rank"])
     
 # ----------------------------
 # FINAL RESULTS SORTING
