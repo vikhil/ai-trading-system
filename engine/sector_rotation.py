@@ -4,7 +4,15 @@ def build_sector_rankings(results_sorted):
 
     for row in results_sorted:
 
-        sector = row.get("sector", "UNKNOWN")
+        sector = (
+            row.get("sector")
+            or row.get("Sector")
+            or "UNKNOWN"
+        )
+        
+        if sector == "UNKNOWN":
+            print("UNKNOWN SECTOR ROW:")
+            print(row)
 
         if sector not in sector_map:
             sector_map[sector] = []
