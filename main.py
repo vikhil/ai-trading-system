@@ -1554,13 +1554,13 @@ for row in results_sorted:
 
         sector_summary[sector]["Breadth"] += 1
 
-sector_rankings = build_sector_rankings(
-    list(sector_summary.values())
-)
-
 print("===== INPUT TO SECTOR RANKINGS =====")
 print(results_sorted[0])
 print("====================================")
+
+sector_rankings = build_sector_rankings(
+    list(sector_summary.values())
+)
 
 print("===== SECTOR RANKINGS DEBUG =====")
 
