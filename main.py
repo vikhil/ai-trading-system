@@ -947,17 +947,6 @@ for row in results:
 
 for row in results:
 
-    row["ai_rank"] = calculate_ai_rank(
-        edge_score=row["edge_score"],
-        institutional_rank=row["institutional_rank"],
-        sector_strength=row["sector_strength"],
-        rs_score=row["rs_score"],
-        trend=row["trend"]
-    )
-
-
-for row in results:
-
     row["ai_rank"] = calculate_ai_rank(row)
 
     row["ai_confidence"] = get_ai_confidence(row["ai_rank"])
