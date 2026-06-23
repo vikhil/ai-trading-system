@@ -1558,6 +1558,10 @@ sector_rankings = build_sector_rankings(
     list(sector_summary.values())
 )
 
+print("===== INPUT TO SECTOR RANKINGS =====")
+print(results_sorted[0])
+print("====================================")
+
 print("===== SECTOR RANKINGS DEBUG =====")
 
 for r in sector_rankings[:3]:
