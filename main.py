@@ -1572,11 +1572,11 @@ print("==============================")
 sector_data = [[
     "Sector",
     "Strength",
-    "RS Score",
-    "Momentum",
-    "Breadth",
-    "Trend",
-    "Breakout"
+    "Average Edge",
+    "Average Score",
+    "Average RS",
+    "Institutional",
+    "Stocks"
 ]]
 
 for row in sector_rankings:
@@ -1584,11 +1584,11 @@ for row in sector_rankings:
     sector_data.append([
         row["Sector"],
         row["Strength"],
-        row["RS Score"],
-        row["Momentum"],
-        row["Breadth"],
-        row["Trend"],
-        row["Breakout"]
+        row["Average Edge"],
+        row["Average Score"],
+        row["Average RS"],
+        row["Institutional"],
+        row["Stocks"]
     ])
 
 safe_update(
