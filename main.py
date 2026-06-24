@@ -45,7 +45,6 @@ from sheets_writer import safe_update
 from alerts import send_telegram
 from portfolio_manager import enrich_portfolio
 from engine.portfolio_rotation import generate_rotation_plan
-from engine.sector_rotation import build_sector_rankings
 from utils.logger import (
     log_scan,
     log_signal,
@@ -1490,7 +1489,7 @@ for r in results_sorted:
 
     })
     
-sector_rankings = build_sector_rankings(results_sorted)
+#sector_rankings = build_sector_rankings(results_sorted)
 
 rotation_rows = generate_rotation_plan(
     enriched_portfolio,
@@ -1579,3 +1578,4 @@ print(
 save_state(state)
     
 print("Completed Successfully")
+print("===== VERSION 2A.2 =====")
