@@ -8,7 +8,7 @@ print(f"[SYSTEM] Version: {SYSTEM_VERSION}")
 print(f"[SYSTEM] Run ID: {RUN_ID}")
 
 DEBUG = False
-DEBUG_LOGS = True 
+DEBUG_LOGS = False 
 
 # ----------------------------
 # GLOBAL RISK SETTINGS
