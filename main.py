@@ -1473,6 +1473,76 @@ except:
 
 safe_update(top_ws, top_picks)
 
+# ------------------------------------
+# BUY QUEUE
+# ------------------------------------
+
+try:
+    buy_queue_ws = sheet.worksheet("BUY Queue")
+
+except:
+
+    buy_queue_ws = sheet.add_worksheet(
+        title="BUY Queue",
+        rows="1000",
+        cols="30"
+    )
+
+buy_queue_data = [[
+    "Queue Rank",
+    "Ticker",
+    "Sector",
+    "Priority",
+    "Status",
+    "Score",
+    "Edge Rating",
+    "AI Rank",
+    "Sector Strength",
+    "RS Score",
+    "CMP",
+    "Position Size",
+    "Comments"
+]]
+
+for row in buy_queue:
+
+    buy_queue_data.append([
+
+        row["Queue Rank"],
+
+        row["ticker"],
+
+        row["sector"],
+
+        row["Priority"],
+
+        row["Status"],
+
+        row["score"],
+
+        row["edge_rating"],
+
+        row["ai_rank"],
+
+        row["sector_strength"],
+
+        row["rs_score"],
+
+        row["cmp"],
+
+        row["Recommended Allocation"],
+
+        row["Comments"]
+
+    ])
+
+safe_update(
+    buy_queue_ws,
+    buy_queue_data
+)
+
+print(f"BUY Queue Updated : {len(buy_queue)}")
+
 # ----------------------------
 # EXCLUDE EXISTING HOLDINGS
 # ----------------------------
