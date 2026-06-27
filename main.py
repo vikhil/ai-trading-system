@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-SYSTEM_VERSION = "2A.1-STABLE"
+SYSTEM_VERSION = "2A.2-STABLE"
 
 RUN_ID = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -222,7 +222,7 @@ def get_market_regime():
     else:
         regime = "SIDEWAYS"
 
-    return regime, last_close, last_ema50, last_ema200, nifty_return
+    return regime, last_close, last_ema50, last_ema200, nifty_return, nifty
         
 # ----------------------------
 # GOOGLE SHEETS AUTH
@@ -336,15 +336,6 @@ available_slots = max(
 )
 
 # ----------------------------
-# AVAILABLE CAPITAL
-# ----------------------------
-
-capital_available = max(
-    0,
-    capital - total_portfolio_value if "total_portfolio_value" in locals() else capital
-)
-
-# ----------------------------
 # PORTFOLIO RISK TRACKING (NEW)
 # ----------------------------
 
@@ -429,29 +420,7 @@ print("Stocks:", len(stocks))
 # MARKET REGIME
 # ----------------------------
 
-regime, nifty_close, nifty_ema50, nifty_ema200, nifty_return = get_market_regime()
-
-# ----------------------------
-# NIFTY DATA FOR RELATIVE STRENGTH
-# ----------------------------
-
-nifty_df = yf.download("^NSEI", period="6mo", interval="1d", auto_adjust=True, progress=False)
-
-if nifty_df.empty or "Close" not in nifty_df.columns:
-    nifty_return = 0.0
-else:
-    nifty_series = nifty_df["Close"]
-
-    if isinstance(nifty_series, pd.DataFrame):
-        nifty_series = nifty_series.iloc[:, 0]
-
-    nifty_series = nifty_series.dropna()
-
-    if len(nifty_series) < 2:
-        nifty_return = 0.0
-    else:
-        nifty_return = float(
-            (nifty_series.iloc[-1] / nifty_series.iloc[0]) - 1)
+regime, nifty_close, nifty_ema50, nifty_ema200, nifty_return, nifty_df = get_market_regime()
 
 print("Market Regime:", regime)
 
@@ -491,24 +460,15 @@ try:
     # DYNAMIC CAPITAL
     # ---------------------------------
     
-    if total_portfolio_value > 0:
-        capital = total_portfolio_value
-    
-    print("Capital For Position Sizing:", capital)
+    capital = max(total_portfolio_value, 100000)
 
-    print(
-        "Risk Capital:",
-        capital
-    )
+    print("Risk Capital:", capital)
 
     # ----------------------------
-    # DYNAMIC CAPITAL BASE
+    # AVAILABLE CAPITAL
     # ----------------------------
     
-    capital = max(
-        total_portfolio_value,
-        100000
-    )
+    deployment_budget = capital * 0.20
     
     print("Capital Base:", capital)
     print("Risk Per Trade:", capital * risk_per_trade)
@@ -812,11 +772,11 @@ def batch_download(tickers, chunk_size=20):
         batch = tickers[i:i + chunk_size]
         
         data = yf.download(
-            tickers=tickers,
+            tickers=batch,
             period="6mo",
             interval="1d",
             group_by="ticker",
-            threads=True,
+            threads=False,
             progress=False
         )
 
@@ -969,15 +929,24 @@ for row in results:
 
 results_sorted = sorted(
     results,
-    key=lambda x: x.get("ai_rank", 0),
+    key=lambda x: (
+        x.get("ai_rank",0),
+        x.get("edge_score",0),
+        x.get("score",0)
+    ),
     reverse=True
 )
 
 results_sorted = [
     r for r in results_sorted
-    if isinstance(r, dict)
-    and "ticker" in r
-    and "edge_score" in r
+    if (
+        isinstance(r, dict)
+        and r.get("ticker")
+        and r.get("cmp") is not None
+        and r.get("edge_score") is not None
+        and r.get("score") is not None
+        and r.get("trade_action") is not None
+    )
 ]
 
 # ----------------------------
@@ -988,7 +957,7 @@ buy_queue = build_opportunity_queue(
     results_sorted,
     open_tickers,
     available_slots,
-    capital_available
+    deployment_budget
 )
 
 print(f"Opportunity Queue Size: {len(buy_queue)}")
@@ -1021,6 +990,7 @@ watch_candidates = [
 
 executed_buys = []
 allocated_risk = 0
+allocated_capital = 0
 
 max_total_risk = capital * max_capital_risk
 
@@ -1043,12 +1013,28 @@ for r in sorted_buys:
         if entry and not is_state_expired(entry.get("timestamp", "")):
             continue
     
-    trade_risk = r["position_size"] * r["atr_risk"]
+    position_size = float(r.get("position_size") or 0)
+
+    # Skip invalid position sizes
+    if position_size <= 0:
+        continue
+    
+    if allocated_capital + position_size > deployment_budget:
+        continue
+    
+    atr_risk = float(r.get("atr_risk") or 0)
+    
+    trade_risk = position_size * atr_risk
     if (allocated_risk + trade_risk + current_portfolio_risk) > max_total_risk:
         continue
 
     executed_buys.append(r)
     allocated_risk += trade_risk
+    allocated_capital += position_size
+
+    print(
+        f"Allocated Capital: ₹{allocated_capital:,.0f} / ₹{deployment_budget:,.0f}"
+    )
     
     if len(executed_buys) >= available_slots:
         break
@@ -1129,7 +1115,10 @@ for r in executed_buys:
 print(f"Available Slots: {available_slots}")
 
 print(f"Max Portfolio Risk Allowed: {max_total_risk}")
-print(f"Allocated Risk: {allocated_risk}")
+print(f"Allocated Capital: ₹{allocated_capital:,.0f}")
+
+print(f"Unused Capital: ₹{deployment_budget-allocated_capital:,.0f}")
+
 print(f"Remaining Risk Capacity: {max_total_risk - allocated_risk}")
 print(f"Executed Buy Count: {len(executed_buys)}")
 
@@ -1321,7 +1310,7 @@ headers = [
     "Volume Spike",
     "Breakout"
 ]
-scanner_ws.clear()
+
 scanner_data = [headers]
 
 for r in results_sorted:
@@ -1383,7 +1372,6 @@ print(watchlist_data[:3])
 try:
     print("Writing Watchlist...")
     
-    watchlist_ws.clear()
     safe_update(watchlist_ws, watchlist_data)
 
     print(
@@ -1412,8 +1400,7 @@ try:
     
     failed_data = [["Ticker", "Error Type", "Reason"]]
 
-    if failed_logs:
-        failed_data.extend(failed_logs)
+    failed_data.extend(failed_logs)
     
     safe_update(failed_ws, failed_data)
     
@@ -1681,4 +1668,10 @@ print(
 save_state(state)
     
 print("Completed Successfully")
+
+print(f"Capital Base : ₹{capital:,.0f}")
+print(f"Deployment Budget : ₹{capital_available:,.0f}")
+print(f"Capital Used : ₹{allocated_capital:,.0f}")
+print(f"Capital Remaining : ₹{capital_available-allocated_capital:,.0f}")
+
 print("===== VERSION 2A.2 =====")
