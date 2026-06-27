@@ -4,15 +4,6 @@ def build_opportunity_queue(
     available_slots,
     capital_available
 ):
-    """
-    Builds a ranked opportunity queue.
-
-    Returns one list containing BOTH
-
-    Immediate BUY candidates
-
-    Future BUY Queue candidates
-    """
 
     queue = []
 
@@ -30,21 +21,41 @@ def build_opportunity_queue(
 
         row["Queue Rank"] = rank
 
-        if rank <= available_slots and capital_available > 0:
+        row["Priority"] = ""
 
-            row["Immediate Buy"] = "YES"
+        row["Status"] = ""
 
-            row["Reason"] = "Capital Available"
+        row["Comments"] = ""
 
-        else:
+        row["Replacement Candidate"] = ""
 
-            row["Immediate Buy"] = "NO"
-
-            row["Reason"] = "Portfolio Full"
+        row["Switch Score"] = ""
 
         row["Recommended Allocation"] = row["position_size"]
 
-        row["Comments"] = ""
+        # -------------------------
+        # READY TO BUY
+        # -------------------------
+
+        if rank <= available_slots and capital_available > 0:
+
+            row["Status"] = "READY TO BUY"
+
+            row["Priority"] = "HIGH"
+
+            row["Comments"] = "Capital available immediately"
+
+        # -------------------------
+        # WAITING
+        # -------------------------
+
+        else:
+
+            row["Status"] = "WAITING FOR CAPITAL"
+
+            row["Priority"] = "HIGH"
+
+            row["Comments"] = "Portfolio full"
 
         queue.append(row)
 
