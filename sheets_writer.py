@@ -11,10 +11,15 @@ def safe_update(ws, data):
         
         print(f"[SHEETS OK] Updated {ws.title} rows={len(data)}")
 
-        print(
-            "VERIFY:",
-            ws.acell("A1").value
-        )
+        print("VERIFY A1:", ws.acell("A1").value)
+
+        try:
+            print("VERIFY A2:", ws.acell("A2").value)
+            print("VERIFY B2:", ws.acell("B2").value)
+        except Exception:
+            pass
+        
+        print("Worksheet Row Count:", len(ws.get_all_values()))
         
     except Exception as e:
         print(f"[SHEETS ERROR] {ws.title} -> {e}")
