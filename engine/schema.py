@@ -1,0 +1,31 @@
+# engine/schema.py
+
+SCHEMA = {
+    "ticker": "ticker",
+    "sector": "sector",
+    "cmp": "cmp",
+    "rsi": "rsi",
+    "ema20": "ema20",
+    "ema50": "ema50",
+    "trend": "trend",
+    "score": "score",
+    "edge_score": "edge_score",
+    "edge_rating": "edge_rating",
+    "institutional_rank": "institutional_rank",
+    "ai_rank": "ai_rank",
+    "ai_confidence": "ai_confidence",
+    "trade_action": "trade_action",
+    "position_size": "position_size",
+    "signal": "signal",
+    "atr_risk": "atr_risk",
+    "stop_loss": "stop_loss",
+    "target": "target",
+    "risk_reward": "risk_reward",
+    "rs_score": "rs_score",
+    "rs_rank": "rs_rank",
+    "avg_volume": "avg_volume",
+    "current_volume": "current_volume",
+    "volume_spike": "volume_spike",
+    "breakout": "breakout",
+    "sector_strength": "sector_strength"
+}
