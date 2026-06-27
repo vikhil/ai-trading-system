@@ -1,14 +1,11 @@
-def build_sector_rankings(results_sorted):
+from engine.schema import SCHEMA
 
+def build_sector_rankings(results_sorted):
     sector_map = {}
 
     for row in results_sorted:
 
-        sector = (
-            row.get("sector")
-            or row.get("Sector")
-            or "UNKNOWN"
-        )
+        sector = row.get(SCHEMA["sector"], "UNKNOWN")
         
         if sector == "UNKNOWN":
             print("UNKNOWN SECTOR ROW:")
@@ -24,22 +21,22 @@ def build_sector_rankings(results_sorted):
     for sector, stocks in sector_map.items():
 
         avg_edge = sum(
-            x.get("edge_rating", 0)
+            x.get(SCHEMA["edge_rating"], 0)
             for x in stocks
         ) / len(stocks)
 
         avg_rs = sum(
-            x.get("rs_score", 0)
+            x.get(SCHEMA["rs_score"], 0)
             for x in stocks
         ) / len(stocks)
 
         avg_score = sum(
-            x.get("score", 0)
+            x.get(SCHEMA["score"], 0)
             for x in stocks
         ) / len(stocks)
 
         institutional = sum(
-            x.get("institutional_rank", 0)
+            x.get(SCHEMA["institutional_rank"], 0)
             for x in stocks
         ) / len(stocks)
 
