@@ -63,6 +63,9 @@ from engine.ai_rank import (
     calculate_ai_rank,
     get_ai_confidence
 )
+
+from engine.opportunity_queue import build_opportunity_queue
+
 from engine.schema import SCHEMA
 
 def load_state():
@@ -330,6 +333,15 @@ MAX_OPEN_POSITIONS = min(
 available_slots = max(
     0,
     MAX_OPEN_POSITIONS - open_positions
+)
+
+# ----------------------------
+# AVAILABLE CAPITAL
+# ----------------------------
+
+capital_available = max(
+    0,
+    capital - total_portfolio_value if "total_portfolio_value" in locals() else capital
 )
 
 # ----------------------------
@@ -967,6 +979,19 @@ results_sorted = [
     and "ticker" in r
     and "edge_score" in r
 ]
+
+# ----------------------------
+# BUILD OPPORTUNITY QUEUE
+# ----------------------------
+
+buy_queue = build_opportunity_queue(
+    results_sorted,
+    open_tickers,
+    available_slots,
+    capital_available
+)
+
+print(f"Opportunity Queue Size: {len(buy_queue)}")
 
 # ----------------------------
 # BUY + WATCH CANDIDATES
