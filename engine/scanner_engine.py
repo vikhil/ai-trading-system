@@ -142,13 +142,14 @@ def run_scanner(
             # Safety conversions (important because yfinance + pandas can return NaN/Series)
             current_volume = float(raw_volume) if pd.notna(raw_volume) else 0
             atr_indicator = float(atr_indicator) if pd.notna(atr_indicator) else 0
-
-            print(
-                f"[VOLUME DEBUG] {ticker} | "
-                f"Current={current_volume} | "
-                f"Avg20={avg_volume} | "
-                f"Spike={volume_spike}"
-            )
+            
+            if DEBUG_LOGS:
+                print(
+                    f"[VOLUME DEBUG] {ticker} | "
+                    f"Current={current_volume} | "
+                    f"Avg20={avg_volume} | "
+                    f"Spike={volume_spike}"
+                )
             
             # B) Liquidity filter
             if current_volume <= 0:
@@ -286,13 +287,14 @@ def run_scanner(
             # SIGNAL QUALITY GATE (NEW)
             # ----------------------------
 
-            print(
-                f"[QUALITY] {ticker} | "
-                f"Score={score} | "
-                f"RS={rs_score:.2f} | "
-                f"RR={risk_reward:.2f} | "
-                f"VolSpike={volume_spike:.2f}"
-            )
+            if DEBUG_LOGS:
+                print(
+                    f"[QUALITY] {ticker} | "
+                    f"Score={score} | "
+                    f"RS={rs_score:.2f} | "
+                    f"RR={risk_reward:.2f} | "
+                    f"VolSpike={volume_spike:.2f}"
+                )
             
             if not signal_quality_gate(score, rs_score, risk_reward, volume_spike):
                 if DEBUG_LOGS:
@@ -324,19 +326,7 @@ def run_scanner(
                 ])
             
                 continue
-                
-            # ----------------------------
-            # DEBUG LOGGING
-            # ----------------------------
             
-            #print(
-            #    ticker,
-            #    "Score:", score,
-            #    "RR:", risk_reward,
-            #    "Signal:", signal
-            #)
-            
-    
             # ----------------------------
             # FINAL ROW
             # ----------------------------
@@ -412,20 +402,22 @@ def run_scanner(
             else:
                 pass
                 
-            print(
-                ticker,
-                "Score:", score,
-                "Edge:", edge_score,
-                "RR:", risk_reward,
-                "Signal:", signal
-            )
+            if DEBUG_LOGS:
+                print(
+                    ticker,
+                    "Score:", score,
+                    "Edge:", edge_score,
+                    "RR:", risk_reward,
+                    "Signal:", signal
+                )
             
-            print(
-                f"ADDING RESULT: {ticker} | "
-                f"Score={score} | "
-                f"RR={risk_reward} | "
-                f"Edge={edge_score}"
-            )
+            if DEBUG_LOGS:
+                print(
+                    f"ADDING RESULT: {ticker} | "
+                    f"Score={score} | "
+                    f"RR={risk_reward} | "
+                    f"Edge={edge_score}"
+                )
             
             results.append({
                 "ticker": ticker,
@@ -454,7 +446,9 @@ def run_scanner(
                 "volume_spike": volume_spike,
                 "breakout": breakout
             })
-            print("RESULTS SIZE:", len(results))
+            
+            if DEBUG_LOGS:
+                print("RESULTS SIZE:", len(results))
     
         except Exception as e:
             error_reason = str(e)
