@@ -1541,6 +1541,13 @@ safe_update(
     buy_queue_data
 )
 
+print("========== BUY QUEUE DEBUG ==========")
+
+for row in buy_queue[:5]:
+    print(row)
+
+print("=====================================")
+
 print(f"BUY Queue Updated : {len(buy_queue)}")
 
 # ----------------------------
