@@ -63,6 +63,7 @@ from engine.ai_rank import (
     calculate_ai_rank,
     get_ai_confidence
 )
+from engine.schema import SCHEMA
 
 def load_state():
     try:
