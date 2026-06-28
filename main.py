@@ -329,12 +329,9 @@ open_tickers = {
 current_portfolio_size = open_positions
 
 # Dynamic portfolio sizing
-MAX_OPEN_POSITIONS = min(
+MAX_OPEN_POSITIONS = max(
     30,
-    max(
-        15,
-        round(current_portfolio_size * 1.10)
-    )
+    round(current_portfolio_size * 1.10)
 )
 
 available_slots = max(
