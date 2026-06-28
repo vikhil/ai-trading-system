@@ -113,6 +113,7 @@ def generate_rotation_plan(
             + max(0, -pl_pct)
             + (position_risk / 100)
             + (weight * 2)
+            + (switch_score * 0.50)
         )
 
         priority = round(priority_score, 2)
@@ -135,6 +136,19 @@ def generate_rotation_plan(
 
                 if candidate_bucket != bucket:
                     continue
+
+                # Reject weak replacement candidates
+                if safe_number(candidate.get("Score")) < 75:
+                    continue
+                
+                if safe_number(candidate.get("Edge Rating")) < 7:
+                    continue
+                
+                if safe_number(candidate.get("Risk Reward")) < 1.5:
+                    continue
+                
+                if safe_number(candidate.get("RS Score")) < 15:
+                    continue
     
                 sector_strength = get_sector_strength(
                     candidate.get("Sector"),
@@ -153,11 +167,13 @@ def generate_rotation_plan(
                     best_switch_score = current_switch
                     best_candidate = candidate
         
-            if best_candidate is not None and best_switch_score >= 40:
+            if best_candidate is not None:
         
                 selected_candidate = best_candidate
         
                 replacement = selected_candidate.get("Ticker", "")
+
+                current_holdings.add(replacement)
                 
                 if selected_candidate in top_sorted:
                     top_sorted.remove(selected_candidate)
@@ -205,15 +221,31 @@ def generate_rotation_plan(
 
         switch_score = safe_number(switch_score)
         
-        if switch_score >= 45:
+        if action == "ROTATE NOW":
+
+            if switch_score >= 55:
+                action = "ROTATE NOW"
+        
+            elif switch_score >= 40:
+                action = "CONSIDER ROTATION"
+
+            else:
+                action = "MONITOR"
+
+        elif action == "CONSIDER ROTATION":
+
+            if switch_score < 35:
+                action = "MONITOR"
+    
+        if switch_score >= 55:
             priority_label = "HIGH"
-        
-        elif switch_score >= 30:
+    
+        elif switch_score >= 40:
             priority_label = "MEDIUM"
-        
+    
         else:
             priority_label = "LOW"
-
+            
         rotation_rows.append({
             "Ticker": ticker,
             "Health Score": health_score,
