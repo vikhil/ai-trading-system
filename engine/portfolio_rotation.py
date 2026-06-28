@@ -181,7 +181,7 @@ def generate_rotation_plan(
                 replacement_score = calculate_replacement_quality(selected_candidate)
                 
                 replacement_edge = safe_number(selected_candidate.get("Edge Rating"))
-                switch_score = best_switch_score
+                switch_score = safe_number(best_switch_score, 0.0)
 
         # ----------------------------
         # Concentration check
