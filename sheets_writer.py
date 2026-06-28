@@ -1,5 +1,29 @@
 import time
 
+def dicts_to_rows(data, columns):
+    """
+    Converts List[Dict] into Google Sheet rows.
+
+    Returns:
+        [
+            header,
+            row1,
+            row2,
+            ...
+        ]
+    """
+
+    rows = [columns]
+
+    for item in data:
+
+        rows.append([
+            item.get(col, "")
+            for col in columns
+        ])
+
+    return rows
+    
 def safe_update(ws, data):
     try:
         ws.clear()
