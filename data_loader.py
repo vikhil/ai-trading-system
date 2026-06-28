@@ -24,20 +24,32 @@ NIFTY500_URL = (
 def fetch_nse_index_stocks(url):
 
     headers = {
-        "User-Agent": "Mozilla/5.0"
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/137.0 Safari/537.36"
+        ),
+        "Accept": "text/csv,*/*",
+        "Referer": "https://www.nseindia.com/",
     }
 
-    response = requests.get(
-        url,
-        headers=headers
-    )
+    try:
 
-    if response.status_code != 200:
-        raise Exception(
-            f"NSE fetch failed: {response.status_code}"
+        response = requests.get(
+            url,
+            headers=headers,
+            timeout=30
         )
 
-    df = pd.read_csv(StringIO(response.text))
+        response.raise_for_status()
+
+        df = pd.read_csv(StringIO(response.text))
+
+    except Exception as e:
+
+        print(f"NSE download failed ({e}). Using local fallback...")
+
+        return load_fallback_universe()
 
     stocks = []
 
@@ -47,15 +59,30 @@ def fetch_nse_index_stocks(url):
 
             "Ticker": row["Symbol"].strip().upper() + ".NS",
 
-            "Sector": row.get(
-                "Industry",
-                "UNKNOWN"
-            )
+            "Sector": row.get("Industry", "UNKNOWN")
 
         })
 
     return stocks
 
+def load_fallback_universe():
+
+    fallback = pd.read_csv("fallback_universe.csv")
+
+    stocks = []
+
+    for _, row in fallback.iterrows():
+
+        stocks.append({
+
+            "Ticker": row["Ticker"].strip().upper(),
+
+            "Sector": row["Sector"]
+
+        })
+
+    return stocks
+    
 def load_universe():
 
     if UNIVERSE == "NIFTY50":
