@@ -1636,9 +1636,22 @@ rotation_data = [[
 
 rotation_data.extend(rotation_rows)
 
+rotation_output = []
+
+headers = list(rotation_rows[0].keys())
+
+rotation_output.append(headers)
+
+for row in rotation_rows:
+
+    rotation_output.append(
+        [row.get(col, "") for col in headers]
+
+from sheets_writer import dicts_to_rows
+
 safe_update(
     rotation_ws,
-    rotation_data
+    dicts_to_rows(rotation_rows)
 )
 
 print(
