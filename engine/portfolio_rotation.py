@@ -209,13 +209,13 @@ def generate_rotation_plan(
                 volume = 0
         
             comments = generate_comments(
+                health_score,
                 weight,
                 position_risk,
-                breakout,
-                volume,
-                health_score
+                selected_candidate,
+                switch_score
             )
-        
+            
         except Exception:
             comments = ""
 
