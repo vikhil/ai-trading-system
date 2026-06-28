@@ -71,3 +71,19 @@ def write_dicts(ws, data, columns):
         ws,
         rows
     )
+
+def dicts_to_rows(dict_list):
+
+    if not dict_list:
+        return []
+
+    headers = list(dict_list[0].keys())
+
+    rows = [headers]
+
+    for item in dict_list:
+        rows.append(
+            [item.get(col, "") for col in headers]
+        )
+
+    return rows
