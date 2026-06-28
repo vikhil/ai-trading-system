@@ -1646,7 +1646,8 @@ for row in rotation_rows:
 
     rotation_output.append(
         [row.get(col, "") for col in headers]
-
+    )
+    
 from sheets_writer import dicts_to_rows
 
 safe_update(
