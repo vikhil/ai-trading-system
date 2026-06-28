@@ -1007,44 +1007,54 @@ sorted_buys = sorted(
     reverse=True
 )
 
-for r in sorted_buys:
+# ----------------------------------------
+# Do not execute BUYs if portfolio is full
+# ----------------------------------------
 
-    ticker = r["ticker"]
+if available_slots <= 0:
+
+    print("Portfolio Full. BUY execution skipped.")
+
+else:
+
+    for r in sorted_buys:
+
+        ticker = r["ticker"]
+        
+        # ----------------------------
+        # STATE CHECK (NEW LOGIC)
+        # ----------------------------
+        if ticker in state:
+            entry = state.get(ticker, {})
+        
+            if entry and not is_state_expired(entry.get("timestamp", "")):
+                continue
+        
+        position_size = float(r.get("position_size") or 0)
     
-    # ----------------------------
-    # STATE CHECK (NEW LOGIC)
-    # ----------------------------
-    if ticker in state:
-        entry = state.get(ticker, {})
-    
-        if entry and not is_state_expired(entry.get("timestamp", "")):
+        # Skip invalid position sizes
+        if position_size <= 0:
+            continue
+        
+        if allocated_capital + position_size > deployment_budget:
+            continue
+        
+        atr_risk = float(r.get("atr_risk") or 0)
+        
+        trade_risk = position_size * atr_risk
+        if (allocated_risk + trade_risk + current_portfolio_risk) > max_total_risk:
             continue
     
-    position_size = float(r.get("position_size") or 0)
-
-    # Skip invalid position sizes
-    if position_size <= 0:
-        continue
+        executed_buys.append(r)
+        allocated_risk += trade_risk
+        allocated_capital += position_size
     
-    if allocated_capital + position_size > deployment_budget:
-        continue
-    
-    atr_risk = float(r.get("atr_risk") or 0)
-    
-    trade_risk = position_size * atr_risk
-    if (allocated_risk + trade_risk + current_portfolio_risk) > max_total_risk:
-        continue
-
-    executed_buys.append(r)
-    allocated_risk += trade_risk
-    allocated_capital += position_size
-
-    print(
-        f"Allocated Capital: ₹{allocated_capital:,.0f} / ₹{deployment_budget:,.0f}"
-    )
-    
-    if len(executed_buys) >= available_slots:
-        break
+        print(
+            f"Allocated Capital: ₹{allocated_capital:,.0f} / ₹{deployment_budget:,.0f}"
+        )
+        
+        if len(executed_buys) >= available_slots:
+            break
         
 executed_watches = watch_candidates[:MAX_WATCH]
 
