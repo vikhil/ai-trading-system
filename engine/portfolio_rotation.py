@@ -213,7 +213,19 @@ def generate_rotation_plan(
         
         else:
             priority_label = "LOW"
+
+        # -----------------------------------------
+        # Rank weakest holdings first
+        # -----------------------------------------
         
+        rotation_rows = sorted(
+            rotation_rows,
+            key=lambda x: (
+                x["Switch Score"],
+                x["Health Score"]
+            )
+        )
+
         rotation_rows.append([
             ticker,
             health_score,
