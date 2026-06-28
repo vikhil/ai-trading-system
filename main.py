@@ -66,6 +66,13 @@ from engine.ai_rank import (
 
 from engine.opportunity_queue import build_opportunity_queue
 
+from engine.portfolio_intelligence import (
+    build_sector_exposure,
+    calculate_sector_bonus,
+    calculate_portfolio_fit,
+    recommendation
+)
+
 from engine.schema import SCHEMA
 
 def load_state():
