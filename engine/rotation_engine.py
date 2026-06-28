@@ -51,7 +51,7 @@ def calculate_switch_score(holding, candidate):
 
     breakout = str(candidate.get("Breakout", "")).upper()
 
-    switch_score = 0
+    switch_score = 0.0
 
     # ----------------------------------
     # Holding Weakness
