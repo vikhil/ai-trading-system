@@ -48,3 +48,26 @@ def safe_update(ws, data):
     except Exception as e:
         print(f"[SHEETS ERROR] {ws.title} -> {e}")
         raise
+
+def write_dicts(ws, data, columns):
+    """
+    Writes List[Dict] to Google Sheets.
+
+    Parameters
+    ----------
+    ws : gspread worksheet
+
+    data : List[Dict]
+
+    columns : List[str]
+    """
+
+    rows = dicts_to_rows(
+        data,
+        columns
+    )
+
+    safe_update(
+        ws,
+        rows
+    )
