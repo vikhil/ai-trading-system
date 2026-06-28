@@ -1047,7 +1047,10 @@ else:
     
         executed_buys.append(r)
         allocated_risk += trade_risk
-        allocated_capital += position_size
+        allocated_capital += (
+            position_size *
+            float(r["cmp"])
+        )
     
         print(
             f"Allocated Capital: ₹{allocated_capital:,.0f} / ₹{deployment_budget:,.0f}"
@@ -1067,6 +1070,16 @@ print(
     f"({len(portfolio_data)} holdings loaded)"
 )
 
+# -------------------------------------
+# FINAL SAFETY CHECK
+# -------------------------------------
+
+if available_slots <= 0:
+
+    print("Portfolio Full - No BUY execution allowed.")
+
+    executed_buys = []
+    
 # ----------------------------
 # EXECUTION LAYER (CONTROLLED)
 # ----------------------------
