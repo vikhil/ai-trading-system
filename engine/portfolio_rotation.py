@@ -214,31 +214,31 @@ def generate_rotation_plan(
         else:
             priority_label = "LOW"
 
-        rotation_rows.append([
-            ticker,
-            health_score,
-            health_status,
-            current_value,
-            weight,
-            pl_pct,
-            position_risk,
-            action,
-            priority,
-            priority_label,
-            replacement,
-            replacement_score,
-            replacement_edge,
-            switch_score,
-            round(capital_freed, 2),
-            comments
-        ])
+        rotation_rows.append({
+            "Ticker": ticker,
+            "Health Score": health_score,
+            "Health Status": health_status,
+            "Current Value": current_value,
+            "Portfolio Weight %": weight,
+            "P/L %": pl_pct,
+            "Position Risk": position_risk,
+            "Action": action,
+            "Priority": priority,
+            "Priority Label": priority_label,
+            "Replacement": replacement,
+            "Replacement Score": replacement_score,
+            "Replacement Edge": replacement_edge,
+            "Switch Score": switch_score,
+            "Capital Freed": round(capital_freed, 2),
+            "Comments": comments,
+        })
         
     rotation_rows.sort(
         key=lambda x: (
-            x[13],   # Switch Score
-            x[1]     # Health Score
+            x["Switch Score"],
+            x["Health Score"],
         ),
-        reverse=True
+        reverse=True,
     )
             
     rotate_count = 0
