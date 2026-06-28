@@ -326,13 +326,14 @@ open_tickers = {
     if row.get("Ticker") and str(row.get("Quantity", "1")) != "0"
 }
 
+# Current holdings
 current_portfolio_size = open_positions
 
-# Dynamic portfolio sizing
-MAX_OPEN_POSITIONS = max(
-    30,
-    round(current_portfolio_size * 1.10)
-)
+# User-configurable target size
+TARGET_PORTFOLIO_SIZE = 20
+
+# Allow temporary expansion by 10%
+MAX_OPEN_POSITIONS = round(TARGET_PORTFOLIO_SIZE * 1.10)
 
 available_slots = max(
     0,
@@ -954,19 +955,6 @@ results_sorted = [
 ]
 
 # ----------------------------
-# BUILD OPPORTUNITY QUEUE
-# ----------------------------
-
-buy_queue = build_opportunity_queue(
-    results_sorted,
-    open_tickers,
-    available_slots,
-    deployment_budget
-)
-
-print(f"Opportunity Queue Size: {len(buy_queue)}")
-
-# ----------------------------
 # BUY + WATCH CANDIDATES
 # ----------------------------
 
@@ -1501,6 +1489,19 @@ except:
         rows="1000",
         cols="30"
     )
+
+# ----------------------------
+# BUILD OPPORTUNITY QUEUE
+# ----------------------------
+
+buy_queue = build_opportunity_queue(
+    results_sorted,
+    open_tickers,
+    available_slots,
+    deployment_budget - allocated_capital
+)
+
+print(f"Opportunity Queue Size: {len(buy_queue)}")
 
 buy_queue_data = [[
     "Queue Rank",
