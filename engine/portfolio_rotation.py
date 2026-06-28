@@ -242,14 +242,14 @@ def generate_rotation_plan(
     )
             
     rotate_count = 0
-            
+
     for row in rotation_rows:
-            
-        if row[7] == "ROTATE NOW":
-            
+    
+        if row["Action"] == "ROTATE NOW":
+    
             rotate_count += 1
-            
+    
             if rotate_count > 5:
-                row[7] = "MONITOR"
-            
+                row["Action"] = "MONITOR"
+    
     return rotation_rows
