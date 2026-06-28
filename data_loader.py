@@ -47,8 +47,10 @@ def fetch_nse_index_stocks(url):
 
     except Exception as e:
 
-        print(f"NSE download failed ({e}). Using local fallback...")
+        print(f"NSE download failed ({e})")
 
+        print("Loading local fallback_universe.csv")
+        
         return load_fallback_universe()
 
     stocks = []
