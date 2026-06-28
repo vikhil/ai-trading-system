@@ -80,11 +80,11 @@ def generate_rotation_plan(
         priority = 0
         
         replacement = ""
-        replacement_score = ""
+        replacement_score = 0.0
         
-        replacement_edge = ""
+        replacement_edge = 0.0
         
-        switch_score = ""
+        switch_score = 0.0
 
         selected_candidate = None
         
@@ -219,7 +219,8 @@ def generate_rotation_plan(
         except Exception:
             comments = ""
 
-        switch_score = safe_number(switch_score)
+        switch_score = float(switch_score or 0)
+        switch_score = safe_number(switch_score, 0.0)
         
         if action == "ROTATE NOW":
 
