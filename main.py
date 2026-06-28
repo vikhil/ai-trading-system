@@ -462,8 +462,8 @@ try:
     
     capital = max(total_portfolio_value, 100000)
 
-    print("Risk Capital:", capital)
-
+    print("Portfolio Capital:", capital)
+    
     # ----------------------------
     # AVAILABLE CAPITAL
     # ----------------------------
@@ -1670,8 +1670,8 @@ save_state(state)
 print("Completed Successfully")
 
 print(f"Capital Base : ₹{capital:,.0f}")
-print(f"Deployment Budget : ₹{capital_available:,.0f}")
+print(f"Deployment Budget : ₹{deployment_budget:,.0f}")
 print(f"Capital Used : ₹{allocated_capital:,.0f}")
-print(f"Capital Remaining : ₹{capital_available-allocated_capital:,.0f}")
+print(f"Capital Remaining : ₹{deployment_budget-allocated_capital:,.0f}")
 
 print("===== VERSION 2A.2 =====")
