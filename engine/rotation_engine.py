@@ -4,25 +4,49 @@ def calculate_replacement_quality(candidate):
     edge = float(candidate.get("Edge Rating", 0))
     rr = float(candidate.get("Risk Reward", 0))
     rs = float(candidate.get("RS Score", 0))
+    ai = float(candidate.get("AI Rank", 0))
+    inst = float(candidate.get("Institutional Rank", 0))
+    sector = float(candidate.get("Sector Strength", 0))
+    trend = float(candidate.get("Trend Persistence", 0))
+
     breakout = str(candidate.get("Breakout", "")).upper()
+    confidence = str(candidate.get("AI Confidence", "")).upper()
+
     volume = float(candidate.get("Volume Spike", 0))
-    
-    quality = (
-        score * 0.40
-        + edge * 5
-        + rr * 12
-        + rs * 0.50
-    )
+
+    quality = 0
+
+    quality += score * 0.25
+    quality += edge * 5
+    quality += rr * 10
+    quality += rs * 0.40
+
+    quality += ai * 0.35
+    quality += inst * 0.35
+
+    quality += sector * 0.60
+
+    quality += trend * 0.15
 
     if breakout == "YES":
+        quality += 10
+
+    if volume >= 3:
         quality += 12
 
-    if volume >= 2:
-        quality += 12
+    elif volume >= 2:
+        quality += 8
+
     elif volume >= 1.5:
-        quality += 6
+        quality += 4
 
-    return round(quality, 2)
+    if confidence == "HIGH":
+        quality += 8
+
+    elif confidence == "MEDIUM":
+        quality += 4
+
+    return round(min(quality, 100), 2)
 
 
 def calculate_switch_score(holding, candidate):
@@ -76,12 +100,19 @@ def calculate_switch_score(holding, candidate):
     # Candidate Quality
     # ----------------------------------
     
-    switch_score += score * 0.20
-    switch_score += edge * 3
-    switch_score += rr * 5
-    switch_score += rs * 0.25
-    switch_score += ai * 0.40
-    switch_score += sector_strength * 4
+    institutional = float(candidate.get("Institutional Rank", 0))
+    trend = float(candidate.get("Trend Persistence", 0))
+    
+    switch_score += score * 0.18
+    switch_score += edge * 4
+    switch_score += rr * 6
+    
+    switch_score += rs * 0.30
+    switch_score += ai * 0.35
+    switch_score += institutional * 0.30
+    
+    switch_score += sector_strength * 5
+    switch_score += trend * 0.15
 
     # ----------------------------------
     # Relative Improvement
@@ -109,15 +140,29 @@ def calculate_switch_score(holding, candidate):
     # Volume confirmation
     # ---------------------------------
 
-    if volume >= 2:
+    if volume >= 3:
+        switch_score += 8
+    
+    elif volume >= 2:
         switch_score += 5
+    
+    elif volume >= 1.5:
+        switch_score += 2
 
     # ---------------------------------
     # Breakout bonus
     # ---------------------------------
 
-    if str(candidate.get("Breakout", "")).upper() == "YES":
-        switch_score += 5
+    if breakout == "YES":
+        switch_score += 6
+    
+    confidence = str(candidate.get("AI Confidence", "")).upper()
+    
+    if confidence == "HIGH":
+        switch_score += 4
+    
+    elif confidence == "MEDIUM":
+        switch_score += 2
 
     return round(min(switch_score, 100), 2)
 
@@ -132,37 +177,51 @@ def generate_comments(
 
     comments = []
 
-    # Holding quality
     if health_score < 40:
-        comments.append("EXIT CANDIDATE")
+        comments.append("Exit candidate")
 
     elif health_score < 60:
-        comments.append("WEAK HOLD")
+        comments.append("Weak holding")
 
-    # Position sizing
+    else:
+        comments.append("Healthy holding")
+
     if weight > 10:
-        comments.append("OVERWEIGHT")
+        comments.append("Portfolio overweight")
 
     elif weight < 1:
-        comments.append("SMALL POSITION")
+        comments.append("Small allocation")
 
-    # Risk
     if position_risk > 1000:
-        comments.append("HIGH RISK")
+        comments.append("High portfolio risk")
 
-    # Replacement quality
     if candidate:
 
         if str(candidate.get("Breakout", "")).upper() == "YES":
-            comments.append("BREAKOUT")
+            comments.append("Breakout confirmed")
 
         if float(candidate.get("Volume Spike", 0)) >= 2:
-            comments.append("HEAVY VOLUME")
+            comments.append("Strong volume confirmation")
+
+        if str(candidate.get("AI Confidence", "")).upper() == "HIGH":
+            comments.append("High AI confidence")
+
+        if float(candidate.get("Institutional Rank", 0)) >= 70:
+            comments.append("Institutional buying")
+
+        if float(candidate.get("Sector Strength", 0)) >= 40:
+            comments.append("Leading sector")
 
         if switch_score >= 70:
-            comments.append("EXCELLENT UPGRADE")
+            comments.append("Excellent replacement")
 
         elif switch_score >= 55:
-            comments.append("GOOD UPGRADE")
+            comments.append("Strong replacement")
+
+        elif switch_score >= 40:
+            comments.append("Moderate upgrade")
+
+        else:
+            comments.append("Monitor only")
 
     return ", ".join(comments)
