@@ -1,18 +1,70 @@
 def calculate_replacement_quality(candidate):
 
-    score = float(candidate.get("Score", 0))
-    edge = float(candidate.get("Edge Rating", 0))
-    rr = float(candidate.get("Risk Reward", 0))
-    rs = float(candidate.get("RS Score", 0))
-    ai = float(candidate.get("AI Rank", 0))
-    inst = float(candidate.get("Institutional Rank", 0))
-    sector = float(candidate.get("Sector Strength", 0))
-    trend = float(candidate.get("Trend Persistence", 0))
+    score = float(
+        get_value(candidate,
+                  "Score",
+                  "score")
+    )
+    
+    edge = float(
+        get_value(candidate,
+                  "Edge Rating",
+                  "edge_rating")
+    )
+    
+    rr = float(
+        get_value(candidate,
+                  "Risk Reward",
+                  "risk_reward")
+    )
+    
+    rs = float(
+        get_value(candidate,
+                  "RS Score",
+                  "rs_score")
+    )
+    
+    ai = float(
+        get_value(candidate,
+                  "AI Rank",
+                  "ai_rank")
+    )
+    inst = float(
+        get_value(candidate,
+                  "Institutional Rank",
+                  "institutional_rank")
+    )
+    sector = float(
+        get_value(candidate,
+                  "Sector Strength",
+                  "sector_strength")
+    )
+    
+    trend = float(
+    get_value(candidate,
+              "Trend Persistence",
+              "trend_persistence")
+)
 
-    breakout = str(candidate.get("Breakout", "")).upper()
-    confidence = str(candidate.get("AI Confidence", "")).upper()
+    breakout = str(
+        get_value(candidate,
+                  "Breakout",
+                  "breakout",
+                  default="")
+    ).upper()
+    
+    confidence = str(
+        get_value(candidate,
+                  "AI Confidence",
+                  "ai_confidence",
+                  default="")
+    ).upper()
 
-    volume = float(candidate.get("Volume Spike", 0))
+    volume = float(
+        get_value(candidate,
+                  "Volume Spike",
+                  "volume_spike")
+    )
 
     quality = 0
 
@@ -48,6 +100,17 @@ def calculate_replacement_quality(candidate):
 
     return round(min(quality, 100), 2)
 
+def get_value(data, *keys, default=0):
+    """
+    Returns the first matching key.
+    Supports both BUY Queue and Scanner formats.
+    """
+
+    for key in keys:
+        if key in data and data[key] not in ("", None):
+            return data[key]
+
+    return default
 
 def calculate_switch_score(holding, candidate):
 
@@ -65,15 +128,49 @@ def calculate_switch_score(holding, candidate):
     # Candidate
     # -----------------------------
 
-    score = float(candidate.get("Score", 0))
-    edge = float(candidate.get("Edge Rating", 0))
-    rr = float(candidate.get("Risk Reward", 0))
-    rs = float(candidate.get("RS Score", 0))
-    ai = float(candidate.get("AI Rank", 0))
-    sector_strength = float(candidate.get("Sector Strength", 0))
-    volume = float(candidate.get("Volume Spike", 0))
+    score = float(
+        get_value(candidate,
+                  "Score",
+                  "score")
+    )
+    edge = float(
+        get_value(candidate,
+                  "Edge Rating",
+                  "edge_rating")
+    )
+    rr = float(
+        get_value(candidate,
+                  "Risk Reward",
+                  "risk_reward")
+    )
+    rs = float(
+        get_value(candidate,
+                  "RS Score",
+                  "rs_score")
+    )
+    ai = float(
+        get_value(candidate,
+                  "AI Rank",
+                  "ai_rank")
+    )
+    sector = float(
+    get_value(candidate,
+              "Sector Strength",
+              "sector_strength")
+)
+    
+    volume = float(
+        get_value(candidate,
+                  "Volume Spike",
+                  "volume_spike")
+    )
 
-    breakout = str(candidate.get("Breakout", "")).upper()
+    breakout = str(
+        get_value(candidate,
+                  "Breakout",
+                  "breakout",
+                  default="")
+    ).upper()
 
     switch_score = 0.0
 
@@ -100,8 +197,16 @@ def calculate_switch_score(holding, candidate):
     # Candidate Quality
     # ----------------------------------
     
-    institutional = float(candidate.get("Institutional Rank", 0))
-    trend = float(candidate.get("Trend Persistence", 0))
+    inst = float(
+    get_value(candidate,
+              "Institutional Rank",
+              "institutional_rank")
+)
+    trend = float(
+        get_value(candidate,
+                  "Trend Persistence",
+                  "trend_persistence")
+    )
     
     switch_score += score * 0.18
     switch_score += edge * 4
@@ -156,7 +261,12 @@ def calculate_switch_score(holding, candidate):
     if breakout == "YES":
         switch_score += 6
     
-    confidence = str(candidate.get("AI Confidence", "")).upper()
+    confidence = str(
+    get_value(candidate,
+              "AI Confidence",
+              "ai_confidence",
+              default="")
+).upper()
     
     if confidence == "HIGH":
         switch_score += 4
