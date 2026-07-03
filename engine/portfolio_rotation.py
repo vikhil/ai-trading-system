@@ -107,16 +107,6 @@ def generate_rotation_plan(
 
         if action in ["ROTATE NOW", "CONSIDER ROTATION"]:
             capital_freed = current_value
-            
-        priority_score = (
-            (100 - health_score)
-            + max(0, -pl_pct)
-            + (position_risk / 100)
-            + (weight * 2)
-            + (switch_score * 0.50)
-        )
-
-        priority = round(priority_score, 2)
         
         # ----------------------------
         # Assign replacement
@@ -182,7 +172,16 @@ def generate_rotation_plan(
                 
                 replacement_edge = safe_number(selected_candidate.get("Edge Rating"))
                 switch_score = safe_number(best_switch_score, 0.0)
+                priority_score = (
+                    (100 - health_score)
+                    + max(0, -pl_pct)
+                    + (position_risk / 100)
+                    + (weight * 2)
+                    + (switch_score * 0.50)
+                )
 
+                priority = round(priority_score, 2)
+                
         # ----------------------------
         # Concentration check
         # ----------------------------
