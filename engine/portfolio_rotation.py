@@ -24,7 +24,7 @@ print("PORTFOLIO_ROTATION VERSION = SAFE_NUMBER_FIX")
 
 def generate_rotation_plan(
     portfolio_data,
-    top_picks,
+    buy_queue,
     sector_rankings
 ):
     rotation_rows = []
@@ -45,7 +45,7 @@ def generate_rotation_plan(
     # ----------------------------
 
     top_sorted = sorted(
-        top_picks,
+        buy_queue,
         key=calculate_replacement_quality,
         reverse=True,
     )
@@ -124,8 +124,15 @@ def generate_rotation_plan(
 
                 candidate_bucket = classify_bucket(candidate)
 
-                if candidate_bucket != bucket:
-                    continue
+                sector_bonus = 0
+                
+                # Prefer same bucket
+                if candidate_bucket == bucket:
+                    sector_bonus += 8
+                
+                # Prefer same sector
+                if candidate.get("Sector") == row.get("Sector"):
+                    sector_bonus += 5
 
                 # Reject weak replacement candidates
                 if safe_number(candidate.get("Score")) < 75:
@@ -151,6 +158,7 @@ def generate_rotation_plan(
                         candidate,
                     )
                     + (sector_strength * 0.20)
+                    + sector_bonus
                 )
         
                 if current_switch > best_switch_score:
