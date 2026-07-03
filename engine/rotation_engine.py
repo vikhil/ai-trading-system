@@ -212,11 +212,14 @@ def generate_comments(
         if float(candidate.get("Sector Strength", 0)) >= 40:
             comments.append("Leading sector")
 
-        if switch_score >= 70:
-            comments.append("Excellent replacement")
-
-        elif switch_score >= 55:
-            comments.append("Strong replacement")
+        if switch_score >= 80:
+            comments.append("SWITCH IMMEDIATELY")
+        
+        elif switch_score >= 65:
+            comments.append("STRONG UPGRADE")
+        
+        elif switch_score >= 50:
+            comments.append("GOOD UPGRADE")
 
         elif switch_score >= 40:
             comments.append("Moderate upgrade")
