@@ -120,6 +120,14 @@ def generate_rotation_plan(
         
             for candidate in top_sorted:
 
+                print(
+                    "ROTATION CANDIDATE:",
+                    get_value(candidate, "Ticker", "ticker"),
+                    get_value(candidate, "Score", "score"),
+                    get_value(candidate, "Edge Rating", "edge_rating"),
+                    get_value(candidate, "RS Score", "rs_score")
+                )
+                
                 if candidate.get("Ticker") in current_holdings:
                     continue
 
