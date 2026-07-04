@@ -203,7 +203,7 @@ def generate_rotation_plan(
                     get_value(
                         selected_candidate,
                         "Edge Rating",
-                        "edge_rating"
+                        "edge_rating",
                     )
                 )
                 switch_score = safe_number(best_switch_score, 0.0)
@@ -225,15 +225,20 @@ def generate_rotation_plan(
 
             if selected_candidate:
         
-                breakout = selected_candidate.get(
-                    "Breakout",
-                    "NO"
-                )
+                breakout = str(
+                    get_value(
+                        selected_candidate,
+                        "Breakout",
+                        "breakout",
+                        default="NO",
+                    )
+                ).upper()
         
                 volume = float(
-                    selected_candidate.get(
+                    get_value(
+                        selected_candidate,
                         "Volume Spike",
-                        0
+                        "volume_spike",
                     )
                 )
         
