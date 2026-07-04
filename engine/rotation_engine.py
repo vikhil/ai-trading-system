@@ -36,7 +36,7 @@ def calculate_replacement_quality(candidate):
                   "institutional_rank")
     )
     
-    sector = if float(
+    sector = float(
         get_value(candidate,
                   "Sector Strength",
                   "sector_strength")
