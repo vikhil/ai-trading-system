@@ -214,9 +214,9 @@ def calculate_switch_score(holding, candidate):
     
     switch_score += rs * 0.30
     switch_score += ai * 0.35
-    switch_score += institutional * 0.30
+    switch_score += inst * 0.30
     
-    switch_score += sector_strength * 5
+    switch_score += sector * 5
     switch_score += trend * 0.15
 
     # ----------------------------------
@@ -262,11 +262,11 @@ def calculate_switch_score(holding, candidate):
         switch_score += 6
     
     confidence = str(
-    get_value(candidate,
-              "AI Confidence",
-              "ai_confidence",
-              default="")
-).upper()
+        get_value(candidate,
+                  "AI Confidence",
+                  "ai_confidence",
+                  default="")
+    ).upper()
     
     if confidence == "HIGH":
         switch_score += 4
