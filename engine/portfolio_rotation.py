@@ -6,6 +6,7 @@ from engine.rotation_engine import (
 
 from engine.portfolio_classifier import classify_bucket
 from engine.sector_rotation import get_sector_strength
+from engine.rotation_engine import get_value
 
 def safe_number(value, default=0.0):
     try:
@@ -131,24 +132,32 @@ def generate_rotation_plan(
                     sector_bonus += 8
                 
                 # Prefer same sector
-                if candidate.get("Sector") == row.get("Sector"):
+                if get_value(candidate, "Sector", "sector") == row.get("Sector"):
                     sector_bonus += 5
 
                 # Reject weak replacement candidates
-                if safe_number(candidate.get("Score")) < 75:
+                if safe_number(
+                        get_value(candidate, "Score", "score")
+                    ) < 75:
                     continue
                 
-                if safe_number(candidate.get("Edge Rating")) < 7:
+                if safe_number(
+                        get_value(candidate, "Edge Rating", "edge_rating")
+                    ) < 7:
                     continue
                 
-                if safe_number(candidate.get("Risk Reward")) < 1.5:
+                if safe_number(
+                        get_value(candidate, "Risk Reward", "risk_reward")
+                    ) < 1.5:
                     continue
                 
-                if safe_number(candidate.get("RS Score")) < 15:
+                if safe_number(
+                        get_value(candidate, "RS Score", "rs_score")
+                    ) < 15:
                     continue
     
                 sector_strength = get_sector_strength(
-                    candidate.get("Sector"),
+                    get_value(candidate, "Sector", "sector"),
                     sector_rankings
                 )
                 
@@ -169,7 +178,11 @@ def generate_rotation_plan(
         
                 selected_candidate = best_candidate
         
-                replacement = selected_candidate.get("Ticker", "")
+                replacement = get_value(
+                    selected_candidate,
+                    "Ticker",
+                    "ticker"
+                )
 
                 current_holdings.add(replacement)
                 
@@ -178,7 +191,13 @@ def generate_rotation_plan(
                 
                 replacement_score = calculate_replacement_quality(selected_candidate)
                 
-                replacement_edge = safe_number(selected_candidate.get("Edge Rating"))
+                replacement_edge = safe_number(
+                    get_value(
+                        selected_candidate,
+                        "Edge Rating",
+                        "edge_rating"
+                    )
+                )
                 switch_score = safe_number(best_switch_score, 0.0)
                 priority_score = (
                     (100 - health_score)
