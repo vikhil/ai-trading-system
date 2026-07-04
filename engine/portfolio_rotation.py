@@ -128,7 +128,13 @@ def generate_rotation_plan(
                     get_value(candidate, "RS Score", "rs_score")
                 )
                 
-                if candidate.get("Ticker") in current_holdings:
+                candidate_ticker = get_value(
+                    candidate,
+                    "Ticker",
+                    "ticker"
+                )
+                
+                if candidate_ticker in current_holdings:
                     continue
 
                 candidate_bucket = classify_bucket(candidate)
@@ -179,11 +185,28 @@ def generate_rotation_plan(
                 )
         
                 if current_switch > best_switch_score:
+
+                    print(
+                        "NEW BEST:",
+                        ticker,
+                        "->",
+                        get_value(candidate, "Ticker", "ticker"),
+                        current_switch
+                    )
+                    
                     best_switch_score = current_switch
                     best_candidate = candidate
         
             if best_candidate is not None:
-        
+                
+                print(
+                    "FINAL SELECTED:",
+                    ticker,
+                    "->",
+                    get_value(best_candidate, "Ticker", "ticker"),
+                    best_switch_score
+                )
+                
                 selected_candidate = best_candidate
         
                 replacement = get_value(
