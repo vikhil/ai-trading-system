@@ -29,29 +29,31 @@ def calculate_replacement_quality(candidate):
                   "AI Rank",
                   "ai_rank")
     )
+    
     inst = float(
         get_value(candidate,
                   "Institutional Rank",
                   "institutional_rank")
     )
-    sector = float(
+    
+    sector = if float(
         get_value(candidate,
                   "Sector Strength",
                   "sector_strength")
     )
     
     trend = float(
-    get_value(candidate,
-              "Trend Persistence",
-              "trend_persistence")
-)
+        get_value(candidate,
+                  "Trend Persistence",
+                  "trend_persistence")
+    )
 
     breakout = str(
         get_value(candidate,
                   "Breakout",
                   "breakout",
                   default="")
-    ).upper()
+    ).upper()=="Yes"
     
     confidence = str(
         get_value(candidate,
