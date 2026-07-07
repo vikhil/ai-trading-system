@@ -61,7 +61,18 @@ def fetch_nse_index_stocks(url):
 
             "Ticker": row["Symbol"].strip().upper() + ".NS",
 
-            "Sector": row.get("Industry", "UNKNOWN")
+            sector = row.get("Industry")
+
+            if pd.isna(sector):
+                sector = "UNKNOWN"
+            
+            stocks.append({
+            
+                "Ticker": row["Symbol"].strip().upper() + ".NS",
+            
+                "Sector": str(sector).strip()
+            
+            })
 
         })
 
