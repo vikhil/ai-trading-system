@@ -167,12 +167,28 @@ def enrich_portfolio(portfolio_data):
         for row in sector_lookup
     }
 
+    print("Universe size =", len(ticker_to_sector))
+
+    for test in [
+        "AKUMS.NS",
+        "EXICOM.NS",
+        "ECOSMOBLTY.NS",
+        "CPSEETF.NS",
+        "EASEMYTRIP.NS",
+        "BEL.NS",
+        "ADANIENT.NS"
+    ]:
+        print(test, "->", ticker_to_sector.get(test))
+    
     for row in portfolio_data:
 
         ticker = str(
             row.get("Ticker", "")
         ).strip()
 
+        if ticker not in ticker_to_sector:
+            print(f"Sector NOT FOUND for {ticker}")
+    
         sector = ticker_to_sector.get(ticker, "UNKNOWN")
         
         if not ticker:
