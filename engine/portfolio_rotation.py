@@ -64,7 +64,7 @@ def generate_rotation_plan(
 
         health_status = str(
             row.get("Health Status", "")
-        )
+        ).strip().upper()
 
         bucket = classify_bucket(row)
         
