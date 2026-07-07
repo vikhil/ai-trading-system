@@ -90,7 +90,7 @@ def generate_rotation_plan(
         selected_candidate = None
         
         # EXIT immediately
-        if health_status in ("URGENT_EXIT", "EXIT_CANDIDATE"):
+        if health_status in {"URGENT_EXIT", "EXIT_CANDIDATE"}:
             action = "ROTATE NOW"
         
         # Weak stocks
