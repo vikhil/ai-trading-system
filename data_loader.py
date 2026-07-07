@@ -57,23 +57,14 @@ def fetch_nse_index_stocks(url):
 
     for _, row in df.iterrows():
 
+        sector = row.get("Industry")
+
+        if pd.isna(sector):
+            sector = "UNKNOWN"
+            
         stocks.append({
-
             "Ticker": row["Symbol"].strip().upper() + ".NS",
-
-            sector = row.get("Industry")
-
-            if pd.isna(sector):
-                sector = "UNKNOWN"
-            
-            stocks.append({
-            
-                "Ticker": row["Symbol"].strip().upper() + ".NS",
-            
-                "Sector": str(sector).strip()
-            
-            })
-
+            "Sector": str(sector).strip()
         })
 
     return stocks
