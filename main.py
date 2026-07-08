@@ -449,7 +449,8 @@ print("Market Regime:", regime)
 
 try:
     enriched_portfolio = enrich_portfolio(
-        portfolio_data
+        portfolio_data,
+        regime=regime
     )
     
     print(
