@@ -208,8 +208,7 @@ def enrich_portfolio(portfolio_data):
             print(f"END DOWNLOAD -> {ticker}")
             
             if df is None or df.empty:
-                print(f"{ticker}: Download returned empty")
-                continue
+                raise Exception("Yahoo returned empty")
     
             # Fix Yahoo MultiIndex issue
             if isinstance(df.columns, pd.MultiIndex):
@@ -478,11 +477,12 @@ def enrich_portfolio(portfolio_data):
             
             enriched.append({
                 **row,
+                "Sector": sector,
                 "LTP": 0,
-                "Invested": 0,
-                "Current Value": 0,
-                "P/L ₹": 0,
-                "P/L %": 0,
+                "Invested": qty * buy_price,
+                "Current Value": qty * buy_price,
+                "P/L ₹": "",
+                "P/L %": "",
                 "ATR Risk": 0,
                 "Position Risk": 0,
                 "Stop Loss": 0,
