@@ -16,16 +16,16 @@ from engine.risk_engine import (
 from engine.institutional_rank import calculate_institutional_rank
 
 def signal_quality_gate(score, rs_score, risk_reward, volume_spike):
-    if score < 45:
+    if score < 40:
         return False
     
-    if rs_score < 8:
+    if rs_score < 10:
         return False
     
-    if risk_reward < 1.3:
+    if risk_reward < 1.2:
         return False
     
-    if volume_spike < 0.3:
+    if volume_spike < 0.4:
         return False
 
     return True
