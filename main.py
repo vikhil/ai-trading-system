@@ -963,10 +963,10 @@ buy_candidates = [
     if (
         r["trade_action"] in ["BUY", "STRONG_BUY"]
         and r["ticker"].upper() not in open_tickers
-        and r["edge_rating"] >= 7
-        and r["score"] >= 75
+        and r["edge_rating"] >= 6
+        and r["score"] >= 70
         and r["risk_reward"] >= 1.5
-        and r["rs_score"] >= 15
+        and r["rs_score"] >= 10
     )
 ]
 
