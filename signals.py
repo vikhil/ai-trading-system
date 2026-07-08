@@ -340,7 +340,7 @@ def add_volume_and_breakout(df):
 # RISK ENGINE (FIXED SAFE VERSION)
 # =========================================================
 
-def apply_risk_engine(row, df=None, atr_multiplier=1.5):
+def apply_risk_engine(row, df=None, regime="SIDEWAYS", atr_multiplier=1.5):
 
     try:
         entry = float(row["Close"]) if not hasattr(row["Close"], "iloc") else float(row["Close"].iloc[-1])
@@ -358,11 +358,17 @@ def apply_risk_engine(row, df=None, atr_multiplier=1.5):
         # ---------------------------
         # STRUCTURE STOP
         # ---------------------------
-        structure_low = df["Close"].rolling(10).min().iloc[-1]
-
+        structure_low = min(
+            df["Low"].rolling(10).min().iloc[-1],
+            entry
+        )
+        
         atr_stop = entry - (atr * atr_multiplier)
-
-        stop_loss = max(atr_stop, structure_low)
+        
+        stop_loss = min(atr_stop, structure_low)
+        
+        # Never allow SL above entry
+        stop_loss = min(stop_loss, entry - (atr * 0.20))
 
         # ---------------------------
         # TARGET
@@ -381,29 +387,30 @@ def apply_risk_engine(row, df=None, atr_multiplier=1.5):
             stop_loss = entry - min_risk_buffer if entry > stop_loss else entry + min_risk_buffer
 
         # ---------------------------
-        # RISK & REWARD (NOW CORRECT)
+        # RISK & REWARD (NEW)
         # ---------------------------
-
-        risk = abs(entry - stop_loss)
-
-        # HARD SAFETY: prevent micro-risk distortion
-        min_risk_abs = atr * 0.5   # NEW: volatility-based floor
         
-        if risk < min_risk_abs:
-            risk = min_risk_abs
-            
-        reward = abs(target - entry)
+        risk = entry - stop_loss
         
-        # SAFE GUARD (CRITICAL FIX)
-        if risk <= 0 or pd.isna(risk) or risk < 1e-6:
-            rr = 0
-        else:
-            rr = reward / risk
+        # Prevent unrealistically tiny stops
+        minimum_risk = max(atr * 0.75, entry * 0.005)
         
-        # volatility sanity cap (more realistic than flat 10)
-        rr = min(rr, 6)
+        if risk < minimum_risk:
+            risk = minimum_risk
+            stop_loss = entry - risk
         
-        rr = round(rr, 2)
+        # Choose Reward Multiple based on Market Regime
+        reward_multiple = {
+            "BEAR": 1.5,
+            "SIDEWAYS": 2.0,
+            "BULL": 3.0
+        }.get(regime, 2.0)
+        
+        target = entry + (risk * reward_multiple)
+        
+        reward = target - entry
+        
+        rr = round(reward / risk, 2)
 
         return pd.Series([
             round(atr, 2),
