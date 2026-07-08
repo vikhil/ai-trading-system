@@ -61,11 +61,14 @@ def calculate_position_size(capital, cmp_price, atr_risk, edge_rating, risk_per_
 
 def calculate_edge_score(score, risk_reward, rs_score, volume_spike, breakout, regime):
 
-    if pd.isna(score) or score < 60:
+    if pd.isna(score) or score < 50:
         return 0
 
     edge = 0
-
+    
+    if pd.isna(score):
+        return 0
+    
     score = float(score)
     risk_reward = float(risk_reward) if pd.notna(risk_reward) else 0
     rs_score = float(rs_score) if pd.notna(rs_score) else 0
