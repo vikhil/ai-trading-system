@@ -16,16 +16,16 @@ from engine.risk_engine import (
 from engine.institutional_rank import calculate_institutional_rank
 
 def signal_quality_gate(score, rs_score, risk_reward, volume_spike):
-    if score < 40:
+    if score < 45:
         return False
-        
-    if rs_score < 10:
+    
+    if rs_score < 8:
         return False
-        
-    if risk_reward < 1.2:
+    
+    if risk_reward < 1.3:
         return False
-
-    if volume_spike < 0.4:
+    
+    if volume_spike < 0.3:
         return False
 
     return True
@@ -385,7 +385,14 @@ def run_scanner(
             # HARD SIGNAL OVERRIDE
             
             if signal == "NO TRADE":
-                trade_action = "IGNORE"
+
+                if edge_rating >= 5:
+            
+                    trade_action = "WATCH"
+            
+                else:
+            
+                    trade_action = "IGNORE"
             
             elif signal == "WATCHLIST":
                 if trade_action in ["BUY", "STRONG_BUY"]:
