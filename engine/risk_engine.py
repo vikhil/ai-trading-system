@@ -61,13 +61,15 @@ def calculate_position_size(capital, cmp_price, atr_risk, edge_rating, risk_per_
 
 def calculate_edge_score(score, risk_reward, rs_score, volume_spike, breakout, regime):
 
-    if pd.isna(score) or score < 50:
+    if pd.isna(score):
         return 0
 
     edge = 0
-    
-    if pd.isna(score):
+
+    # Only reject extremely weak setups
+    if score < 45:
         return 0
+
     
     score = float(score)
     risk_reward = float(risk_reward) if pd.notna(risk_reward) else 0
@@ -75,15 +77,17 @@ def calculate_edge_score(score, risk_reward, rs_score, volume_spike, breakout, r
     volume_spike = float(volume_spike) if pd.notna(volume_spike) else 0
 
     # 1. Signal strength
-    if score >= 80:
+    if score >= 90:
+        edge += 6
+    elif score >= 80:
         edge += 5
     elif score >= 75:
         edge += 4
-    elif score >= 70:
-        edge += 3
-    elif score >= 65:
-        edge += 2
     elif score >= 60:
+        edge += 3
+    elif score >= 50:
+        edge += 2
+    elif score >= 45:
         edge += 1
 
     # 2. Risk-reward quality
