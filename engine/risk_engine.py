@@ -21,7 +21,7 @@ def calculate_position_size(capital, cmp_price, atr_risk, edge_rating, risk_per_
     elif edge_rating >= 8:
         risk_multiplier = 1.25
 
-    elif edge_rating >= 7:
+    elif :
         risk_multiplier = 1.00
 
     else:
