@@ -15,8 +15,22 @@ DEBUG_LOGS = False
 # ----------------------------
 capital = 100000
 
+# ----------------------------
+# Risk Configuration
+# ----------------------------
+
+# 0.5% capital risk per trade
 risk_per_trade = 0.005
+
+# Maximum portfolio risk
 max_capital_risk = 0.20
+
+# Reward multiples used everywhere
+REWARD_MULTIPLIER = {
+    "BEAR": 1.5,
+    "SIDEWAYS": 2.0,
+    "BULL": 3.0
+}
 
 STATE_FILE = "trade_state.json"
 STATE_EXPIRY_HOURS = 24
