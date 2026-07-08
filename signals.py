@@ -136,12 +136,17 @@ def classify_signal(score, regime):
         )
 
     if regime == "SIDEWAYS":
-        return "SWING BUY" if score >= 85 else "NO TRADE"
+        return (
+            "SWING BUY" if score >= 82 else
+            "WATCHLIST" if score >= 65 else
+            "NO TRADE"
+        )
 
     return (
-        "INSTITUTIONAL BUY" if score >= 85 else
-        "BUY" if score >= 70 else
-        "ACCUMULATE" if score >= 55 else
+        "INSTITUTIONAL BUY" if score >= 90 else
+        "BUY" if score >= 78 else
+        "ACCUMULATE" if score >= 60 else
+        "WATCHLIST" if score >= 50 else
         "NO TRADE"
     )
 
