@@ -156,7 +156,7 @@ def safe_number(value, default=0):
     except:
         return default
         
-def enrich_portfolio(portfolio_data):
+def enrich_portfolio(portfolio_data, regime="SIDEWAYS"):
 
     enriched = []
 
@@ -249,7 +249,8 @@ def enrich_portfolio(portfolio_data):
             
             risk_values = apply_risk_engine(
                 last_valid_row,
-                df=df
+                df=df,
+                regime=regime
             )
 
             print(
