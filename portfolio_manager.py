@@ -208,7 +208,16 @@ def enrich_portfolio(portfolio_data, regime="SIDEWAYS"):
             print(f"END DOWNLOAD -> {ticker}")
             
             if df is None or df.empty:
-                raise Exception("Yahoo returned empty")
+
+                print(f"{ticker}: Download returned empty")
+            
+                enriched.append({
+                    **row,
+                    "Sector": sector,
+                    "Health Status": "DOWNLOAD_FAILED"
+                })
+            
+                continue
     
             # Fix Yahoo MultiIndex issue
             if isinstance(df.columns, pd.MultiIndex):
@@ -222,13 +231,29 @@ def enrich_portfolio(portfolio_data, regime="SIDEWAYS"):
             print(f"{ticker} Columns = {df.columns}")
             
             if df.empty:
+
                 print(f"{ticker}: No data")
+            
+                enriched.append({
+                    **row,
+                    "Sector": sector,
+                    "Health Status": "NO_DATA"
+                })
+            
                 continue
 
             required_cols = ["High", "Low", "Close"]
 
             if not all(col in df.columns for col in required_cols):
+
                 print(f"{ticker}: Missing OHLC columns")
+            
+                enriched.append({
+                    **row,
+                    "Sector": sector,
+                    "Health Status": "BAD_DATA"
+                })
+            
                 continue
     
             df = calculate_atr(df)
@@ -479,7 +504,7 @@ def enrich_portfolio(portfolio_data, regime="SIDEWAYS"):
             enriched.append({
                 **row,
                 "Sector": sector,
-                "LTP": 0,
+                "LTP": buy_price,
                 "Invested": qty * buy_price,
                 "Current Value": qty * buy_price,
                 "P/L ₹": "",
@@ -553,5 +578,12 @@ def enrich_portfolio(portfolio_data, regime="SIDEWAYS"):
     
         else:
             row["Health Status"] = "URGENT_EXIT"
-        
+
+        if len(enriched) != len(portfolio_data):
+    
+            print(
+                f"WARNING : Portfolio row mismatch "
+                f"{len(enriched)} vs {len(portfolio_data)}"
+            )
+    
     return enriched
