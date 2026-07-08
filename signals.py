@@ -390,7 +390,7 @@ def apply_risk_engine(row, df=None, regime="SIDEWAYS", atr_multiplier=1.5):
         # RISK & REWARD (NEW)
         # ---------------------------
         
-        risk = entry - stop_loss
+        risk = abs(entry - stop_loss)
         
         # Prevent unrealistically tiny stops
         minimum_risk = max(atr * 0.75, entry * 0.005)
@@ -408,7 +408,9 @@ def apply_risk_engine(row, df=None, regime="SIDEWAYS", atr_multiplier=1.5):
         
         target = entry + (risk * reward_multiple)
         
-        reward = target - entry
+        reward = abs(target-entry)
+        
+        #rr = reward/risk
         
         rr = round(reward / risk, 2)
 
