@@ -197,24 +197,58 @@ def enrich_portfolio(portfolio_data, regime="SIDEWAYS"):
         try:
             print(f"START DOWNLOAD -> {ticker}")
             
-            df = yf.download(
-                ticker,
-                period="6mo",
-                interval="1d",
-                auto_adjust=True,
-                progress=False,
-                threads=False
-            )
+            import time
+
+            df = None
+            
+            for attempt in range(3):
+            
+                try:
+            
+                    df = yf.download(
+                        ticker,
+                        period="6mo",
+                        interval="1d",
+                        auto_adjust=True,
+                        progress=False,
+                        threads=False
+                    )
+            
+                    if df is not None and not df.empty:
+                        break
+            
+                except Exception as e:
+            
+                    print(f"{ticker}: Retry {attempt+1} failed -> {e}")
+            
+                time.sleep(2)
+                
             print(f"END DOWNLOAD -> {ticker}")
             
             if df is None or df.empty:
 
-                print(f"{ticker}: Download returned empty")
+                print(f"{ticker}: Download failed after 3 attempts")
             
                 enriched.append({
                     **row,
                     "Sector": sector,
-                    "Health Status": "DOWNLOAD_FAILED"
+                    "LTP": buy_price,
+                    "Invested": qty * buy_price,
+                    "Current Value": qty * buy_price,
+                    "P/L ₹": "",
+                    "P/L %": "",
+                    "ATR Risk": 0,
+                    "Position Risk": 0,
+                    "Stop Loss": 0,
+                    "Target": 0,
+                    "Risk Reward": 0,
+                    "RSI": 0,
+                    "RS Score": 0,
+                    "Trend": "DOWNLOAD_FAILED",
+                    "Score": 0,
+                    "Health Score": 0,
+                    "Health Status": "DOWNLOAD_FAILED",
+                    "Sector Health Bonus": 0
                 })
             
                 continue
