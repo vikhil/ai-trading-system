@@ -1,5 +1,6 @@
 import yfinance as yf
 import pandas as pd
+import os
 
 from signals import (
     generate_signal,
@@ -12,6 +13,50 @@ import math
 from data_loader import load_universe
 from engine.sector_health import calculate_sector_health
 
+CACHE_DIR = "cache"
+
+os.makedirs(CACHE_DIR, exist_ok=True)
+
+
+def cache_file(ticker):
+
+    return os.path.join(
+        CACHE_DIR,
+        ticker.replace(".", "_") + ".csv"
+    )
+
+
+def save_cache(ticker, df):
+
+    try:
+
+        df.to_csv(cache_file(ticker))
+
+    except Exception as e:
+
+        print(f"Cache Save Failed {ticker}: {e}")
+
+
+def load_cache(ticker):
+
+    try:
+
+        file = cache_file(ticker)
+
+        if os.path.exists(file):
+
+            return pd.read_csv(
+                file,
+                index_col=0,
+                parse_dates=True
+            )
+
+    except Exception as e:
+
+        print(f"Cache Load Failed {ticker}: {e}")
+
+    return None
+    
 def calculate_health_score(
     trend,
     rs_score,
@@ -213,7 +258,10 @@ def enrich_portfolio(portfolio_data, regime="SIDEWAYS"):
                         progress=False,
                         threads=False
                     )
-            
+                    if df is not None and not df.empty:
+
+                        save_cache(ticker, df)
+    
                     if df is not None and not df.empty:
                         break
             
@@ -227,7 +275,19 @@ def enrich_portfolio(portfolio_data, regime="SIDEWAYS"):
             
             if df is None or df.empty:
 
-                print(f"{ticker}: Download failed after 3 attempts")
+                print(f"{ticker}: Yahoo Failed")
+            
+                cached = load_cache(ticker)
+            
+                if cached is not None and not cached.empty:
+            
+                    print(f"{ticker}: Using Cached Data")
+            
+                    df = cached
+            
+                else:
+            
+                    print(f"{ticker}: No Cache Available")
             
                 enriched.append({
                     **row,
