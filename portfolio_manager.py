@@ -1,6 +1,7 @@
 import yfinance as yf
 import pandas as pd
 import os
+from datetime import datetime
 
 from signals import (
     generate_signal,
@@ -13,49 +14,57 @@ import math
 from data_loader import load_universe
 from engine.sector_health import calculate_sector_health
 
-CACHE_DIR = "cache"
+CACHE_FOLDER = "Cache"
 
-os.makedirs(CACHE_DIR, exist_ok=True)
+def load_cached_or_download(ticker):
 
+    cache_file = os.path.join(CACHE_FOLDER, f"{ticker}.csv")
 
-def cache_file(ticker):
+    # -----------------------------
+    # Use today's cache if available
+    # -----------------------------
+    if os.path.exists(cache_file):
 
-    return os.path.join(
-        CACHE_DIR,
-        ticker.replace(".", "_") + ".csv"
+        modified = datetime.fromtimestamp(
+            os.path.getmtime(cache_file)
+        ).date()
+
+        if modified == datetime.today().date():
+
+            try:
+
+                df = pd.read_csv(
+                    cache_file,
+                    index_col=0,
+                    parse_dates=True
+                )
+
+                if not df.empty:
+                    print(f"{ticker}: Loaded from Cache")
+                    return df
+
+            except:
+                pass
+
+    # -----------------------------
+    # Otherwise download
+    # -----------------------------
+    print(f"{ticker}: Downloading from Yahoo")
+
+    df = yf.download(
+        ticker,
+        period="6mo",
+        interval="1d",
+        auto_adjust=True,
+        progress=False,
+        threads=False
     )
 
+    if df is not None and not df.empty:
 
-def save_cache(ticker, df):
+        df.to_csv(cache_file)
 
-    try:
-
-        df.to_csv(cache_file(ticker))
-
-    except Exception as e:
-
-        print(f"Cache Save Failed {ticker}: {e}")
-
-
-def load_cache(ticker):
-
-    try:
-
-        file = cache_file(ticker)
-
-        if os.path.exists(file):
-
-            return pd.read_csv(
-                file,
-                index_col=0,
-                parse_dates=True
-            )
-
-    except Exception as e:
-
-        print(f"Cache Load Failed {ticker}: {e}")
-
-    return None
+    return df
     
 def calculate_health_score(
     trend,
@@ -250,14 +259,8 @@ def enrich_portfolio(portfolio_data, regime="SIDEWAYS"):
             
                 try:
             
-                    df = yf.download(
-                        ticker,
-                        period="6mo",
-                        interval="1d",
-                        auto_adjust=True,
-                        progress=False,
-                        threads=False
-                    )
+                    df = load_cached_or_download(ticker)
+                    
                     if df is not None and not df.empty:
 
                         save_cache(ticker, df)
