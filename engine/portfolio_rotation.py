@@ -137,33 +137,6 @@ def generate_rotation_plan(
 
         if action in ["ROTATE NOW", "CONSIDER ROTATION"]:
             capital_freed = current_value
-
-        # -------------------------------------------------
-        # Skip stocks that have no active investment
-        # -------------------------------------------------
-        
-        if current_value <= 0 or weight <= 0 or position_risk <= 0:
-        
-            rotation_rows.append({
-                "Ticker": ticker,
-                "Health Score": health_score,
-                "Health Status": health_status,
-                "Current Value": current_value,
-                "Portfolio Weight %": weight,
-                "P/L %": pl_pct,
-                "Position Risk": position_risk,
-                "Action": "MONITOR",
-                "Priority": 0,
-                "Priority Label": "",
-                "Replacement": "",
-                "Replacement Score": 0,
-                "Replacement Edge": 0,
-                "Switch Score": 0,
-                "Capital Freed": 0,
-                "Comments": ""
-            })
-        
-            continue
     
         # ----------------------------
         # Assign replacement
