@@ -1,7 +1,10 @@
 import yfinance as yf
 import pandas as pd
+
 import os
 from datetime import datetime
+
+from cache_manager import load_cache, save_cache
 
 from signals import (
     generate_signal,
@@ -249,6 +252,12 @@ def enrich_portfolio(portfolio_data, regime="SIDEWAYS"):
             continue
 
         try:
+            atr_risk = 0
+            position_risk = 0
+            stop_loss = 0
+            target = 0
+            risk_reward = 0
+        
             print(f"START DOWNLOAD -> {ticker}")
             
             import time
