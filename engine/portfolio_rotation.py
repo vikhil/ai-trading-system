@@ -67,14 +67,46 @@ def generate_rotation_plan(
         ).strip().upper()
 
         bucket = classify_bucket(row)
+
+        qty = safe_number(row.get("Quantity"))
         
         current_value = safe_number(row.get("Current Value"))
-
+        
         weight = safe_number(row.get("Portfolio Weight %"))
         
         pl_pct = safe_number(row.get("P/L %"))
         
         position_risk = safe_number(row.get("Position Risk"))
+        
+        # --------------------------------------------------
+        # Skip stocks that are not active holdings
+        # --------------------------------------------------
+        
+        if qty <= 0 or current_value <= 0:
+        
+            rotation_rows.append({
+        
+                "Ticker": ticker,
+                "Health Score": health_score,
+                "Health Status": health_status,
+                "Current Value": current_value,
+                "Portfolio Weight %": weight,
+                "P/L %": pl_pct,
+                "Position Risk": position_risk,
+        
+                "Action": "N/A",
+                "Priority": 0,
+                "Priority Label": "N/A",
+                "Replacement": "",
+                "Replacement Score": 0,
+                "Replacement Edge": 0,
+                "Switch Score": 0,
+                "Capital Freed": 0,
+                "Comments": ""
+        
+            })
+        
+            continue
 
         action = "HOLD"
 
