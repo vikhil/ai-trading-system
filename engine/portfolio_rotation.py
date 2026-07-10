@@ -163,11 +163,16 @@ def generate_rotation_plan(
                     "ticker"
                 )
 
-                replacement_sector = get_value(
-                    selected_candidate,
-                    "Sector",
-                    "sector"
-                )
+                replacement_sector = ""
+
+                if selected_candidate:
+                
+                    replacement_sector = get_value(
+                        selected_candidate,
+                        "Sector",
+                        "sector",
+                        default=""
+                    )
                 
                 sector_replacement_count[replacement_sector] = (
                     sector_replacement_count.get(replacement_sector, 0) + 1
