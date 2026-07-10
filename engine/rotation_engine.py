@@ -106,11 +106,17 @@ def get_value(data, *keys, default=0):
     """
     Returns the first matching key.
     Supports both BUY Queue and Scanner formats.
+    Safe against None objects.
     """
 
+    if not isinstance(data, dict):
+        return default
+
     for key in keys:
-        if key in data and data[key] not in ("", None):
-            return data[key]
+        if key in data:
+            value = data[key]
+            if value not in ("", None):
+                return value
 
     return default
 
