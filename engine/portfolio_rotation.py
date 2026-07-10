@@ -55,7 +55,10 @@ def generate_rotation_plan(
         row.get("Ticker", "")
         for row in portfolio_data
     }
-    
+
+    sector_replacement_count = {}
+    MAX_REPLACEMENTS_PER_SECTOR = 2
+
     for row in holdings_sorted:
 
         ticker = row.get("Ticker", "")
@@ -137,6 +140,11 @@ def generate_rotation_plan(
 
         if action in ["ROTATE NOW", "CONSIDER ROTATION"]:
             capital_freed = current_value
+
+        MIN_ROTATION_VALUE = 5000
+
+        if capital_freed < MIN_ROTATION_VALUE:
+            action = "MONITOR"
     
         # ----------------------------
         # Assign replacement
@@ -148,28 +156,62 @@ def generate_rotation_plan(
             best_switch_score = float("-inf")
         
             for candidate in top_sorted:
-
-                print(
-                    "ROTATION CANDIDATE:",
-                    get_value(candidate, "Ticker", "ticker"),
-                    get_value(candidate, "Score", "score"),
-                    get_value(candidate, "Edge Rating", "edge_rating"),
-                    get_value(candidate, "RS Score", "rs_score")
-                )
                 
                 candidate_ticker = get_value(
                     candidate,
                     "Ticker",
                     "ticker"
                 )
+
+                replacement_sector = get_value(
+                    selected_candidate,
+                    "Sector",
+                    "sector"
+                )
                 
+                sector_replacement_count[replacement_sector] = (
+                    sector_replacement_count.get(replacement_sector, 0) + 1
+                )
+
+                candidate_sector = get_value(
+                    candidate,
+                    "Sector",
+                    "sector"
+                )
+                
+                if sector_replacement_count.get(candidate_sector, 0) >= MAX_REPLACEMENTS_PER_SECTOR:
+                    continue
+    
                 if candidate_ticker in current_holdings:
                     continue
 
                 candidate_bucket = classify_bucket(candidate)
 
                 sector_bonus = 0
+
+                breakout = str(
+                    get_value(
+                        candidate,
+                        "Breakout",
+                        "breakout",
+                        default="NO"
+                    )
+                ).upper()
                 
+                if breakout == "YES":
+                    sector_bonus += 5
+
+                volume_spike = safe_number(
+                    get_value(
+                        candidate,
+                        "Volume Spike",
+                        "volume_spike"
+                    )
+                )
+                
+                if volume_spike >= 2:
+                    sector_bonus += 3
+    
                 # Prefer same bucket
                 if candidate_bucket == bucket:
                     sector_bonus += 8
@@ -212,7 +254,10 @@ def generate_rotation_plan(
                     + (sector_strength * 0.20)
                     + sector_bonus
                 )
-        
+
+                if current_switch < 60:
+                    continue
+    
                 if current_switch > best_switch_score:
 
                     print(
@@ -259,15 +304,16 @@ def generate_rotation_plan(
                     )
                 )
                 switch_score = safe_number(best_switch_score, 0.0)
-                priority_score = (
-                    (100 - health_score)
-                    + max(0, -pl_pct)
-                    + (position_risk / 100)
-                    + (weight * 2)
-                    + (switch_score * 0.50)
-                )
+                
+        priority_score = (
+            (100 - health_score)
+            + max(0, -pl_pct)
+            + (position_risk / 100)
+            + (weight * 2)
+            + min(30, switch_score * 0.25)
+        )
 
-                priority = round(priority_score, 2)
+        priority = round(priority_score, 2)
                 
         # ----------------------------
         # Concentration check
@@ -329,12 +375,12 @@ def generate_rotation_plan(
             if switch_score < 35:
                 action = "MONITOR"
     
-        if switch_score >= 55:
+        if priority >= 180:
             priority_label = "HIGH"
-    
-        elif switch_score >= 40:
+        
+        elif priority >= 130:
             priority_label = "MEDIUM"
-    
+        
         else:
             priority_label = "LOW"
             
@@ -358,10 +404,7 @@ def generate_rotation_plan(
         })
         
     rotation_rows.sort(
-        key=lambda x: (
-            x["Switch Score"],
-            x["Health Score"],
-        ),
+        key=lambda x: x["Priority"],
         reverse=True,
     )
             
