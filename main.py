@@ -1598,6 +1598,8 @@ for row in buy_queue:
         row["cmp"],
 
         row["Recommended Allocation"],
+
+        row["Capital Required"],
         
         row["Comments"]
 
