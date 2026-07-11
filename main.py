@@ -89,6 +89,8 @@ from engine.portfolio_intelligence import (
 
 from engine.schema import SCHEMA
 
+from engine.portfolio_optimizer import optimize_portfolio
+
 def load_state():
     try:
         if os.path.exists(STATE_FILE):
@@ -749,6 +751,18 @@ try:
         "Portfolio Rotation"
     )
 
+try:
+    optimizer_ws = sheet.worksheet(
+        "Portfolio Optimizer"
+    )
+
+except:
+    optimizer_ws = sheet.add_worksheet(
+        title="Portfolio Optimizer",
+        rows="1000",
+        cols="20"
+    )
+    
 except:
     rotation_ws = sheet.add_worksheet(
         title="Portfolio Rotation",
@@ -1544,6 +1558,8 @@ buy_queue_data = [[
     "CMP",
     "Position Size",
     "Capital Required",
+    "Replacement Holding",
+    "Switch Edge",
     "Comments"
 ]]
 
@@ -1577,6 +1593,8 @@ for row in buy_queue:
 
         row["Capital Required"],
         
+        row.get("Replacement Holding", ""),
+        row.get("Switch Edge", ""),
         row["Comments"]
 
     ])
@@ -1645,41 +1663,39 @@ rotation_rows = generate_rotation_plan(
     sector_rankings
 )
 
+optimizer_rows = optimize_portfolio(
+    enriched_portfolio,
+    buy_queue,
+    sector_rankings
+)
+
 # ----------------------------------------------------
 # Inject Portfolio Rotation suggestions into BUY Queue
 # ----------------------------------------------------
 
-rotation_lookup = {}
-
-for row in rotation_rows:
-
-    replacement = row.get("Replacement", "")
-
-    if replacement:
-
-        rotation_lookup[replacement] = row
-
+rotation_lookup = {
+    row["Candidate"]: row
+    for row in optimizer_rows
+}
 
 for row in buy_queue:
 
-    ticker = row.get("ticker") or row.get("Ticker")
+    ticker = row.get("ticker")
 
     if ticker in rotation_lookup:
 
-        rot = rotation_lookup[ticker]
-
-        row["Replacement Candidate"] = rot["Ticker"]
-
-        row["Switch Score"] = rot["Switch Score"]
+        opt = rotation_lookup[ticker]
 
         row["Comments"] = (
-            f"Replace {rot['Ticker']} "
-            f"(Switch Score {rot['Switch Score']:.1f})"
+            f"Replace {opt['Holding']} "
+            f"(Switch Edge {opt['Switch Edge']})"
         )
 
-        row["Status"] = "READY VIA ROTATION"
+        if opt["Action"] == "SWITCH":
 
-        row["Priority"] = "VERY HIGH"
+            row["Priority"] = "VERY HIGH"
+
+            row["Status"] = "READY VIA ROTATION"
         
 rotation_data = [[
     "Ticker",
@@ -1719,6 +1735,11 @@ from sheets_writer import dicts_to_rows
 safe_update(
     rotation_ws,
     dicts_to_rows(rotation_rows)
+)
+
+safe_update(
+    optimizer_ws,
+    dicts_to_rows(optimizer_rows)
 )
 
 print(
