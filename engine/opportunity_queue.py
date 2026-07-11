@@ -33,6 +33,11 @@ def build_opportunity_queue(
 
         row["Recommended Allocation"] = row["position_size"]
 
+        row["Capital Required"] = round(
+            float(row["cmp"]) * float(row["position_size"]),
+            2,
+        )
+        
         # -------------------------
         # READY TO BUY
         # -------------------------
