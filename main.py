@@ -1515,42 +1515,6 @@ buy_queue = build_opportunity_queue(
     available_slots,
     deployment_budget - allocated_capital
 )
-
-# ----------------------------------------------------
-# Inject Portfolio Rotation suggestions into BUY Queue
-# ----------------------------------------------------
-
-rotation_lookup = {}
-
-for row in rotation_rows:
-
-    replacement = row.get("Replacement", "")
-
-    if replacement:
-
-        rotation_lookup[replacement] = row
-
-
-for row in buy_queue:
-
-    ticker = row.get("ticker") or row.get("Ticker")
-
-    if ticker in rotation_lookup:
-
-        rot = rotation_lookup[ticker]
-
-        row["Replacement Candidate"] = rot["Ticker"]
-
-        row["Switch Score"] = rot["Switch Score"]
-
-        row["Comments"] = (
-            f"Replace {rot['Ticker']} "
-            f"(Switch Score {rot['Switch Score']:.1f})"
-        )
-
-        row["Status"] = "READY VIA ROTATION"
-
-        row["Priority"] = "VERY HIGH"
         
 print(f"Opportunity Queue Size: {len(buy_queue)}")
 
@@ -1669,6 +1633,42 @@ rotation_rows = generate_rotation_plan(
     sector_rankings
 )
 
+# ----------------------------------------------------
+# Inject Portfolio Rotation suggestions into BUY Queue
+# ----------------------------------------------------
+
+rotation_lookup = {}
+
+for row in rotation_rows:
+
+    replacement = row.get("Replacement", "")
+
+    if replacement:
+
+        rotation_lookup[replacement] = row
+
+
+for row in buy_queue:
+
+    ticker = row.get("ticker") or row.get("Ticker")
+
+    if ticker in rotation_lookup:
+
+        rot = rotation_lookup[ticker]
+
+        row["Replacement Candidate"] = rot["Ticker"]
+
+        row["Switch Score"] = rot["Switch Score"]
+
+        row["Comments"] = (
+            f"Replace {rot['Ticker']} "
+            f"(Switch Score {rot['Switch Score']:.1f})"
+        )
+
+        row["Status"] = "READY VIA ROTATION"
+
+        row["Priority"] = "VERY HIGH"
+        
 rotation_data = [[
     "Ticker",
     "Health Score",
