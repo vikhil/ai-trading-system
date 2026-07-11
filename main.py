@@ -1516,6 +1516,42 @@ buy_queue = build_opportunity_queue(
     deployment_budget - allocated_capital
 )
 
+# ----------------------------------------------------
+# Inject Portfolio Rotation suggestions into BUY Queue
+# ----------------------------------------------------
+
+rotation_lookup = {}
+
+for row in rotation_rows:
+
+    replacement = row.get("Replacement", "")
+
+    if replacement:
+
+        rotation_lookup[replacement] = row
+
+
+for row in buy_queue:
+
+    ticker = row.get("ticker") or row.get("Ticker")
+
+    if ticker in rotation_lookup:
+
+        rot = rotation_lookup[ticker]
+
+        row["Replacement Candidate"] = rot["Ticker"]
+
+        row["Switch Score"] = rot["Switch Score"]
+
+        row["Comments"] = (
+            f"Replace {rot['Ticker']} "
+            f"(Switch Score {rot['Switch Score']:.1f})"
+        )
+
+        row["Status"] = "READY VIA ROTATION"
+
+        row["Priority"] = "VERY HIGH"
+        
 print(f"Opportunity Queue Size: {len(buy_queue)}")
 
 buy_queue_data = [[
@@ -1531,6 +1567,7 @@ buy_queue_data = [[
     "RS Score",
     "CMP",
     "Position Size",
+    "Capital Required",
     "Comments"
 ]]
 
