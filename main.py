@@ -1030,27 +1030,39 @@ else:
             if entry and not is_state_expired(entry.get("timestamp", "")):
                 continue
         
+        # Position size from risk engine (number of shares)
         position_size = float(r.get("position_size") or 0)
-    
-        # Skip invalid position sizes
+        
         if position_size <= 0:
             continue
         
-        if allocated_capital + position_size > deployment_budget:
+        cmp_price = float(r["cmp"])
+        
+        # Actual capital required
+        capital_required = position_size * cmp_price
+        
+        # Capital check
+        if allocated_capital + capital_required > deployment_budget:
             continue
         
-        atr_risk = float(r.get("atr_risk") or 0)
+        # Risk per share
+        stop_loss = float(r.get("stop_loss") or 0)
         
-        trade_risk = position_size * atr_risk
+        risk_per_share = cmp_price - stop_loss
+        
+        if risk_per_share <= 0:
+            continue
+        
+        # Actual portfolio risk
+        trade_risk = position_size * risk_per_share
+        
         if (allocated_risk + trade_risk + current_portfolio_risk) > max_total_risk:
             continue
-    
+        
         executed_buys.append(r)
+        
         allocated_risk += trade_risk
-        allocated_capital += (
-            position_size *
-            float(r["cmp"])
-        )
+        allocated_capital += capital_required
     
         print(
             f"Allocated Capital: ₹{allocated_capital:,.0f} / ₹{deployment_budget:,.0f}"
@@ -1561,7 +1573,7 @@ for row in buy_queue:
 
         row["cmp"],
 
-        row["Recommended Allocation"],
+        row["position_size"],
 
         row["Capital Required"],
         
