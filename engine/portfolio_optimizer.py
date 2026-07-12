@@ -3,28 +3,56 @@ import pandas as pd
 
 def calculate_optimizer_score(row):
 
-    health = float(row.get("Health Score", 0))
-    edge = float(row.get("Edge Rating", 0)) * 10
-    ai = float(row.get("AI Rank", 0)) * 10
-    sector = float(row.get("Sector Strength", 50))
-    rs = float(row.get("RS Score", 0))
+    health = float(row.get("Health Score", row.get("score", 0)))
 
-    trend = str(row.get("Trend", "")).upper()
+    edge = float(row.get("Edge Rating", row.get("edge_rating", 0))) * 10
+
+    ai = float(row.get("AI Rank", row.get("ai_rank", 0))) * 10
+
+    sector = float(
+        row.get(
+            "Sector Strength",
+            row.get("sector_strength", 50)
+        )
+    )
+
+    rs = float(
+        row.get(
+            "RS Score",
+            row.get("rs_score", 0)
+        )
+    )
+
+    trend = str(
+        row.get(
+            "Trend",
+            row.get("trend", "")
+        )
+    ).upper()
 
     if trend == "BULL":
         trend_score = 100
+
     elif trend == "SIDEWAYS":
         trend_score = 60
+
     else:
         trend_score = 20
 
     score = (
+
         health * 0.30 +
+
         edge * 0.25 +
+
         ai * 0.15 +
+
         sector * 0.10 +
+
         trend_score * 0.10 +
+
         rs * 0.10
+
     )
 
     return round(score, 2)
@@ -87,15 +115,9 @@ def optimize_portfolio(
     for row in buy_queue:
 
         c = dict(row)
-
-        score = (
-            float(c.get("score", 0)) * 0.50 +
-            float(c.get("edge_rating", 0)) * 5 +
-            float(c.get("ai_rank", 0)) * 5
-        )
-
-        c["Optimizer Score"] = round(score, 2)
-
+    
+        c["Optimizer Score"] = calculate_optimizer_score(c)
+    
         candidates.append(c)
 
     candidates = sorted(
@@ -120,9 +142,15 @@ def optimize_portfolio(
         )
 
         if (
-            switch_edge >= 20 and
-            float(new.get("edge_rating", 0)) >= 7
+            switch_edge >= 15
+            and new["Optimizer Score"] >= 80
+            and float(new.get("risk_reward", 0)) >= 2
+            and float(new.get("edge_rating", 0)) >= 7
         ):
+    action = "SWITCH"
+
+else:
+    action = old["Recommendation"]
             action = "SWITCH"
 
         else:
