@@ -171,54 +171,54 @@ def optimize_portfolio(
         new = candidates[i]
 
         switch_edge = round(
-    new["Optimizer Score"] -
-    old["Optimizer Score"],
-    2
-)
-
-if (
-    switch_edge >= 15
-    and new["Optimizer Score"] >= 80
-    and float(new.get("risk_reward", 0)) >= 2
-    and float(new.get("edge_rating", 0)) >= 7
-):
-    action = "SWITCH"
-
-else:
-    action = old["Recommendation"]
-
-# -----------------------------------
-# Build dynamic explanation
-# -----------------------------------
-
-reason = build_reason(
-    old,
-    new,
-    switch_edge
-)
-
-output.append({
-
-    "Holding": old["Ticker"],
-
-    "Holding Score": old["Optimizer Score"],
-
-    "Holding Sector": old.get("Sector",""),
-
-    "Candidate": new["ticker"],
-
-    "Candidate Score": new["Optimizer Score"],
-
-    "Candidate Sector": new.get("sector",""),
-
-    "Switch Edge": switch_edge,
-
-    "Risk Reward": new.get("risk_reward",""),
-
-    "Recommendation": action,
-
-    "Reason": reason
-
-})
+            new["Optimizer Score"] -
+            old["Optimizer Score"],
+            2
+        )
+        
+        if (
+            switch_edge >= 15
+            and new["Optimizer Score"] >= 80
+            and float(new.get("risk_reward", 0)) >= 2
+            and float(new.get("edge_rating", 0)) >= 7
+        ):
+            action = "SWITCH"
+        
+        else:
+            action = old["Recommendation"]
+        
+        # -----------------------------------
+        # Build dynamic explanation
+        # -----------------------------------
+        
+        reason = build_reason(
+            old,
+            new,
+            switch_edge
+        )
+        
+        output.append({
+        
+            "Holding": old["Ticker"],
+        
+            "Holding Score": old["Optimizer Score"],
+        
+            "Holding Sector": old.get("Sector",""),
+        
+            "Candidate": new["ticker"],
+        
+            "Candidate Score": new["Optimizer Score"],
+        
+            "Candidate Sector": new.get("sector",""),
+        
+            "Switch Edge": switch_edge,
+        
+            "Risk Reward": new.get("risk_reward",""),
+        
+            "Recommendation": action,
+        
+            "Reason": reason
+        
+        })
 
     return output
