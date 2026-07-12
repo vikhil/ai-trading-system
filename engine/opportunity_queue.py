@@ -19,6 +19,23 @@ def build_opportunity_queue(
 
         row = r.copy()
 
+        row["Optimizer Score"] = round(
+
+            row["score"] * 0.30 +
+        
+            row["edge_rating"] * 8 +
+        
+            row["ai_rank"] * 5 +
+        
+            row["sector_strength"] * 0.20 +
+        
+            row["rs_score"] * 0.20,
+        
+            2
+        
+        )
+        
+
         row["Queue Rank"] = rank
 
         row["Priority"] = ""
@@ -29,13 +46,17 @@ def build_opportunity_queue(
 
         row["Replacement Candidate"] = ""
 
-        row["Switch Score"] = ""
+        row["Replacement Holding"] = ""
+
+        row["Switch Edge"] = ""
 
         row["Recommended Allocation"] = row["position_size"]
 
         row["Capital Required"] = round(
             float(row["cmp"]) * float(row["position_size"]),
             2,
+        
+        row["Optimizer Score"] = ""
         )
         
         # -------------------------
@@ -46,7 +67,21 @@ def build_opportunity_queue(
 
             row["Status"] = "READY TO BUY"
 
-            row["Priority"] = "HIGH"
+            if row["edge_rating"] >= 9:
+
+                row["Priority"] = "VERY HIGH"
+            
+            elif row["edge_rating"] >= 8:
+            
+                row["Priority"] = "HIGH"
+            
+            elif row["edge_rating"] >= 7:
+            
+                row["Priority"] = "MEDIUM"
+            
+            else:
+            
+                row["Priority"] = "LOW"
 
             row["Comments"] = "Capital available immediately"
 
