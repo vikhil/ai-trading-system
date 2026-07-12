@@ -54,9 +54,7 @@ def build_opportunity_queue(
 
         row["Capital Required"] = round(
             float(row["cmp"]) * float(row["position_size"]),
-            2,
-        
-        row["Optimizer Score"] = ""
+            2
         )
         
         # -------------------------
