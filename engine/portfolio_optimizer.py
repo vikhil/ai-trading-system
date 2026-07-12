@@ -66,16 +66,20 @@ def build_reason(old, new, switch_edge):
             f"Optimizer +{round(new['Optimizer Score'] - old['Optimizer Score'],1)}"
         )
 
-    if new["edge_rating"] > old["edge_rating"]:
+    if float(new.get("edge_rating", new.get("Edge Rating", 0))) > \
+       float(old.get("edge_rating", old.get("Edge Rating", 0))):
         reasons.append("Better Edge")
 
-    if new["ai_rank"] > old["ai_rank"]:
+    if float(new.get("ai_rank", new.get("AI Rank", 0))) > \
+       float(old.get("ai_rank", old.get("AI Rank", 0))):
         reasons.append("Higher AI Rank")
 
-    if new["sector_strength"] > old["sector_strength"]:
+    if float(new.get("sector_strength", new.get("Sector Strength", 0))) > \
+       float(old.get("sector_strength", old.get("Sector Strength", 0))):
         reasons.append("Stronger Sector")
 
-    if new["rs_score"] > old["rs_score"]:
+    if float(new.get("rs_score", new.get("RS Score", 0))) > \
+       float(old.get("rs_score", old.get("RS Score", 0))):
         reasons.append("Higher Relative Strength")
 
     if float(new.get("risk_reward", 0)) >= 2.5:
@@ -89,7 +93,7 @@ def build_reason(old, new, switch_edge):
 def recommendation(score):
 
     if score >= 90:
-        return "ADD"
+        return "STRONG HOLD"
 
     if score >= 80:
         return "HOLD"
@@ -135,7 +139,10 @@ def optimize_portfolio(
 
     portfolio = sorted(
         portfolio,
-        key=lambda x: x["Optimizer Score"]
+        key=lambda x: (
+            x["Optimizer Score"],
+            x.get("Current Value",0)
+        )
     )
 
     candidates = []
@@ -164,48 +171,54 @@ def optimize_portfolio(
         new = candidates[i]
 
         switch_edge = round(
-            new["Optimizer Score"] -
-            old["Optimizer Score"],
-            2
-        )
+    new["Optimizer Score"] -
+    old["Optimizer Score"],
+    2
+)
 
-        if (
-            switch_edge >= 15
-            and new["Optimizer Score"] >= 80
-            and float(new.get("risk_reward", 0)) >= 2
-            and float(new.get("edge_rating", 0)) >= 7
-        ):
-            action = "SWITCH"
+if (
+    switch_edge >= 15
+    and new["Optimizer Score"] >= 80
+    and float(new.get("risk_reward", 0)) >= 2
+    and float(new.get("edge_rating", 0)) >= 7
+):
+    action = "SWITCH"
 
-        else:
-            action = old["Recommendation"]
-                    action = "SWITCH"
+else:
+    action = old["Recommendation"]
 
-        else:
-            action = old["Recommendation"]
+# -----------------------------------
+# Build dynamic explanation
+# -----------------------------------
 
-        output.append({
+reason = build_reason(
+    old,
+    new,
+    switch_edge
+)
 
-            "Holding": old["Ticker"],
+output.append({
 
-            "Holding Score": old["Optimizer Score"],
-        
-            "Holding Sector": old.get("Sector",""),
-        
-            "Candidate": new["ticker"],
-        
-            "Candidate Score": new["Optimizer Score"],
-        
-            "Candidate Sector": new.get("sector",""),
-        
-            "Switch Edge": switch_edge,
-        
-            "Risk Reward": new.get("risk_reward",""),
-        
-            "Recommendation": action,
-        
-            "Reason": reason
+    "Holding": old["Ticker"],
 
-        })
+    "Holding Score": old["Optimizer Score"],
+
+    "Holding Sector": old.get("Sector",""),
+
+    "Candidate": new["ticker"],
+
+    "Candidate Score": new["Optimizer Score"],
+
+    "Candidate Sector": new.get("sector",""),
+
+    "Switch Edge": switch_edge,
+
+    "Risk Reward": new.get("risk_reward",""),
+
+    "Recommendation": action,
+
+    "Reason": reason
+
+})
 
     return output
