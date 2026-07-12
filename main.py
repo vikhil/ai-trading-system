@@ -751,6 +751,17 @@ try:
         "Portfolio Rotation"
     )
 
+except:
+    rotation_ws = sheet.add_worksheet(
+        title="Portfolio Rotation",
+        rows="2000",
+        cols="20"
+    )
+
+# ----------------------------
+# PORTFOLIO OPTIMIZER
+# ----------------------------
+
 try:
     optimizer_ws = sheet.worksheet(
         "Portfolio Optimizer"
@@ -760,13 +771,6 @@ except:
     optimizer_ws = sheet.add_worksheet(
         title="Portfolio Optimizer",
         rows="1000",
-        cols="20"
-    )
-    
-except:
-    rotation_ws = sheet.add_worksheet(
-        title="Portfolio Rotation",
-        rows="2000",
         cols="20"
     )
 
