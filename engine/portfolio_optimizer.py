@@ -57,7 +57,35 @@ def calculate_optimizer_score(row):
 
     return round(score, 2)
 
+def build_reason(old, new, switch_edge):
 
+    reasons = []
+
+    if new["Optimizer Score"] > old["Optimizer Score"]:
+        reasons.append(
+            f"Optimizer +{round(new['Optimizer Score'] - old['Optimizer Score'],1)}"
+        )
+
+    if new["edge_rating"] > old["edge_rating"]:
+        reasons.append("Better Edge")
+
+    if new["ai_rank"] > old["ai_rank"]:
+        reasons.append("Higher AI Rank")
+
+    if new["sector_strength"] > old["sector_strength"]:
+        reasons.append("Stronger Sector")
+
+    if new["rs_score"] > old["rs_score"]:
+        reasons.append("Higher Relative Strength")
+
+    if float(new.get("risk_reward", 0)) >= 2.5:
+        reasons.append(f"RR {new['risk_reward']}")
+
+    if switch_edge >= 25:
+        reasons.append("High Conviction")
+
+    return " | ".join(reasons)
+    
 def recommendation(score):
 
     if score >= 90:
@@ -147,34 +175,36 @@ def optimize_portfolio(
             and float(new.get("risk_reward", 0)) >= 2
             and float(new.get("edge_rating", 0)) >= 7
         ):
-    action = "SWITCH"
-
-else:
-    action = old["Recommendation"]
             action = "SWITCH"
+
+        else:
+            action = old["Recommendation"]
+                    action = "SWITCH"
 
         else:
             action = old["Recommendation"]
 
         output.append({
 
-            "Holding":
-                old["Ticker"],
+            "Holding": old["Ticker"],
 
-            "Holding Score":
-                old["Optimizer Score"],
-
-            "Candidate":
-                new["ticker"],
-
-            "Candidate Score":
-                new["Optimizer Score"],
-
-            "Switch Edge":
-                switch_edge,
-
-            "Action":
-                action
+            "Holding Score": old["Optimizer Score"],
+        
+            "Holding Sector": old.get("Sector",""),
+        
+            "Candidate": new["ticker"],
+        
+            "Candidate Score": new["Optimizer Score"],
+        
+            "Candidate Sector": new.get("sector",""),
+        
+            "Switch Edge": switch_edge,
+        
+            "Risk Reward": new.get("risk_reward",""),
+        
+            "Recommendation": action,
+        
+            "Reason": reason
 
         })
 
