@@ -50,6 +50,10 @@ def build_opportunity_queue(
 
         row["Switch Edge"] = ""
 
+        row["Optimizer Score"] = ...
+        
+        row["Risk Reward"] = row["risk_reward"]
+
         row["Recommended Allocation"] = row["position_size"]
 
         row["Capital Required"] = round(
