@@ -1559,6 +1559,8 @@ buy_queue_data = [[
     "AI Rank",
     "Sector Strength",
     "RS Score",
+    "Optimizer Score",
+    "Risk Reward",
     "CMP",
     "Position Size",
     "Capital Required",
@@ -1590,6 +1592,10 @@ for row in buy_queue:
         row["sector_strength"],
 
         row["rs_score"],
+
+        row ["optimizer_score"]
+
+        row["risk_reward"],
 
         row["cmp"],
 
