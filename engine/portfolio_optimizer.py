@@ -3,24 +3,72 @@ import pandas as pd
 
 def calculate_optimizer_score(row):
 
-    health = float(row.get("Health Score", row.get("score", 0)))
-
-    edge = float(row.get("Edge Rating", row.get("edge_rating", 0))) * 10
-
-    ai = float(row.get("AI Rank", row.get("ai_rank", 0))) * 10
-
-    sector = float(
-        row.get(
-            "Sector Strength",
-            row.get("sector_strength", 50)
-        )
+    health = min(
+        float(
+            row.get(
+                "Health Score",
+                row.get("score",0)
+            )
+        ),
+        100
     )
 
-    rs = float(
-        row.get(
-            "RS Score",
-            row.get("rs_score", 0)
-        )
+    edge = min(
+
+        float(
+            row.get(
+                "Edge Rating",
+                row.get("edge_rating",0)
+            )
+        ) * 10,
+    
+        100
+    
+    )
+    
+    ai = min(
+
+        float(
+            row.get(
+                "AI Rank",
+                row.get("ai_rank",0)
+            )
+        ),
+    
+        100
+    
+    )
+
+    sector = min(
+
+        float(
+            row.get(
+                "Sector Strength",
+                row.get(
+                    "sector_strength",
+                    50
+                )
+            )
+        ),
+    
+        100
+    
+    )
+
+    rs = min(
+
+        float(
+            row.get(
+                "RS Score",
+                row.get(
+                    "rs_score",
+                    0
+                )
+            )
+        ),
+    
+        100
+    
     )
 
     trend = str(
@@ -177,15 +225,42 @@ def optimize_portfolio(
         )
         
         if (
-            switch_edge >= 15
-            and new["Optimizer Score"] >= 80
-            and float(new.get("risk_reward", 0)) >= 2
-            and float(new.get("edge_rating", 0)) >= 7
+
+        old["Health Score"] < 40
+        
+        and
+        
+        switch_edge >=15
+        
+        and
+        
+        new["Optimizer Score"] >=80
+        
+        and
+        
+        float(
+            new.get(
+                "risk_reward",
+                0
+            )
+        ) >=2
+        
+        and
+        
+        float(
+            new.get(
+                "edge_rating",
+                0
+            )
+        ) >=7
+        
         ):
-            action = "SWITCH"
+        
+            action="SWITCH"
         
         else:
-            action = old["Recommendation"]
+        
+            action=old["Recommendation"]
         
         # -----------------------------------
         # Build dynamic explanation
