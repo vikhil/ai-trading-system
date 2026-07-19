@@ -1593,7 +1593,7 @@ for row in buy_queue:
 
         row["rs_score"],
 
-        row ["optimizer_score"]
+        row ["optimizer_score"],
 
         row["risk_reward"],
 
