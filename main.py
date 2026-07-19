@@ -1695,7 +1695,7 @@ for row in buy_queue:
             f"(Switch Edge {opt['Switch Edge']})"
         )
 
-        if opt["Action"] == "SWITCH":
+        if opt["Recommendation"] == "SWITCH":
 
             row["Priority"] = "VERY HIGH"
 
