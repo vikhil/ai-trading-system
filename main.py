@@ -441,6 +441,20 @@ sector_lookup = {
     for row in stock_master
 }
 
+print("Stock Master Rows:", len(stock_master))
+
+print("AKUMS Exists:",
+      "AKUMS.NS" in sector_lookup)
+
+print("EXICOM Exists:",
+      "EXICOM.NS" in sector_lookup)
+
+if "AKUMS.NS" in sector_lookup:
+    print(
+        "AKUMS Sector:",
+        sector_lookup["AKUMS.NS"]
+    )
+    
 # ----------------------------
 # TICKER LIST FOR YFINANCE
 # ----------------------------
