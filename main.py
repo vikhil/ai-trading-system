@@ -1609,6 +1609,13 @@ for row in buy_queue:
 
     ])
 
+import pprint
+
+for r in buy_queue_data:
+    for c in r:
+        if c is Ellipsis:
+            print("FOUND ELLIPSIS:", r)
+
 safe_update(
     buy_queue_ws,
     buy_queue_data
