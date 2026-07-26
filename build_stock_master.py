@@ -43,9 +43,6 @@ for row in portfolio_data[:10]:
     
 portfolio_tickers = set()
 
-print("Portfolio Tickers Found:")
-print(sorted(portfolio_tickers))
-
 for row in portfolio_data:
 
     ticker = str(row.get("Ticker", "")).strip()
@@ -53,6 +50,11 @@ for row in portfolio_data:
     if ticker:
 
         portfolio_tickers.add(ticker)
+
+print("Portfolio Tickers Found:")
+print(sorted(portfolio_tickers))
+
+print("Portfolio Tickers Count:", len(portfolio_tickers))
 
 existing_tickers = set(
     row["Ticker"]
