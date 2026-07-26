@@ -420,9 +420,11 @@ universe = sorted(
 # FAST LOOKUP TABLE
 # ----------------------------
 
+stock_master = load_stock_master()
+
 sector_lookup = {
     row["Ticker"]: row["Sector"]
-    for row in universe
+    for row in stock_master
 }
 
 # ----------------------------
