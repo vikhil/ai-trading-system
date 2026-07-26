@@ -17,6 +17,8 @@ stock_master_rows = [
     ]
 ]
 
+today = datetime.now().strftime("%Y-%m-%d")
+
 for row in universe:
 
     ticker = row["Ticker"]
@@ -31,7 +33,7 @@ for row in universe:
 
         industry = info.get("industry") or "UNKNOWN"
 
-        market_cap = info.get("marketCap", "")
+        market_cap = info.get("marketCap") or 0
 
         if ticker in nifty50:
             index_name = "NIFTY50"
@@ -51,9 +53,7 @@ for row in universe:
                 market_cap_category = "SMALL"
         else:
             market_cap_category = "UNKNOWN"
-        
-        today = datetime.now().strftime("%Y-%m-%d")
-        
+                
         stock_master_rows.append([
             ticker,
             company_name,
@@ -88,7 +88,11 @@ gc = gspread.service_account(
     filename="credentials.json"
 )
 
+print("Connecting to Google Sheet...")
+
 sheet = gc.open("AI_Trading_System")
+
+print("Connected")
 
 stock_master_ws = sheet.worksheet(
     "Stock_Master"
@@ -97,8 +101,8 @@ stock_master_ws = sheet.worksheet(
 stock_master_ws.clear()
 
 stock_master_ws.update(
-    "A1",
-    stock_master_rows
+    range_name="A1",
+    values=stock_master_rows
 )
 
 print(
