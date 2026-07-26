@@ -10,6 +10,15 @@ from data_loader import load_universe
 
 universe = load_universe()
 
+print("Universe Size:", len(universe))
+
+cpse_found = any(
+    row["Ticker"] == "CPSEETF.NS"
+    for row in universe
+)
+
+print("CPSEETF Found:", cpse_found)
+
 # -----------------------------------
 # ADD PORTFOLIO HOLDINGS TO UNIVERSE
 # -----------------------------------
@@ -101,7 +110,10 @@ today = datetime.now().strftime("%Y-%m-%d")
 for row in universe:
 
     ticker = row["Ticker"]
-
+    
+    if ticker == "CPSEETF.NS":
+        print("FOUND CPSEETF IN UNIVERSE")
+        
     try:
 
         info = yf.Ticker(ticker).info
