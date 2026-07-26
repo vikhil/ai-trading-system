@@ -406,7 +406,7 @@ print("Connected")
 # LOAD UNIVERSE
 # ----------------------------
 universe = load_universe()
-
+    
 # ----------------------------
 # SORT BY TICKER
 # ----------------------------
