@@ -9,7 +9,7 @@ def dicts_to_rows(data, columns):
             header,
             row1,
             row2,
-            ...
+            ""
         ]
     """
 
