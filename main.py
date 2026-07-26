@@ -328,7 +328,7 @@ except:
 # ----------------------------
 
 portfolio_data = portfolio_ws.get_all_records()
-
+    
 if not portfolio_data:
 
     print(
