@@ -91,6 +91,8 @@ from engine.schema import SCHEMA
 
 from engine.portfolio_optimizer import optimize_portfolio
 
+def load_stock_master():
+    
 def load_state():
     try:
         if os.path.exists(STATE_FILE):
