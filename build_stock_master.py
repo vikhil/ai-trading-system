@@ -1,6 +1,24 @@
 from datetime import datetime
+import yfinance as yf
+import gspread
+from data_loader import (
+    load_universe,
+    fetch_nse_index_stocks,
+    NIFTY50_URL,
+    NIFTYNEXT50_URL
+)
 
 universe = load_universe()
+
+nifty50 = set(
+    stock["Ticker"]
+    for stock in fetch_nse_index_stocks(NIFTY50_URL)
+)
+
+niftynext50 = set(
+    stock["Ticker"]
+    for stock in fetch_nse_index_stocks(NIFTYNEXT50_URL)
+)
 
 stock_master_rows = [
     [
@@ -35,14 +53,7 @@ for row in universe:
 
         market_cap = info.get("marketCap") or 0
 
-        if ticker in nifty50:
-            index_name = "NIFTY50"
-
-        elif ticker in niftynext50:
-            index_name = "NEXT50"
-
-        else:
-            index_name = "OTHER"
+        index_name = "NIFTY500"
 
         if market_cap:
             if market_cap >= 200000000000:
