@@ -15,6 +15,7 @@ from signals import (
 import math
 
 from data_loader import load_universe
+from engine.stock_master import load_stock_master
 from engine.sector_health import calculate_sector_health
 
 CACHE_FOLDER = "Cache"
@@ -217,11 +218,11 @@ def enrich_portfolio(portfolio_data, regime="SIDEWAYS"):
 
     enriched = []
 
-    sector_lookup = load_universe()
+    stock_master = load_stock_master()
 
     ticker_to_sector = {
         row["Ticker"]: row["Sector"]
-        for row in sector_lookup
+        for row in stock_master
     }
 
     print("Universe size =", len(ticker_to_sector))
