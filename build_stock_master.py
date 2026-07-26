@@ -36,7 +36,15 @@ portfolio_ws = sheet.worksheet("Portfolio")
 
 portfolio_data = portfolio_ws.get_all_records()
 
+print("Portfolio Rows:", len(portfolio_data))
+
+for row in portfolio_data[:10]:
+    print(row)
+    
 portfolio_tickers = set()
+
+print("Portfolio Tickers Found:")
+print(sorted(portfolio_tickers))
 
 for row in portfolio_data:
 
@@ -62,6 +70,14 @@ for ticker in portfolio_tickers:
 print(
     f"Final Universe Size = {len(universe)}"
 )
+
+missing = [
+    t for t in portfolio_tickers
+    if t not in existing_tickers
+]
+
+print("Portfolio-only tickers:")
+print(missing)
 
 stock_master_rows = [
     [
