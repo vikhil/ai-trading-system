@@ -50,7 +50,7 @@ def build_opportunity_queue(
 
         row["Switch Edge"] = ""
 
-        row["Optimizer Score"] = ...
+        row["Optimizer Score"] = ""
         
         row["Risk Reward"] = row["risk_reward"]
 
