@@ -1,6 +1,11 @@
 from datetime import datetime
 import yfinance as yf
 import gspread
+import os
+import json
+
+from oauth2client.service_account import ServiceAccountCredentials
+
 from data_loader import load_universe
 
 universe = load_universe()
@@ -80,13 +85,31 @@ for row in universe:
             "FAILED"         # Data Source
         ])
 
-gc = gspread.service_account(
-    filename="credentials.json"
+# ----------------------------
+# GOOGLE SHEETS AUTH
+# ----------------------------
+
+creds_dict = json.loads(
+    os.environ["GOOGLE_CREDENTIALS"]
 )
+
+scope = [
+    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/drive"
+]
+
+creds = ServiceAccountCredentials.from_json_keyfile_dict(
+    creds_dict,
+    scope
+)
+
+client = gspread.authorize(creds)
 
 print("Connecting to Google Sheet...")
 
-sheet = gc.open("AI_Trading_System")
+sheet = client.open_by_key(
+    "1qGsaLVDzxxPSuYnY_Qd2vcEiYXE4tWoTEuxLfH38hPI"
+)
 
 print("Connected")
 
