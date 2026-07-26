@@ -1,6 +1,19 @@
 universe = load_universe()
 
-stock_master_rows = []
+stock_master_rows = [
+    [
+        "Ticker",
+        "Company Name",
+        "Sector",
+        "Industry",
+        "Market Cap",
+        "Market Cap Category",
+        "Index",
+        "First Seen",
+        "Last Updated",
+        "Data Source"
+    ]
+]
 
 for row in universe:
 
@@ -12,9 +25,9 @@ for row in universe:
 
         company_name = info.get("longName", "")
 
-        sector = info.get("sector", "")
+        sector = info.get("sector") or "UNKNOWN"
 
-        industry = info.get("industry", "")
+        industry = info.get("industry") or "UNKNOWN"
 
         market_cap = info.get("marketCap", "")
 
@@ -36,5 +49,15 @@ for row in universe:
             index_name
         ])
 
-    except Exception:
-        pass
+    except Exception as e:
+
+        print(f"FAILED -> {ticker} -> {e}")
+    
+        stock_master_rows.append([
+            ticker,
+            "",
+            "",
+            "",
+            "",
+            "FAILED"
+        ])
