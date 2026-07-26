@@ -92,6 +92,18 @@ from engine.schema import SCHEMA
 from engine.portfolio_optimizer import optimize_portfolio
 
 def load_stock_master():
+
+    try:
+
+        ws = sheet.worksheet("Stock_Master")
+
+        return ws.get_all_records()
+
+    except Exception as e:
+
+        print("Stock_Master load failed:", e)
+
+        return []
     
 def load_state():
     try:
