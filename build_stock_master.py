@@ -1,24 +1,9 @@
 from datetime import datetime
 import yfinance as yf
 import gspread
-from data_loader import (
-    load_universe,
-    fetch_nse_index_stocks,
-    NIFTY50_URL,
-    NIFTYNEXT50_URL
-)
+from data_loader import load_universe
 
 universe = load_universe()
-
-nifty50 = set(
-    stock["Ticker"]
-    for stock in fetch_nse_index_stocks(NIFTY50_URL)
-)
-
-niftynext50 = set(
-    stock["Ticker"]
-    for stock in fetch_nse_index_stocks(NIFTYNEXT50_URL)
-)
 
 stock_master_rows = [
     [
@@ -109,12 +94,18 @@ stock_master_ws = sheet.worksheet(
     "Stock_Master"
 )
 
+print("Clearing Stock_Master...")
+
 stock_master_ws.clear()
+
+print("Writing rows:", len(stock_master_rows))
 
 stock_master_ws.update(
     range_name="A1",
     values=stock_master_rows
 )
+
+print("Write Complete")
 
 print(
     f"Stock_Master Updated: {len(stock_master_rows)-1}"
