@@ -40,13 +40,27 @@ for row in universe:
         else:
             index_name = "OTHER"
 
+        if market_cap:
+            if market_cap >= 200000000000:
+                market_cap_category = "LARGE"
+            elif market_cap >= 50000000000:
+                market_cap_category = "MID"
+            else:
+                market_cap_category = "SMALL"
+        else:
+            market_cap_category = "UNKNOWN"
+        
         stock_master_rows.append([
             ticker,
             company_name,
             sector,
             industry,
             market_cap,
-            index_name
+            market_cap_category,
+            index_name,
+            "",
+            "",
+            "YFINANCE"
         ])
 
     except Exception as e:
