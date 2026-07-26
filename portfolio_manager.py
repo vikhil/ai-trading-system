@@ -220,6 +220,23 @@ def enrich_portfolio(portfolio_data, regime="SIDEWAYS"):
 
     stock_master = load_stock_master()
 
+    print("Stock Master Rows:", len(stock_master))
+
+    cpse_exists = any(
+        row["Ticker"] == "CPSEETF.NS"
+        for row in stock_master
+    )
+    
+    print("CPSEETF In Stock Master:", cpse_exists)
+    
+    if cpse_exists:
+        cpse_row = next(
+            row for row in stock_master
+            if row["Ticker"] == "CPSEETF.NS"
+        )
+    
+        print("CPSEETF ROW:", cpse_row)
+    
     ticker_to_sector = {
         row["Ticker"]: row["Sector"]
         for row in stock_master
