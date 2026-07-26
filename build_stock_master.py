@@ -1,3 +1,5 @@
+from datetime import datetime
+
 universe = load_universe()
 
 stock_master_rows = [
@@ -50,6 +52,8 @@ for row in universe:
         else:
             market_cap_category = "UNKNOWN"
         
+        today = datetime.now().strftime("%Y-%m-%d")
+        
         stock_master_rows.append([
             ticker,
             company_name,
@@ -58,8 +62,8 @@ for row in universe:
             market_cap,
             market_cap_category,
             index_name,
-            "",
-            "",
+            today,
+            today,
             "YFINANCE"
         ])
 
@@ -68,10 +72,40 @@ for row in universe:
         print(f"FAILED -> {ticker} -> {e}")
     
         stock_master_rows.append([
-            ticker,
-            "",
-            "",
-            "",
-            "",
-            "FAILED"
+            ticker,          # Ticker
+            "",              # Company Name
+            "UNKNOWN",       # Sector
+            "UNKNOWN",       # Industry
+            "",              # Market Cap
+            "UNKNOWN",       # Market Cap Category
+            "OTHER",         # Index
+            "",              # First Seen
+            "",              # Last Updated
+            "FAILED"         # Data Source
         ])
+
+gc = gspread.service_account(
+    filename="credentials.json"
+)
+
+sheet = gc.open("AI_Trading_System")
+
+stock_master_ws = sheet.worksheet(
+    "Stock_Master"
+)
+
+stock_master_ws.clear()
+
+stock_master_ws.update(
+    "A1",
+    stock_master_rows
+)
+
+print(
+    f"Stock_Master Updated: {len(stock_master_rows)-1}"
+)
+
+print("================================")
+print("Stock Master Build Complete")
+print("Rows:", len(stock_master_rows)-1)
+print("================================")
