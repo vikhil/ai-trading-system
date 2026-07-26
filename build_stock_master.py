@@ -10,6 +10,59 @@ from data_loader import load_universe
 
 universe = load_universe()
 
+# -----------------------------------
+# ADD PORTFOLIO HOLDINGS TO UNIVERSE
+# -----------------------------------
+
+scope = [
+    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/drive"
+]
+
+creds_dict = json.loads(os.environ["GOOGLE_CREDENTIALS"])
+
+creds = ServiceAccountCredentials.from_json_keyfile_dict(
+    creds_dict,
+    scope
+)
+
+client = gspread.authorize(creds)
+
+sheet = client.open_by_key(
+    "1qGsaLVDzxxPSuYnY_Qd2vcEiYXE4tWoTEuxLfH38hPI"
+)
+
+portfolio_ws = sheet.worksheet("Portfolio")
+
+portfolio_data = portfolio_ws.get_all_records()
+
+portfolio_tickers = set()
+
+for row in portfolio_data:
+
+    ticker = str(row.get("Ticker", "")).strip()
+
+    if ticker:
+
+        portfolio_tickers.add(ticker)
+
+existing_tickers = set(
+    row["Ticker"]
+    for row in universe
+)
+
+for ticker in portfolio_tickers:
+
+    if ticker not in existing_tickers:
+
+        universe.append({
+            "Ticker": ticker
+        })
+
+print(
+    f"Final Universe Size = {len(universe)}"
+)
+
 stock_master_rows = [
     [
         "Ticker",
