@@ -46,6 +46,14 @@ def download_security_master():
     df = pd.read_csv(
         StringIO(response.text)
     )
+
+    df.columns = df.columns.str.strip()
+
+    df = df.applymap(
+        lambda x: x.strip()
+        if isinstance(x, str)
+        else x
+    )
     
     print(df.columns.tolist())
     
