@@ -3,6 +3,8 @@ import requests
 from io import StringIO
 import yfinance as yf
 
+from engine.stock_master import load_stock_master
+
 # ==========================
 # UNIVERSE CONFIGURATION
 # ==========================
@@ -134,35 +136,39 @@ def load_fallback_universe():
     
 def load_universe():
 
-    if UNIVERSE == "NIFTY50":
+    try:
 
-        universe = fetch_nse_index_stocks(
-            NIFTY50_URL
-        )
+        stock_master = load_stock_master()
 
-    elif UNIVERSE == "NIFTY100":
+        if stock_master:
 
-        universe = (
-            fetch_nse_index_stocks(NIFTY50_URL)
-            +
-            fetch_nse_index_stocks(NIFTYNEXT50_URL)
-        )
+            universe = []
 
-    elif UNIVERSE == "NIFTY500":
+            for row in stock_master:
 
-        universe = fetch_nse_index_stocks(
-            NIFTY500_URL
-        )
-    
-    elif UNIVERSE == "ALL_NSE":
+                universe.append({
 
-        universe = fetch_all_nse_equities()
-    
-    else:
+                    "Ticker": row["Ticker"],
 
-        raise Exception(
-            f"Unknown Universe: {UNIVERSE}"
-        )
+                    "Sector": row.get("Sector", "UNKNOWN")
+
+                })
+
+            print(f"Universe Loaded from Stock_Master: {len(universe)}")
+
+            return universe
+
+    except Exception as e:
+
+        print(f"Stock_Master unavailable -> {e}")
+
+    # -------------------------
+    # Fallback
+    # -------------------------
+
+    print("Using NIFTY500 fallback")
+
+    universe = fetch_nse_index_stocks(NIFTY500_URL)
 
     cleaned = []
     seen = set()
@@ -173,7 +179,6 @@ def load_universe():
 
         if (
             ticker.endswith(".NS")
-            and "DUMMY" not in ticker
             and ticker not in seen
         ):
 
