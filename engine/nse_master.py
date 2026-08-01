@@ -29,19 +29,19 @@ def create_nse_session():
     return session
 
 SECURITY_MASTER_URL = (
-    "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
+    "https://nsearchives.nseindia.com/content/equities/EQUITY_L.csv"
 )
 
 ETF_MASTER_URL = (
-    "https://archives.nseindia.com/content/etf/etf.csv"
+    "https://nsearchives.nseindia.com/content/equities/eq_etfseclist.csv"
 )
 
 REIT_MASTER_URL = (
-    "https://www.nseindia.com/api/reit-invit-master"
+    "https://nsearchives.nseindia.com/content/equities/REITS_L.csv"
 )
 
 INVIT_MASTER_URL = (
-    "https://www.nseindia.com/api/reit-invit-master"
+    "https://nsearchives.nseindia.com/content/equities/INVITS_L.csv"
 )
 
 def download_security_master():
@@ -62,6 +62,7 @@ def download_security_master():
     df = clean_dataframe(df)
     
     print(df.columns.tolist())
+    print(df.head())
     
     print(
         "Downloaded Security Master:",
