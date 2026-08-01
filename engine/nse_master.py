@@ -32,6 +32,18 @@ SECURITY_MASTER_URL = (
     "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
 )
 
+ETF_MASTER_URL = (
+    "https://archives.nseindia.com/content/etf/etf.csv"
+)
+
+REIT_MASTER_URL = (
+    "https://www.nseindia.com/api/reit-invit-master"
+)
+
+INVIT_MASTER_URL = (
+    "https://www.nseindia.com/api/reit-invit-master"
+)
+
 def download_security_master():
 
     session = create_nse_session()
@@ -47,10 +59,7 @@ def download_security_master():
         StringIO(response.text)
     )
 
-    df.columns = df.columns.str.strip()
-
-    for col in df.select_dtypes(include="object").columns:
-    df[col] = df[col].str.strip()
+    df = clean_dataframe(df)
     
     print(df.columns.tolist())
     
@@ -61,13 +70,56 @@ def download_security_master():
 
     return df
 
+def download_etf_master():
+
+    session = create_nse_session()
+
+    try:
+
+        response = session.get(
+            ETF_MASTER_URL,
+            timeout=30
+        )
+
+        response.raise_for_status()
+
+        df = pd.read_csv(
+            StringIO(response.text)
+        )
+
+        df = clean_dataframe(df)
+
+        print(
+            "ETF Master:",
+            len(df)
+        )
+
+        return df
+
+    except Exception as e:
+
+        print("ETF download failed:", e)
+
+        return pd.DataFrame()
+        
+def clean_dataframe(df):
+
+    df.columns = df.columns.str.strip()
+
+    for col in df.select_dtypes(include="object").columns:
+        df[col] = df[col].str.strip()
+
+    return df
+    
 def load_all_nse_universe():
 
-    df = download_security_master()
+    equity_df = download_security_master()
 
+    etf_df = download_etf_master()
+    
     universe = []
 
-    for _, row in df.iterrows():
+    for _, row in equity_df.iterrows():
 
         symbol = str(
             row["SYMBOL"]
@@ -87,12 +139,36 @@ def load_all_nse_universe():
             "Sector": "UNKNOWN"
 
         })
+    
+    for _, row in etf_df.iterrows():
 
+        symbol = str(
+            row.get("Symbol", "")
+        ).strip().upper()
+    
+        if not symbol:
+            continue
+    
+        universe.append({
+    
+            "Ticker": symbol + ".NS",
+    
+            "Sector": "ETF"
+    
+        })
+    unique = {}
+
+    for row in universe:
+    
+        unique[row["Ticker"]] = row
+
+    universe = list(unique.values())
+    
     print(
         "Universe Created:",
         len(universe)
     )
-
+    
     return universe
 
 if __name__ == "__main__":
