@@ -7,7 +7,7 @@ import yfinance as yf
 # UNIVERSE CONFIGURATION
 # ==========================
 
-UNIVERSE = "NIFTY500"
+UNIVERSE = "ALL_NSE"
 
 NIFTY50_URL = (
     "https://archives.nseindia.com/content/indices/ind_nifty50list.csv"
@@ -19,6 +19,10 @@ NIFTYNEXT50_URL = (
 
 NIFTY500_URL = (
     "https://archives.nseindia.com/content/indices/ind_nifty500list.csv"
+)
+
+ALL_EQUITIES_URL = (
+    "https://archives.nseindia.com/content/equities/EQUITY_L.csv"
 )
 
 def fetch_nse_index_stocks(url):
@@ -69,6 +73,47 @@ def fetch_nse_index_stocks(url):
 
     return stocks
 
+def fetch_all_nse_equities():
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        )
+    }
+
+    try:
+
+        response = requests.get(
+            ALL_EQUITIES_URL,
+            headers=headers,
+            timeout=30
+        )
+
+        response.raise_for_status()
+
+        df = pd.read_csv(StringIO(response.text))
+
+    except Exception as e:
+
+        print(f"All NSE download failed ({e})")
+
+        return load_fallback_universe()
+
+    stocks = []
+
+    for _, row in df.iterrows():
+
+        # Only normal equity series
+        if str(row.get("SERIES", "")).strip().upper() != "EQ":
+            continue
+
+        stocks.append({
+            "Ticker": row["SYMBOL"].strip().upper() + ".NS",
+            "Sector": "UNKNOWN"
+        })
+
+    return stocks
+    
 def load_fallback_universe():
 
     fallback = pd.read_csv("fallback_universe.csv")
@@ -108,7 +153,11 @@ def load_universe():
         universe = fetch_nse_index_stocks(
             NIFTY500_URL
         )
+    
+    elif UNIVERSE == "ALL_NSE":
 
+        universe = fetch_all_nse_equities()
+    
     else:
 
         raise Exception(
