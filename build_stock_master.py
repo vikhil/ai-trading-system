@@ -3,6 +3,7 @@ import yfinance as yf
 import gspread
 import os
 import json
+import time
 
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -118,15 +119,83 @@ for row in universe:
         
     try:
 
-        info = yf.Ticker(ticker).info
+        ticker_obj = yf.Ticker(ticker)
 
-        company_name = info.get("longName", "")
-
-        sector = info.get("sector") or "UNKNOWN"
-
+        info = {}
+        
+        try:
+            info = ticker_obj.info
+        except:
+            pass
+        
+        # -------------------------
+        # Company Name
+        # -------------------------
+        
+        company_name = (
+            info.get("longName")
+            or info.get("shortName")
+            or ticker.replace(".NS", "")
+        )
+        
+        # -------------------------
+        # Sector / Industry
+        # -------------------------
+        
+        sector = info.get("sector") or row.get("Sector", "UNKNOWN")
+        
         industry = info.get("industry") or "UNKNOWN"
+        
+        # -------------------------
+        # Market Cap
+        # -------------------------
+        
+        market_cap = info.get("marketCap")
 
-        market_cap = info.get("marketCap") or 0
+        if isinstance(market_cap, str):
+        
+            market_cap = market_cap.replace(",", "")
+        
+        try:
+        
+            market_cap = float(market_cap)
+        
+        except:
+        
+            market_cap = 0
+        
+        # Try fast_info
+        
+        if not market_cap:
+        
+            try:
+        
+                market_cap = ticker_obj.fast_info.get("market_cap")
+        
+            except:
+        
+                pass
+        
+        # Last attempt:
+        # Price × Shares Outstanding
+        
+        if not market_cap:
+        
+            try:
+        
+                shares = info.get("sharesOutstanding")
+        
+                price = ticker_obj.history(period="1d")["Close"].iloc[-1]
+        
+                if shares:
+        
+                    market_cap = shares * price
+        
+            except:
+        
+                pass
+        
+        market_cap = market_cap or 0
 
         index_name = "NIFTY500"
 
@@ -153,6 +222,8 @@ for row in universe:
             "YFINANCE"
         ])
 
+        time.sleep(0.15)
+        
     except Exception as e:
 
         print(f"FAILED -> {ticker} -> {e}")
