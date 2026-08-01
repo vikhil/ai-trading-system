@@ -220,8 +220,8 @@ def load_all_nse_universe():
 
             "Ticker": symbol + ".NS",
 
-            "Sector": "UNKNOWN"
-
+            "Sector": "Equity"
+            
         })
     
     for _, row in etf_df.iterrows():
@@ -240,6 +240,57 @@ def load_all_nse_universe():
             "Sector": "ETF"
     
         })
+
+    # -------------------------
+    # ADD REITS
+    # -------------------------
+    
+    for _, row in reit_df.iterrows():
+    
+        symbol = str(
+            row.get("SYMBOL", "")
+        ).strip().upper()
+    
+        if (
+            not symbol
+            or symbol == "NAN"
+            or symbol.startswith("NOTE")
+        ):
+            continue
+    
+        universe.append({
+    
+            "Ticker": symbol + ".NS",
+    
+            "Sector": "REIT"
+    
+        })
+
+    # -------------------------
+    # ADD INVITS
+    # -------------------------
+    
+    for _, row in invit_df.iterrows():
+    
+        symbol = str(
+            row.get("SYMBOL", "")
+        ).strip().upper()
+    
+        if (
+            not symbol
+            or symbol == "NAN"
+            or symbol.startswith("NOTE")
+        ):
+            continue
+    
+        universe.append({
+    
+            "Ticker": symbol + ".NS",
+    
+            "Sector": "INVIT"
+    
+        })
+    
     unique = {}
 
     for row in universe:
