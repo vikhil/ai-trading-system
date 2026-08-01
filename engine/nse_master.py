@@ -46,7 +46,9 @@ def download_security_master():
     df = pd.read_csv(
         StringIO(response.text)
     )
-
+    
+    print(df.columns.tolist())
+    
     print(
         "Downloaded Security Master:",
         len(df)
