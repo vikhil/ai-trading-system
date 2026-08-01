@@ -49,11 +49,8 @@ def download_security_master():
 
     df.columns = df.columns.str.strip()
 
-    df = df.applymap(
-        lambda x: x.strip()
-        if isinstance(x, str)
-        else x
-    )
+    for col in df.select_dtypes(include="object").columns:
+    df[col] = df[col].str.strip()
     
     print(df.columns.tolist())
     
