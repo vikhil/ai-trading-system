@@ -29,4 +29,4 @@ jobs:
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         TG_TOKEN: ${{ secrets.TG_TOKEN }}
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-      run: python engine/discover_nse_api.py
+      run: python engine/build_universe.py
