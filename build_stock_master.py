@@ -8,7 +8,9 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 from data_loader import load_universe
 
-universe = load_universe()
+from engine.nse_master import load_all_nse_universe
+
+universe = load_all_nse_universe()
 
 print("Universe Size:", len(universe))
 
