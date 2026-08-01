@@ -61,7 +61,9 @@ def main():
             )
 
             print(df.head())
-
+            
+            print(df["SERIES"].value_counts())
+        
         except Exception as e:
 
             print(
