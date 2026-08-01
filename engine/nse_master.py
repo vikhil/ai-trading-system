@@ -87,11 +87,53 @@ def download_etf_master():
         df = pd.read_csv(
             StringIO(response.text)
         )
+        
+        df = clean_dataframe(df)
+        
+        print("\nETF Columns")
+        print(df.columns.tolist())
+        
+        print(df.head())
+        
+        print(
+            "ETF Master:",
+            len(df)
+        )
+        
+        return df
+
+    except Exception as e:
+
+        print("ETF download failed:", e)
+
+        return pd.DataFrame()
+
+def download_reit_master():
+
+    session = create_nse_session()
+
+    try:
+
+        response = session.get(
+            REIT_MASTER_URL,
+            timeout=30
+        )
+
+        response.raise_for_status()
+
+        df = pd.read_csv(
+            StringIO(response.text)
+        )
 
         df = clean_dataframe(df)
 
+        print("\nREIT Columns")
+        print(df.columns.tolist())
+
+        print(df.head())
+
         print(
-            "ETF Master:",
+            "REIT Master:",
             len(df)
         )
 
@@ -99,7 +141,44 @@ def download_etf_master():
 
     except Exception as e:
 
-        print("ETF download failed:", e)
+        print("REIT download failed:", e)
+
+        return pd.DataFrame()
+
+def download_invit_master():
+
+    session = create_nse_session()
+
+    try:
+
+        response = session.get(
+            INVIT_MASTER_URL,
+            timeout=30
+        )
+
+        response.raise_for_status()
+
+        df = pd.read_csv(
+            StringIO(response.text)
+        )
+
+        df = clean_dataframe(df)
+
+        print("\nInvIT Columns")
+        print(df.columns.tolist())
+
+        print(df.head())
+
+        print(
+            "InvIT Master:",
+            len(df)
+        )
+
+        return df
+
+    except Exception as e:
+
+        print("InvIT download failed:", e)
 
         return pd.DataFrame()
         
@@ -117,6 +196,10 @@ def load_all_nse_universe():
     equity_df = download_security_master()
 
     etf_df = download_etf_master()
+    
+    reit_df = download_reit_master()
+    
+    invit_df = download_invit_master()
     
     universe = []
 
