@@ -11,6 +11,26 @@ from data_loader import load_universe
 
 from engine.nse_master import load_all_nse_universe
 
+def load_existing_stock_master(sheet):
+
+    ws = sheet.worksheet("Stock_Master")
+
+    data = ws.get_all_records()
+
+    existing = {}
+
+    for row in data:
+
+        ticker = str(row.get("Ticker", "")).strip()
+
+        if ticker:
+
+            existing[ticker] = row
+
+    print(f"Existing Stock Master : {len(existing)}")
+
+    return existing
+    
 universe = load_all_nse_universe()
 
 print("Universe Size:", len(universe))
@@ -43,6 +63,11 @@ client = gspread.authorize(creds)
 sheet = client.open_by_key(
     "1qGsaLVDzxxPSuYnY_Qd2vcEiYXE4tWoTEuxLfH38hPI"
 )
+
+print("Connecting to Google Sheet...")
+print("Connected")
+
+existing_master = load_existing_stock_master(sheet)
 
 portfolio_ws = sheet.worksheet("Portfolio")
 
@@ -113,7 +138,36 @@ today = datetime.now().strftime("%Y-%m-%d")
 for row in universe:
 
     ticker = row["Ticker"]
-    
+
+    existing = existing_master.get(ticker)
+
+    if existing:
+
+        market_cap = existing.get("Market Cap", 0)
+        sector = existing.get("Sector", "UNKNOWN")
+        company_name = existing.get("Company Name", "")
+
+        if (
+            market_cap not in [0, "", None]
+            and sector != "UNKNOWN"
+            and company_name != ""
+        ):
+
+            stock_master_rows.append([
+                ticker,
+                company_name,
+                sector,
+                existing.get("Industry", "UNKNOWN"),
+                market_cap,
+                existing.get("Market Cap Category", "UNKNOWN"),
+                existing.get("Index", "OTHER"),
+                existing.get("First Seen", today),
+                today,
+                "CACHE"
+            ])
+
+            continue
+
     if ticker == "CPSEETF.NS":
         print("FOUND CPSEETF IN UNIVERSE")
         
@@ -135,6 +189,7 @@ for row in universe:
         company_name = (
             info.get("longName")
             or info.get("shortName")
+            or row.get("Company Name")
             or ticker.replace(".NS", "")
         )
         
@@ -217,7 +272,7 @@ for row in universe:
             market_cap,
             market_cap_category,
             index_name,
-            today,
+            existing.get("First Seen", today),
             today,
             "YFINANCE"
         ])
@@ -241,33 +296,7 @@ for row in universe:
             "FAILED"         # Data Source
         ])
 
-# ----------------------------
-# GOOGLE SHEETS AUTH
-# ----------------------------
 
-creds_dict = json.loads(
-    os.environ["GOOGLE_CREDENTIALS"]
-)
-
-scope = [
-    "https://spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/drive"
-]
-
-creds = ServiceAccountCredentials.from_json_keyfile_dict(
-    creds_dict,
-    scope
-)
-
-client = gspread.authorize(creds)
-
-print("Connecting to Google Sheet...")
-
-sheet = client.open_by_key(
-    "1qGsaLVDzxxPSuYnY_Qd2vcEiYXE4tWoTEuxLfH38hPI"
-)
-
-print("Connected")
 
 stock_master_ws = sheet.worksheet(
     "Stock_Master"
@@ -275,7 +304,7 @@ stock_master_ws = sheet.worksheet(
 
 print("Clearing Stock_Master...")
 
-stock_master_ws.clear()
+stock_master_ws.batch_clear(["A:J"])
 
 print("Writing rows:", len(stock_master_rows))
 
@@ -285,6 +314,21 @@ stock_master_ws.update(
 )
 
 print("Write Complete")
+
+cache_count = sum(
+    1
+    for row in stock_master_rows[1:]
+    if row[-1] == "CACHE"
+)
+
+yf_count = sum(
+    1
+    for row in stock_master_rows[1:]
+    if row[-1] == "YFINANCE"
+)
+
+print("Cache Used :", cache_count)
+print("Yahoo Used :", yf_count)
 
 print(
     f"Stock_Master Updated: {len(stock_master_rows)-1}"
