@@ -143,23 +143,52 @@ for row in universe:
 
     if existing:
 
-        market_cap = existing.get("Market Cap", 0)
-        sector = existing.get("Sector", "UNKNOWN")
-        company_name = existing.get("Company Name", "")
+        company_name = str(existing.get("Company Name", "")).strip()
 
+        sector = str(existing.get("Sector", "UNKNOWN")).strip()
+
+        industry = str(existing.get("Industry", "UNKNOWN")).strip()
+
+        market_cap = existing.get("Market Cap", 0)
+
+        market_cap_category = str(
+            existing.get("Market Cap Category", "UNKNOWN")
+        ).strip()
+
+        # Convert market cap safely
+        try:
+
+            if isinstance(market_cap, str):
+
+                market_cap = (
+                    market_cap
+                    .replace("₹", "")
+                    .replace(",", "")
+                    .strip()
+                )
+
+            market_cap = float(market_cap)
+
+        except:
+
+            market_cap = 0
+
+        # Use cache ONLY when everything is valid
         if (
-            market_cap not in [0, "", None]
+            company_name != ""
             and sector != "UNKNOWN"
-            and company_name != ""
+            and industry != "UNKNOWN"
+            and market_cap > 0
+            and market_cap_category != "UNKNOWN"
         ):
 
             stock_master_rows.append([
                 ticker,
                 company_name,
                 sector,
-                existing.get("Industry", "UNKNOWN"),
+                industry,
                 market_cap,
-                existing.get("Market Cap Category", "UNKNOWN"),
+                market_cap_category,
                 existing.get("Index", "OTHER"),
                 existing.get("First Seen", today),
                 today,
