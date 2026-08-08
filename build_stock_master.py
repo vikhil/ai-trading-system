@@ -135,17 +135,11 @@ stock_master_rows = [
 
 today = datetime.now().strftime("%Y-%m-%d")
 
+nse_market_cap_fallback_count = 0
+
 for row in universe:
     
-    nse_market_cap_fallback_count = 0
-
-    market_cap = (
-        shares_outstanding * price
-    )
-    
     ticker = row["Ticker"]
-
-    nse_market_cap_fallback_count += 1
     
     existing = existing_master.get(ticker)
 
@@ -333,7 +327,9 @@ for row in universe:
                     market_cap = (
                         shares_outstanding * price
                     )
-        
+
+                    nse_market_cap_fallback_count += 1
+                    
                     print(
                         f"NSE MARKET CAP FALLBACK -> "
                         f"{ticker} -> {market_cap:,.0f}"
