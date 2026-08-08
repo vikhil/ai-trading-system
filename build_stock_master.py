@@ -272,25 +272,31 @@ for row in universe:
         # MARKET CAP FALLBACKS
         # --------------------------------
         
-        # Last Yahoo attempt:
+        # Last attempt:
         # Price × Shares Outstanding
-        
+
         if not market_cap:
-        
+
             try:
-        
-                shares = info.get("sharesOutstanding")
-        
-                price = ticker_obj.history(
-                    period="1d"
-                )["Close"].iloc[-1]
-        
-                if shares and price:
-        
-                    market_cap = shares * price
-        
-            except:
-        
+
+                shares_outstanding = info.get(
+                    "sharesOutstanding"
+                )
+
+                price = (
+                    ticker_obj.history(
+                        period="1d"
+                    )["Close"].iloc[-1]
+                )
+
+                if shares_outstanding and price:
+
+                    market_cap = (
+                        shares_outstanding * price
+                    )
+
+            except Exception:
+
                 pass
         
         
