@@ -221,6 +221,8 @@ def load_all_nse_universe():
             "Ticker": symbol + ".NS",
     
             "Sector": "Equity",
+            
+            "Asset Type": "EQUITY",
     
             "Company Name": str(
                 row.get("NAME OF COMPANY", "")
@@ -255,8 +257,9 @@ def load_all_nse_universe():
     
             "Ticker": symbol + ".NS",
     
-            "Sector": "ETF"
-    
+            "Sector": "ETF",
+
+            "Asset Type": "ETF"
         })
 
     # -------------------------
@@ -280,8 +283,9 @@ def load_all_nse_universe():
     
             "Ticker": symbol + ".NS",
     
-            "Sector": "REIT"
-    
+            "Sector": "REIT",
+
+            "Asset Type": "REIT"
         })
 
     # -------------------------
@@ -305,8 +309,9 @@ def load_all_nse_universe():
     
             "Ticker": symbol + ".NS",
     
-            "Sector": "INVIT"
-    
+            "Sector": "INVIT",
+
+            "Asset Type": "INVIT"
         })
     
     unique = {}
