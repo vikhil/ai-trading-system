@@ -203,7 +203,7 @@ def load_all_nse_universe():
     
     universe = []
 
-    for _, row in equity_df.iterrows():
+for _, row in equity_df.iterrows():
 
     symbol = str(
         row["SYMBOL"]
