@@ -136,9 +136,17 @@ stock_master_rows = [
 today = datetime.now().strftime("%Y-%m-%d")
 
 for row in universe:
+    
+    nse_market_cap_fallback_count = 0
 
+    market_cap = (
+        shares_outstanding * price
+    )
+    
     ticker = row["Ticker"]
 
+    nse_market_cap_fallback_count += 1
+    
     existing = existing_master.get(ticker)
 
     if existing:
@@ -177,7 +185,7 @@ for row in universe:
         if (
             company_name != ""
             and sector != "UNKNOWN"
-            and industry != "UNKNOWN"
+            #and industry != "UNKNOWN"
             and market_cap > 0
             and market_cap_category != "UNKNOWN"
         ):
@@ -260,7 +268,11 @@ for row in universe:
         
                 pass
         
-        # Last attempt:
+        # --------------------------------
+        # MARKET CAP FALLBACKS
+        # --------------------------------
+        
+        # Last Yahoo attempt:
         # Price × Shares Outstanding
         
         if not market_cap:
@@ -269,15 +281,65 @@ for row in universe:
         
                 shares = info.get("sharesOutstanding")
         
-                price = ticker_obj.history(period="1d")["Close"].iloc[-1]
+                price = ticker_obj.history(
+                    period="1d"
+                )["Close"].iloc[-1]
         
-                if shares:
+                if shares and price:
         
                     market_cap = shares * price
         
             except:
         
                 pass
+        
+        
+        # --------------------------------
+        # NSE MASTER FALLBACK
+        # --------------------------------
+        
+        if not market_cap:
+        
+            try:
+        
+                paid_up_value = float(
+                    row.get("Paid Up Value", 0) or 0
+                )
+        
+                face_value = float(
+                    row.get("Face Value", 0) or 0
+                )
+        
+                price = ticker_obj.history(
+                    period="1d"
+                )["Close"].iloc[-1]
+        
+                if (
+                    paid_up_value > 0
+                    and face_value > 0
+                    and price > 0
+                ):
+        
+                    shares_outstanding = (
+                        paid_up_value / face_value
+                    )
+        
+                    market_cap = (
+                        shares_outstanding * price
+                    )
+        
+                    print(
+                        f"NSE MARKET CAP FALLBACK -> "
+                        f"{ticker} -> {market_cap:,.0f}"
+                    )
+        
+            except Exception as e:
+        
+                print(
+                    f"NSE MARKET CAP FAILED -> "
+                    f"{ticker} -> {e}"
+                )
+        
         
         market_cap = market_cap or 0
 
@@ -329,6 +391,11 @@ for row in universe:
 
 stock_master_ws = sheet.worksheet(
     "Stock_Master"
+)
+
+print(
+    "NSE Market Cap Fallback Used :",
+    nse_market_cap_fallback_count
 )
 
 print("Clearing Stock_Master...")
