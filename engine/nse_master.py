@@ -203,44 +203,44 @@ def load_all_nse_universe():
     
     universe = []
 
-for _, row in equity_df.iterrows():
-
-    symbol = str(
-        row["SYMBOL"]
-    ).strip().upper()
-
-    series = str(
-        row["SERIES"]
-    ).strip().upper()
-
-    if series != "EQ":
-        continue
-
-    universe.append({
-
-        "Ticker": symbol + ".NS",
-
-        "Sector": "Equity",
-
-        "Company Name": str(
-            row.get("NAME OF COMPANY", "")
-        ).strip(),
-
-        "Paid Up Value": row.get(
-            "PAID UP VALUE",
-            0
-        ),
-
-        "Face Value": row.get(
-            "FACE VALUE",
-            0
-        ),
-
-        "ISIN": str(
-            row.get("ISIN NUMBER", "")
-        ).strip()
-
-    })
+    for _, row in equity_df.iterrows():
+    
+        symbol = str(
+            row["SYMBOL"]
+        ).strip().upper()
+    
+        series = str(
+            row["SERIES"]
+        ).strip().upper()
+    
+        if series != "EQ":
+            continue
+    
+        universe.append({
+    
+            "Ticker": symbol + ".NS",
+    
+            "Sector": "Equity",
+    
+            "Company Name": str(
+                row.get("NAME OF COMPANY", "")
+            ).strip(),
+    
+            "Paid Up Value": row.get(
+                "PAID UP VALUE",
+                0
+            ),
+    
+            "Face Value": row.get(
+                "FACE VALUE",
+                0
+            ),
+    
+            "ISIN": str(
+                row.get("ISIN NUMBER", "")
+            ).strip()
+    
+        })
     
     for _, row in etf_df.iterrows():
 
