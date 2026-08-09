@@ -1,5 +1,6 @@
 import requests
 import pandas as pd
+import time
 
 from io import StringIO
 
@@ -28,6 +29,184 @@ def create_nse_session():
 
     return session
 
+def get_nse_quote_metadata(session, symbol):
+
+    """
+    Fetch authoritative NSE quote metadata for an equity.
+
+    Used only as a fallback when Yahoo Finance does not
+    provide sufficient sector / industry / market-cap data.
+
+    Returns:
+        {
+            "Company Name": ...,
+            "Sector": ...,
+            "Industry": ...,
+            "Basic Industry": ...,
+            "Market Cap": ...
+        }
+
+    Returns empty dictionary if NSE cannot provide the data.
+    """
+
+    symbol = (
+        str(symbol)
+        .replace(".NS", "")
+        .strip()
+        .upper()
+    )
+
+    if not symbol:
+        return {}
+
+    url = NSE_QUOTE_URL.format(
+        symbol=symbol
+    )
+
+    try:
+
+        response = session.get(
+            url,
+            headers={
+                "Accept": "application/json, text/plain, */*",
+                "Referer": (
+                    f"https://www.nseindia.com/"
+                    f"get-quote/equity/{symbol}"
+                )
+            },
+            timeout=30
+        )
+
+        response.raise_for_status()
+
+        data = response.json()
+
+        metadata = {}
+
+        # --------------------------------
+        # COMPANY NAME
+        # --------------------------------
+
+        info = data.get(
+            "info",
+            {}
+        )
+
+        metadata["Company Name"] = (
+            info.get("companyName")
+            or ""
+        )
+
+        # --------------------------------
+        # INDUSTRY INFORMATION
+        # --------------------------------
+
+        industry_info = data.get(
+            "industryInfo",
+            {}
+        )
+
+        metadata["Sector"] = (
+            industry_info.get("sector")
+            or ""
+        )
+
+        metadata["Industry"] = (
+            industry_info.get("industry")
+            or ""
+        )
+
+        metadata["Basic Industry"] = (
+            industry_info.get("basicIndustry")
+            or ""
+        )
+
+        # --------------------------------
+        # MARKET CAP
+        # --------------------------------
+
+        metadata["Market Cap"] = 0
+
+        security_info = data.get(
+            "securityInfo",
+            {}
+        )
+
+        # Some NSE responses expose issued size.
+        issued_size = (
+            security_info.get("issuedSize")
+            or security_info.get("issuedCapital")
+        )
+
+        price_info = data.get(
+            "priceInfo",
+            {}
+        )
+
+        last_price = (
+            price_info.get("lastPrice")
+            or price_info.get("closePrice")
+        )
+
+        try:
+
+            issued_size = float(
+                issued_size
+            )
+
+        except:
+
+            issued_size = 0
+
+        try:
+
+            last_price = float(
+                last_price
+            )
+
+        except:
+
+            last_price = 0
+
+        if (
+            issued_size > 0
+            and last_price > 0
+        ):
+
+            metadata["Market Cap"] = (
+                issued_size
+                * last_price
+            )
+
+        # --------------------------------
+        # VALIDATE
+        # --------------------------------
+
+        if not any([
+            metadata["Company Name"],
+            metadata["Sector"],
+            metadata["Industry"],
+            metadata["Basic Industry"],
+            metadata["Market Cap"] > 0
+        ]):
+
+            return {}
+
+        return metadata
+
+    except Exception as e:
+
+        print(
+            f"NSE QUOTE FAILED -> "
+            f"{symbol} -> {e}"
+        )
+
+        return {}
+
+    finally:
+
+        time.sleep(0.25)
+
 SECURITY_MASTER_URL = (
     "https://nsearchives.nseindia.com/content/equities/EQUITY_L.csv"
 )
@@ -42,6 +221,10 @@ REIT_MASTER_URL = (
 
 INVIT_MASTER_URL = (
     "https://nsearchives.nseindia.com/content/equities/INVITS_L.csv"
+)
+
+NSE_QUOTE_URL = (
+    "https://www.nseindia.com/api/quote-equity?symbol={symbol}"
 )
 
 def download_security_master():
