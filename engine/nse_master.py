@@ -220,7 +220,7 @@ def load_all_nse_universe():
     
             "Ticker": symbol + ".NS",
     
-            "Sector": "Equity",
+            "Sector": "UNKNOWN",
             
             "Asset Type": "EQUITY",
     
