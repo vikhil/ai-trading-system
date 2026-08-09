@@ -682,16 +682,32 @@ unknown_industry_count = sum(
     in ("", "UNKNOWN")
 )
 
+# --------------------------------
+# MARKET CAP VALIDATION
+# EQUITIES ONLY
+# --------------------------------
+
+equity_rows = [
+    row
+    for row in data_rows
+    if str(row[2]).strip().upper()
+    not in ("ETF", "REIT", "INVIT")
+]
+
 zero_market_cap_count = sum(
     1
-    for row in data_rows
+    for row in equity_rows
     if not row[4]
     or float(row[4] or 0) <= 0
 )
 
+# --------------------------------
+# UNRESOLVED EQUITIES ONLY
+# --------------------------------
+
 unresolved_count = sum(
     1
-    for row in data_rows
+    for row in equity_rows
     if (
         str(row[2]).strip().upper()
         in ("", "UNKNOWN")
@@ -716,6 +732,11 @@ print(
 )
 
 print(
+    "Equity Rows:",
+    len(equity_rows)
+)
+
+print(
     "Unknown Sector:",
     unknown_sector_count
 )
@@ -726,12 +747,12 @@ print(
 )
 
 print(
-    "Zero Market Cap:",
+    "Equity Zero Market Cap:",
     zero_market_cap_count
 )
 
 print(
-    "Unresolved Rows:",
+    "Unresolved Equities:",
     unresolved_count
 )
 
@@ -756,7 +777,6 @@ print(
 )
 
 print("================================")
-
 print("Cache Used :", cache_count)
 print("Yahoo Used :", yf_count)
 
