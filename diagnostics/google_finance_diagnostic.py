@@ -61,7 +61,7 @@ print(
 
 
 # ============================================================
-# IDENTIFY UNRESOLVED EQUITIES
+# IDENTIFY THE 70 UNKNOWN-SECTOR EQUITIES
 # ============================================================
 
 def is_unknown(value):
@@ -78,34 +78,6 @@ def is_unknown(value):
     )
 
 
-def is_zero_market_cap(value):
-
-    if value is None:
-        return True
-
-    if isinstance(value, str):
-
-        cleaned = (
-            value
-            .replace(",", "")
-            .replace("₹", "")
-            .strip()
-        )
-
-        if cleaned == "":
-            return True
-
-        try:
-            return float(cleaned) <= 0
-        except:
-            return True
-
-    try:
-        return float(value) <= 0
-    except:
-        return True
-
-
 unresolved = []
 
 for row in stock_master:
@@ -114,44 +86,50 @@ for row in stock_master:
         row.get("Ticker", "")
     ).strip()
 
+    if not ticker:
+        continue
+
     asset_type = str(
         row.get("Asset Type", "EQUITY")
     ).strip().upper()
-
-    # Stock_Master currently contains equity rows
-    # without an Asset Type column in the displayed
-    # architecture, so treat missing Asset Type as EQUITY.
-    if asset_type != "EQUITY":
-        continue
 
     sector = row.get(
         "Sector",
         "UNKNOWN"
     )
 
-    industry = row.get(
-        "Industry",
-        "UNKNOWN"
-    )
+    # --------------------------------------------------------
+    # IMPORTANT:
+    #
+    # The diagnostic population is intentionally restricted
+    # to EQUITY rows whose Sector is UNKNOWN.
+    #
+    # This matches the current Stock_Master validation:
+    #
+    # Unknown Sector = 70
+    #
+    # ETF / REIT / INVIT rows are NOT diagnostic targets.
+    # --------------------------------------------------------
 
-    market_cap = row.get(
-        "Market Cap",
-        0
-    )
+    if asset_type != "EQUITY":
+        continue
 
-    if (
-        is_unknown(sector)
-        or is_unknown(industry)
-        or is_zero_market_cap(market_cap)
-    ):
+    if not is_unknown(sector):
+        continue
 
-        unresolved.append(row)
+    unresolved.append(row)
 
 
 print(
-    f"Unresolved Equity Rows: {len(unresolved)}"
+    f"Unknown-Sector Equity Rows: {len(unresolved)}"
 )
 
+if len(unresolved) != 70:
+
+    print(
+        "WARNING: Expected 70 unknown-sector equities "
+        f"but found {len(unresolved)}"
+    )
 
 # ============================================================
 # CREATE / RESET DIAGNOSTIC SHEET
@@ -432,11 +410,24 @@ for index, row in enumerate(values[1:], start=2):
 # WRITE DIAGNOSIS
 # ============================================================
 
-for row_number, diagnosis in diagnosis_updates:
+if diagnosis_updates:
+
+    diagnosis_values = [
+        [diagnosis]
+        for _, diagnosis in diagnosis_updates
+    ]
+
+    start_row = 2
+    end_row = start_row + len(diagnosis_values) - 1
 
     gf_ws.update(
-        range_name=f"S{row_number}",
-        values=[[diagnosis]]
+        range_name=f"S{start_row}:S{end_row}",
+        values=diagnosis_values
+    )
+
+    print(
+        f"Diagnosis written in one batch: "
+        f"{len(diagnosis_values)} rows"
     )
 
 
