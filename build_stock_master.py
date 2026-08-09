@@ -7,7 +7,7 @@ import time
 
 from oauth2client.service_account import ServiceAccountCredentials
 
-from data_loader import load_universe
+#from data_loader import load_universe
 
 from engine.nse_master import load_all_nse_universe
 
@@ -136,8 +136,6 @@ stock_master_rows = [
 ]
 
 today = datetime.now().strftime("%Y-%m-%d")
-
-nse_market_cap_fallback_count = 0
 
 for row in universe:
     
@@ -279,9 +277,15 @@ for row in universe:
         # Sector / Industry
         # -------------------------
         
-        sector = info.get("sector") or row.get("Sector", "UNKNOWN")
-        
-        industry = info.get("industry") or "UNKNOWN"
+        sector = (
+            info.get("sector")
+            or "UNKNOWN"
+        )
+
+        industry = (
+            info.get("industry")
+            or "UNKNOWN"
+        )
         
         # -------------------------
         # Market Cap
@@ -344,56 +348,6 @@ for row in universe:
 
                 pass
         
-        
-        # --------------------------------
-        # NSE MASTER FALLBACK
-        # --------------------------------
-        
-        if not market_cap:
-        
-            try:
-        
-                paid_up_value = float(
-                    row.get("Paid Up Value", 0) or 0
-                )
-        
-                face_value = float(
-                    row.get("Face Value", 0) or 0
-                )
-        
-                price = ticker_obj.history(
-                    period="1d"
-                )["Close"].iloc[-1]
-        
-                if (
-                    paid_up_value > 0
-                    and face_value > 0
-                    and price > 0
-                ):
-        
-                    shares_outstanding = (
-                        paid_up_value / face_value
-                    )
-        
-                    market_cap = (
-                        shares_outstanding * price
-                    )
-
-                    nse_market_cap_fallback_count += 1
-                    
-                    print(
-                        f"NSE MARKET CAP FALLBACK -> "
-                        f"{ticker} -> {market_cap:,.0f}"
-                    )
-        
-            except Exception as e:
-        
-                print(
-                    f"NSE MARKET CAP FAILED -> "
-                    f"{ticker} -> {e}"
-                )
-        
-        
         market_cap = market_cap or 0
 
         index_name = "OTHER"
@@ -442,11 +396,6 @@ for row in universe:
 
 stock_master_ws = sheet.worksheet(
     "Stock_Master"
-)
-
-print(
-    "NSE Market Cap Fallback Used :",
-    nse_market_cap_fallback_count
 )
 
 print("Clearing Stock_Master...")
