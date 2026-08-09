@@ -220,7 +220,7 @@ def load_all_nse_universe():
     
             "Ticker": symbol + ".NS",
     
-            "Sector": "UNKNOWN",
+            "Sector": "",
             
             "Asset Type": "EQUITY",
     
@@ -228,7 +228,9 @@ def load_all_nse_universe():
                 row.get("NAME OF COMPANY", "")
             ).strip(),
     
-            "Paid Up Value": row.get(
+            # NSE PAID UP VALUE is the paid-up value
+            # per equity share, NOT total paid-up capital.
+            "Paid Up Value Per Share": row.get(
                 "PAID UP VALUE",
                 0
             ),
