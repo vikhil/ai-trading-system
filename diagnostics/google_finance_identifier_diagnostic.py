@@ -1,91 +1,55 @@
-"""
-Google Finance Identifier Diagnostic
-------------------------------------
-
-Purpose:
-    Diagnose Google Finance identifiers for equity rows that are currently
-    unresolved / UNKNOWN in Stock_Master.
-
-Architecture:
-    NSE Master / security identity
-            ↓
-    Multi-source enrichment / diagnostics
-            ↓
-    Reconciliation / Stock_Master
-
-Google Finance is used here ONLY as a diagnostic / secondary fallback.
-This script does NOT modify Stock_Master.
-
-Output worksheet:
-    GF_Identifier_Diagnostic
-
-Google Finance identifiers tested:
-    NSE -> NSE:<NSE_SYMBOL>
-    BSE -> BOM:<BSE_SCRIP_CODE>
-
-Important:
-    Do NOT use BSE:<NSE_SYMBOL>.
-"""
-
 import os
-import re
+import json
 import time
 from datetime import datetime
 
 import gspread
-from google.oauth2.service_account import Credentials
+from oauth2client.service_account import ServiceAccountCredentials
 
 
 # ============================================================
 # CONFIGURATION
 # ============================================================
 
-SERVICE_ACCOUNT_FILE = os.getenv(
-    "GOOGLE_SERVICE_ACCOUNT_FILE",
-    "credentials/service_account.json"
-)
+SPREADSHEET_ID = "1qGsaLVDzxxPSuYnY_Qd2vcEiYXE4tWoTEuxLfH38hPI"
 
-SPREADSHEET_NAME = os.getenv(
-    "GOOGLE_SPREADSHEET_NAME",
-    "Stock_Master"
-)
+SOURCE_SHEET = "Stock_Master"
+DIAGNOSTIC_SHEET = "GF_Identifier_Diagnostic"
 
-SOURCE_WORKSHEET = os.getenv(
-    "STOCK_MASTER_WORKSHEET",
-    "Stock_Master"
-)
-
-OUTPUT_WORKSHEET = "GF_Identifier_Diagnostic"
-
-# Number of seconds to wait after writing formulas.
-# Google Sheets needs time to calculate GOOGLEFINANCE.
-FORMULA_WAIT_SECONDS = 10
-
-# Maximum rows to process.
-# None = all unresolved equity rows.
-MAX_ROWS = None
+WAIT_SECONDS = 20
 
 
 # ============================================================
 # GOOGLE SHEETS CONNECTION
 # ============================================================
 
-SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets",
-    "https://www.googleapis.com/auth/drive",
-]
-
-
 def connect_to_google_sheet():
+
     print("Connecting to Google Sheet...")
 
-    credentials = Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE,
-        scopes=SCOPES,
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive"
+    ]
+
+    credentials_json = os.environ["GOOGLE_CREDENTIALS"]
+
+    creds_dict = json.loads(
+        credentials_json
     )
 
-    client = gspread.authorize(credentials)
-    spreadsheet = client.open(SPREADSHEET_NAME)
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(
+        creds_dict,
+        scope
+    )
+
+    client = gspread.authorize(
+        creds
+    )
+
+    spreadsheet = client.open_by_key(
+        SPREADSHEET_ID
+    )
 
     print("Connected")
 
@@ -93,10 +57,11 @@ def connect_to_google_sheet():
 
 
 # ============================================================
-# NORMALIZATION HELPERS
+# HELPERS
 # ============================================================
 
-def clean_text(value):
+def clean(value):
+
     if value is None:
         return ""
 
@@ -104,596 +69,699 @@ def clean_text(value):
 
 
 def normalize_symbol(value):
-    """
-    Normalize NSE symbol.
 
-    Examples:
-        RELIANCE -> RELIANCE
-        RELIANCE.NS -> RELIANCE
-        NSE:RELIANCE -> RELIANCE
-    """
+    value = clean(value).upper()
 
-    value = clean_text(value).upper()
-
-    value = value.replace("NSE:", "")
-
-    if value.endswith(".NS"):
-        value = value[:-3]
-
-    return value.strip()
-
-
-def normalize_bse_code(value):
-    """
-    Normalize BSE scrip code.
-
-    Examples:
-        500325 -> 500325
-        BOM:500325 -> 500325
-        '500325 -> 500325
-    """
-
-    value = clean_text(value).upper()
-
-    value = value.replace("BOM:", "")
-    value = value.replace("BSE:", "")
-
-    # Remove Excel/Sheets leading apostrophe
-    value = value.lstrip("'")
-
-    # Keep numeric BSE scrip code
-    match = re.search(r"\d+", value)
-
-    if not match:
+    if not value:
         return ""
 
-    return match.group(0)
+    # Remove common Yahoo suffixes
+    value = value.replace(".NS", "")
+    value = value.replace(".BO", "")
+
+    # Remove spaces
+    value = value.strip()
+
+    return value
 
 
-def is_equity_row(row):
-    """
-    Determine whether the row represents an equity.
+def is_unknown(value):
 
-    Asset Type is preferred.
+    value = clean(value).upper()
 
-    If Asset Type is unavailable, the row is treated as an equity
-    when it is not explicitly identified as an ETF / REIT / InvIT.
-    """
-
-    asset_type = clean_text(
-        row.get("Asset Type", "")
-    ).upper()
-
-    if asset_type:
-        return asset_type in {
-            "EQUITY",
-            "STOCK",
-            "SHARE",
-        }
-
-    # Fallback
-    instrument = clean_text(
-        row.get("Instrument Type", "")
-    ).upper()
-
-    if instrument in {
-        "ETF",
-        "REIT",
-        "INVIT",
-    }:
-        return False
-
-    return True
-
-
-def is_unresolved(row):
-    """
-    Identify rows that need Google Finance identifier diagnostics.
-
-    Primary condition:
-        Sector / Industry is UNKNOWN
-
-    We also allow common unresolved markers.
-    """
-
-    sector = clean_text(row.get("Sector", "")).upper()
-    industry = clean_text(row.get("Industry", "")).upper()
-
-    unresolved_values = {
+    return value in (
         "",
         "UNKNOWN",
         "N/A",
         "NA",
-        "NULL",
         "NONE",
-        "-",
-    }
-
-    sector_unresolved = sector in unresolved_values
-    industry_unresolved = industry in unresolved_values
-
-    return sector_unresolved or industry_unresolved
+        "NULL"
+    )
 
 
-# ============================================================
-# GOOGLE FINANCE FORMULA BUILDERS
-# ============================================================
+def first_available(row, column_names):
 
-def google_finance_formula(identifier):
-    """
-    Build a simple GOOGLEFINANCE formula.
+    for column in column_names:
 
-    We use PRICE because it is a reliable existence test.
+        value = clean(
+            row.get(column, "")
+        )
 
-    If Google Finance recognizes the identifier, PRICE should return
-    a numeric value.
+        if value:
+            return value
 
-    If the identifier is not recognized, the formula generally
-    returns an error.
-    """
+    return ""
 
-    identifier = clean_text(identifier)
 
-    if not identifier:
-        return '=""'
+def escape_formula_text(value):
 
-    return (
-        f'=IFERROR(GOOGLEFINANCE("{identifier}","price"),"GF_NOT_FOUND")'
+    return clean(value).replace(
+        '"',
+        '""'
     )
 
 
 # ============================================================
-# HEADER DETECTION
+# IDENTIFIER CANDIDATES
 # ============================================================
 
-def create_header_map(headers):
-    return {
-        clean_text(header): index
-        for index, header in enumerate(headers)
-    }
+def build_identifier_candidates(row):
 
+    ticker = normalize_symbol(
+        row.get("Ticker", "")
+    )
 
-def get_value(row, header_map, header_name):
-    index = header_map.get(header_name)
+    candidates = []
 
-    if index is None:
-        return ""
+    def add(
+        identifier,
+        identifier_type
+    ):
 
-    if index >= len(row):
-        return ""
+        identifier = clean(identifier)
 
-    return clean_text(row[index])
+        if not identifier:
+            return
 
+        # Avoid duplicate identifiers
+        for existing in candidates:
 
-# ============================================================
-# LOAD STOCK MASTER
-# ============================================================
+            if existing["identifier"].upper() == identifier.upper():
+                return
 
-def load_stock_master(spreadsheet):
-    worksheet = spreadsheet.worksheet(SOURCE_WORKSHEET)
-
-    values = worksheet.get_all_values()
-
-    if not values:
-        raise RuntimeError(
-            f"No data found in worksheet '{SOURCE_WORKSHEET}'."
-        )
-
-    headers = values[0]
-
-    rows = []
-
-    for raw_row in values[1:]:
-        # Make row same length as headers
-        row = raw_row + [""] * (len(headers) - len(raw_row))
-
-        row_dict = {
-            headers[i]: clean_text(row[i])
-            for i in range(len(headers))
-        }
-
-        rows.append(row_dict)
-
-    print(f"Stock Master Rows: {len(rows)}")
-
-    return worksheet, headers, rows
-
-
-# ============================================================
-# IDENTIFY UNRESOLVED EQUITIES
-# ============================================================
-
-def get_unresolved_equities(rows):
-    unresolved = []
-
-    for row_number, row in enumerate(rows, start=2):
-
-        if not is_equity_row(row):
-            continue
-
-        if not is_unresolved(row):
-            continue
-
-        nse_symbol = normalize_symbol(
-            row.get("NSE Symbol", "")
-            or row.get("Symbol", "")
-            or row.get("Ticker", "")
-        )
-
-        bse_code = normalize_bse_code(
-            row.get("BSE Code", "")
-            or row.get("BSE Scrip Code", "")
-            or row.get("BSE Scrip", "")
-        )
-
-        # Skip rows where neither exchange identifier exists.
-        if not nse_symbol and not bse_code:
-            unresolved.append({
-                "source_row": row_number,
-                "row": row,
-                "nse_symbol": "",
-                "bse_code": "",
-            })
-            continue
-
-        unresolved.append({
-            "source_row": row_number,
-            "row": row,
-            "nse_symbol": nse_symbol,
-            "bse_code": bse_code,
+        candidates.append({
+            "identifier": identifier,
+            "type": identifier_type
         })
 
-    if MAX_ROWS:
-        unresolved = unresolved[:MAX_ROWS]
+    # --------------------------------------------------------
+    # 1. Existing Google Finance identifier
+    # --------------------------------------------------------
 
-    print(
-        f"Unknown-Sector Equity Rows: {len(unresolved)}"
+    existing_gf = first_available(
+        row,
+        [
+            "Google Finance Identifier",
+            "Google Finance ID",
+            "GF Identifier",
+            "GF ID",
+            "GoogleFinance Identifier"
+        ]
     )
+
+    if existing_gf:
+
+        add(
+            existing_gf,
+            "EXISTING_GF_IDENTIFIER"
+        )
+
+    # --------------------------------------------------------
+    # 2. NSE identifier
+    # --------------------------------------------------------
+
+    if ticker:
+
+        add(
+            f"NSE:{ticker}",
+            "NSE_SYMBOL"
+        )
+
+    # --------------------------------------------------------
+    # 3. BSE numeric code
+    #
+    # This is particularly important because Google Finance
+    # generally expects the BSE numeric security code rather
+    # than the NSE ticker for BSE-listed securities.
+    # --------------------------------------------------------
+
+    bse_code = first_available(
+        row,
+        [
+            "BSE Code",
+            "BSE_Code",
+            "BSECode",
+            "BSE Security Code",
+            "BSE SecurityCode",
+            "BSE ID",
+            "BSE ID Code"
+        ]
+    )
+
+    if bse_code:
+
+        # Remove decimal representation such as 500325.0
+        try:
+
+            numeric_bse = float(
+                str(bse_code).strip()
+            )
+
+            if numeric_bse.is_integer():
+
+                bse_code = str(
+                    int(numeric_bse)
+                )
+
+        except Exception:
+            pass
+
+        add(
+            f"BSE:{bse_code}",
+            "BSE_CODE"
+        )
+
+    # --------------------------------------------------------
+    # 4. BSE using same symbol
+    # --------------------------------------------------------
+
+    if ticker:
+
+        add(
+            f"BSE:{ticker}",
+            "BSE_SYMBOL"
+        )
+
+    # --------------------------------------------------------
+    # 5. Raw ticker
+    #
+    # This tests whether Google Finance can resolve the
+    # security without an explicit exchange prefix.
+    # --------------------------------------------------------
+
+    if ticker:
+
+        add(
+            ticker,
+            "RAW_TICKER"
+        )
+
+    # --------------------------------------------------------
+    # 6. Company name
+    #
+    # Only used as a fallback diagnostic.
+    # --------------------------------------------------------
+
+    company_name = first_available(
+        row,
+        [
+            "Company Name",
+            "Company",
+            "Name",
+            "CompanyName",
+            "Security Name"
+        ]
+    )
+
+    if company_name:
+
+        add(
+            company_name,
+            "COMPANY_NAME"
+        )
+
+    return candidates
+
+
+# ============================================================
+# IDENTIFY UNKNOWN-SECTOR EQUITIES
+# ============================================================
+
+def load_unresolved_equities(
+    stock_master
+):
+
+    unresolved = []
+
+    for row in stock_master:
+
+        ticker = clean(
+            row.get("Ticker", "")
+        )
+
+        if not ticker:
+            continue
+
+        asset_type = clean(
+            row.get(
+                "Asset Type",
+                "EQUITY"
+            )
+        ).upper()
+
+        sector = row.get(
+            "Sector",
+            "UNKNOWN"
+        )
+
+        # Only EQUITY
+        if asset_type != "EQUITY":
+            continue
+
+        # Only UNKNOWN sector
+        if not is_unknown(sector):
+            continue
+
+        unresolved.append(row)
 
     return unresolved
 
 
 # ============================================================
-# CREATE DIAGNOSTIC WORKSHEET
+# CREATE / RESET DIAGNOSTIC SHEET
 # ============================================================
 
-def get_or_create_output_worksheet(spreadsheet):
+def prepare_diagnostic_sheet(
+    spreadsheet
+):
+
     try:
-        worksheet = spreadsheet.worksheet(OUTPUT_WORKSHEET)
+
+        ws = spreadsheet.worksheet(
+            DIAGNOSTIC_SHEET
+        )
 
         print(
-            f"Using existing worksheet: {OUTPUT_WORKSHEET}"
+            f"Using existing worksheet: "
+            f"{DIAGNOSTIC_SHEET}"
         )
 
     except gspread.WorksheetNotFound:
+
         print(
-            f"Creating worksheet: {OUTPUT_WORKSHEET}"
+            f"Creating worksheet: "
+            f"{DIAGNOSTIC_SHEET}"
         )
 
-        worksheet = spreadsheet.add_worksheet(
-            title=OUTPUT_WORKSHEET,
-            rows=1000,
-            cols=30,
+        ws = spreadsheet.add_worksheet(
+            title=DIAGNOSTIC_SHEET,
+            rows=200,
+            cols=50
         )
 
-    return worksheet
+    print(
+        "Clearing diagnostic worksheet..."
+    )
 
+    ws.clear()
 
-def clear_output_worksheet(worksheet):
-    print("Clearing diagnostic worksheet...")
-
-    worksheet.clear()
+    return ws
 
 
 # ============================================================
-# BUILD DIAGNOSTIC DATA
+# WRITE HEADERS
 # ============================================================
 
-OUTPUT_HEADERS = [
-    "Source Row",
-    "Company Name",
-    "NSE Symbol",
-    "BSE Code",
+def write_headers(ws):
 
-    "NSE Identifier",
-    "BSE Identifier",
+    headers = [
+        "Run Date",
+        "Ticker",
+        "NSE Symbol",
+        "Company Name",
+        "Sector",
+        "Industry",
+        "BSE Code",
 
-    "NSE Formula",
-    "BSE Formula",
+        "Candidate 1",
+        "Candidate 1 Type",
+        "Candidate 1 Result",
 
-    "GF NSE Result",
-    "GF BSE Result",
+        "Candidate 2",
+        "Candidate 2 Type",
+        "Candidate 2 Result",
 
-    "NSE Found",
-    "BSE Found",
+        "Candidate 3",
+        "Candidate 3 Type",
+        "Candidate 3 Result",
 
-    "GF Identifier Status",
-    "Diagnostic Time",
-]
+        "Candidate 4",
+        "Candidate 4 Type",
+        "Candidate 4 Result",
+
+        "Candidate 5",
+        "Candidate 5 Type",
+        "Candidate 5 Result",
+
+        "Candidate 6",
+        "Candidate 6 Type",
+        "Candidate 6 Result",
+
+        "Candidate 7",
+        "Candidate 7 Type",
+        "Candidate 7 Result",
+
+        "Resolved Identifier",
+        "Resolved Identifier Type",
+        "Diagnosis"
+    ]
+
+    ws.update(
+        range_name="A1",
+        values=[headers]
+    )
 
 
-def build_diagnostic_rows(unresolved):
-    rows = []
+# ============================================================
+# BUILD DIAGNOSTIC ROW
+# ============================================================
 
-    for item in unresolved:
+def build_diagnostic_row(
+    row,
+    run_date
+):
 
-        row = item["row"]
+    ticker = clean(
+        row.get("Ticker", "")
+    )
 
-        company_name = (
-            row.get("Company Name", "")
-            or row.get("Company", "")
-            or row.get("Name", "")
+    nse_symbol = normalize_symbol(
+        ticker
+    )
+
+    company_name = first_available(
+        row,
+        [
+            "Company Name",
+            "Company",
+            "Name",
+            "CompanyName",
+            "Security Name"
+        ]
+    )
+
+    sector = clean(
+        row.get(
+            "Sector",
+            "UNKNOWN"
+        )
+    )
+
+    industry = clean(
+        row.get(
+            "Industry",
+            "UNKNOWN"
+        )
+    )
+
+    bse_code = first_available(
+        row,
+        [
+            "BSE Code",
+            "BSE_Code",
+            "BSECode",
+            "BSE Security Code",
+            "BSE SecurityCode",
+            "BSE ID",
+            "BSE ID Code"
+        ]
+    )
+
+    candidates = build_identifier_candidates(
+        row
+    )
+
+    # Maximum seven candidates
+    candidates = candidates[:7]
+
+    output = [
+        run_date,
+        ticker,
+        nse_symbol,
+        company_name,
+        sector,
+        industry,
+        bse_code
+    ]
+
+    # --------------------------------------------------------
+    # Each candidate consists of:
+    #
+    # Identifier
+    # Identifier Type
+    # GOOGLEFINANCE result
+    # --------------------------------------------------------
+
+    for candidate in candidates:
+
+        identifier = candidate["identifier"]
+        identifier_type = candidate["type"]
+
+        escaped_identifier = (
+            escape_formula_text(
+                identifier
+            )
         )
 
-        nse_symbol = item["nse_symbol"]
-        bse_code = item["bse_code"]
-
-        nse_identifier = (
-            f"NSE:{nse_symbol}"
-            if nse_symbol
-            else ""
+        formula = (
+            f'=IFERROR('
+            f'GOOGLEFINANCE('
+            f'"{escaped_identifier}",'
+            f'"price"'
+            f'),"")'
         )
 
-        bse_identifier = (
-            f"BOM:{bse_code}"
-            if bse_code
-            else ""
-        )
-
-        nse_formula = google_finance_formula(
-            nse_identifier
-        )
-
-        bse_formula = google_finance_formula(
-            bse_identifier
-        )
-
-        rows.append([
-            item["source_row"],
-            company_name,
-            nse_symbol,
-            bse_code,
-
-            nse_identifier,
-            bse_identifier,
-
-            nse_formula,
-            bse_formula,
-
-            "",  # GF NSE Result
-            "",  # GF BSE Result
-
-            "",  # NSE Found
-            "",  # BSE Found
-
-            "",  # Status
-            datetime.now().strftime(
-                "%Y-%m-%d %H:%M:%S"
-            ),
+        output.extend([
+            identifier,
+            identifier_type,
+            formula
         ])
 
-    return rows
+    # Pad remaining candidate slots
+    while len(output) < 28:
+
+        output.extend([
+            "",
+            "",
+            ""
+        ])
+
+    # Resolved Identifier
+    output.extend([
+        "",
+        "",
+        ""
+    ])
+
+    return output
 
 
 # ============================================================
-# WRITE FORMULAS
+# NUMERIC VALUE
 # ============================================================
 
-def write_diagnostic_formulas(
-    worksheet,
-    diagnostic_rows,
-):
-    """
-    Write diagnostic rows.
+def numeric_value(value):
 
-    Columns:
-        G = NSE Formula
-        H = BSE Formula
+    if value is None:
+        return 0
 
-    Google Sheets calculates the formulas after they are written.
-    """
-
-    if not diagnostic_rows:
-        return
-
-    values = [
-        OUTPUT_HEADERS
-    ] + diagnostic_rows
-
-    worksheet.update(
-        range_name="A1:N{}".format(len(values)),
-        values=values,
-        value_input_option="USER_ENTERED",
-    )
-
-    print(
-        f"Google Finance formulas written: "
-        f"{len(diagnostic_rows)}"
-    )
-
-
-# ============================================================
-# READ GOOGLE FINANCE RESULTS
-# ============================================================
-
-def is_google_finance_found(value):
-    """
-    Interpret the calculated GOOGLEFINANCE result.
-
-    A valid numeric price means the identifier was resolved.
-
-    We deliberately do not depend on a particular stock price
-    because the diagnostic is only checking identifier resolution.
-    """
-
-    value = clean_text(value).upper()
-
-    if not value:
-        return False
-
-    if value in {
-        "GF_NOT_FOUND",
-        "#N/A",
-        "#VALUE!",
-        "#REF!",
-        "#ERROR!",
-        "#NAME?",
-        "N/A",
-    }:
-        return False
-
-    # Google Sheets may return a numeric value.
     try:
-        float(
-            value.replace(",", "")
-        )
-        return True
 
-    except ValueError:
-        return False
-
-
-def read_and_diagnose_results(worksheet):
-    """
-    Read calculated worksheet values and determine whether
-    NSE/BSE identifiers were found.
-    """
-
-    values = worksheet.get_all_values()
-
-    if len(values) <= 1:
-        return []
-
-    print(
-        f"Diagnostic rows read: {len(values) - 1}"
-    )
-
-    results = []
-
-    for row in values[1:]:
-
-        row = row + [""] * (
-            len(OUTPUT_HEADERS) - len(row)
+        cleaned = (
+            str(value)
+            .replace(",", "")
+            .replace("₹", "")
+            .replace("$", "")
+            .strip()
         )
 
-        nse_result = row[8]
-        bse_result = row[9]
+        if cleaned == "":
+            return 0
 
-        nse_found = is_google_finance_found(
-            nse_result
+        return float(
+            cleaned
         )
 
-        bse_found = is_google_finance_found(
-            bse_result
-        )
+    except Exception:
 
-        if nse_found and bse_found:
-            status = "GF_BOTH_FOUND"
+        return 0
 
-        elif nse_found:
-            status = "GF_NSE_FOUND"
 
-        elif bse_found:
-            status = "GF_BSE_FOUND"
+# ============================================================
+# FIND RESOLVED IDENTIFIER
+# ============================================================
+
+def diagnose_rows(
+    values
+):
+
+    diagnosis_updates = []
+
+    resolved_count = 0
+    unresolved_count = 0
+
+    candidate_type_counts = {}
+
+    # --------------------------------------------------------
+    # Candidate result columns:
+    #
+    # J, M, P, S, V, Y, AB
+    #
+    # 1-based:
+    # 10, 13, 16, 19, 22, 25, 28
+    # --------------------------------------------------------
+
+    result_columns = [
+        9,   # Candidate 1 Result
+        12,  # Candidate 2 Result
+        15,  # Candidate 3 Result
+        18,  # Candidate 4 Result
+        21,  # Candidate 5 Result
+        24,  # Candidate 6 Result
+        27   # Candidate 7 Result
+    ]
+
+    # Type columns
+    type_columns = [
+        8,
+        11,
+        14,
+        17,
+        20,
+        23,
+        26
+    ]
+
+    # Identifier columns
+    identifier_columns = [
+        7,
+        10,
+        13,
+        16,
+        19,
+        22,
+        25
+    ]
+
+    for sheet_row_number, row in enumerate(
+        values[1:],
+        start=2
+    ):
+
+        if len(row) < 31:
+            continue
+
+        resolved_identifier = ""
+        resolved_type = ""
+
+        # ----------------------------------------------------
+        # Find first working candidate
+        # ----------------------------------------------------
+
+        for (
+            result_col,
+            type_col,
+            identifier_col
+        ) in zip(
+            result_columns,
+            type_columns,
+            identifier_columns
+        ):
+
+            result = numeric_value(
+                row[result_col]
+            )
+
+            if result > 0:
+
+                resolved_identifier = (
+                    clean(
+                        row[identifier_col]
+                    )
+                )
+
+                resolved_type = (
+                    clean(
+                        row[type_col]
+                    )
+                )
+
+                break
+
+        if resolved_identifier:
+
+            diagnosis = (
+                "GF_IDENTIFIER_FOUND"
+            )
+
+            resolved_count += 1
+
+            candidate_type_counts[
+                resolved_type
+            ] = (
+                candidate_type_counts.get(
+                    resolved_type,
+                    0
+                ) + 1
+            )
 
         else:
-            status = "GF_NEITHER_FOUND"
 
-        results.append({
-            "row": row,
-            "nse_found": nse_found,
-            "bse_found": bse_found,
-            "status": status,
-        })
+            diagnosis = (
+                "GF_IDENTIFIER_NOT_FOUND"
+            )
 
-    return results
+            unresolved_count += 1
 
-
-# ============================================================
-# WRITE FINAL DIAGNOSIS
-# ============================================================
-
-def write_final_diagnosis(
-    worksheet,
-    results,
-):
-    """
-    Write NSE Found / BSE Found / Status columns.
-
-    Columns:
-        K = NSE Found
-        L = BSE Found
-        M = GF Identifier Status
-    """
-
-    if not results:
-        return
-
-    updates = []
-
-    for index, result in enumerate(results, start=2):
-
-        updates.append([
-            result["nse_found"],
-            result["bse_found"],
-            result["status"],
+        diagnosis_updates.append([
+            sheet_row_number,
+            resolved_identifier,
+            resolved_type,
+            diagnosis
         ])
 
-    worksheet.update(
-        range_name=f"K2:M{len(results) + 1}",
-        values=updates,
-        value_input_option="USER_ENTERED",
-    )
-
-    print(
-        f"Diagnosis written in one batch: "
-        f"{len(results)} rows"
+    return (
+        diagnosis_updates,
+        resolved_count,
+        unresolved_count,
+        candidate_type_counts
     )
 
 
 # ============================================================
-# SUMMARY
+# WRITE DIAGNOSIS
 # ============================================================
 
-def print_summary(results):
+def write_diagnosis(
+    ws,
+    diagnosis_updates
+):
 
-    unresolved = len(results)
+    if not diagnosis_updates:
+        return
 
-    nse_found = sum(
-        1 for r in results
-        if r["nse_found"]
+    output_values = []
+
+    for (
+        row_number,
+        identifier,
+        identifier_type,
+        diagnosis
+    ) in diagnosis_updates:
+
+        output_values.append([
+            identifier,
+            identifier_type,
+            diagnosis
+        ])
+
+    start_row = 2
+
+    end_row = (
+        start_row
+        + len(output_values)
+        - 1
     )
 
-    bse_found = sum(
-        1 for r in results
-        if r["bse_found"]
+    ws.update(
+        range_name=f"AC{start_row}:AE{end_row}",
+        values=output_values
     )
 
-    both_found = sum(
-        1 for r in results
-        if r["nse_found"] and r["bse_found"]
-    )
-
-    neither_found = sum(
-        1 for r in results
-        if not r["nse_found"]
-        and not r["bse_found"]
-    )
-
-    print()
-    print("================================")
-    print("GOOGLE FINANCE IDENTIFIER DIAGNOSTIC")
-    print("================================")
-    print(f"Unresolved Equities : {unresolved}")
-    print(f"GF NSE Found        : {nse_found}")
-    print(f"GF BSE Found        : {bse_found}")
-    print(f"GF Both NSE/BSE     : {both_found}")
-    print(f"GF Neither Found    : {neither_found}")
-    print("================================")
     print(
-        f"Diagnostic Sheet: {OUTPUT_WORKSHEET}"
+        "Identifier diagnosis written "
+        f"in one batch: {len(output_values)} rows"
     )
-    print("================================")
 
 
 # ============================================================
@@ -705,90 +773,224 @@ def main():
     spreadsheet = connect_to_google_sheet()
 
     # --------------------------------------------------------
-    # Load Stock_Master
+    # LOAD STOCK MASTER
     # --------------------------------------------------------
 
-    (
-        source_worksheet,
-        headers,
-        stock_master_rows,
-    ) = load_stock_master(spreadsheet)
+    stock_master_ws = spreadsheet.worksheet(
+        SOURCE_SHEET
+    )
 
-    # --------------------------------------------------------
-    # Find unresolved equity rows
-    # --------------------------------------------------------
+    stock_master = (
+        stock_master_ws.get_all_records()
+    )
 
-    unresolved = get_unresolved_equities(
-        stock_master_rows
+    print(
+        f"Stock Master Rows: "
+        f"{len(stock_master)}"
     )
 
     # --------------------------------------------------------
-    # Prepare diagnostic worksheet
+    # IDENTIFY UNKNOWN-SECTOR EQUITIES
     # --------------------------------------------------------
 
-    diagnostic_worksheet = (
-        get_or_create_output_worksheet(
-            spreadsheet
+    unresolved = (
+        load_unresolved_equities(
+            stock_master
         )
     )
 
-    clear_output_worksheet(
-        diagnostic_worksheet
+    print(
+        f"Unknown-Sector Equity Rows: "
+        f"{len(unresolved)}"
+    )
+
+    if len(unresolved) != 70:
+
+        print(
+            "WARNING: Expected 70 "
+            "unknown-sector equities "
+            f"but found {len(unresolved)}"
+        )
+
+    if not unresolved:
+
+        print(
+            "No unresolved equities found."
+        )
+
+        return
+
+    # --------------------------------------------------------
+    # PREPARE DIAGNOSTIC SHEET
+    # --------------------------------------------------------
+
+    gf_ws = prepare_diagnostic_sheet(
+        spreadsheet
+    )
+
+    write_headers(
+        gf_ws
     )
 
     # --------------------------------------------------------
-    # Build diagnostic rows
+    # BUILD DIAGNOSTIC ROWS
     # --------------------------------------------------------
 
-    diagnostic_rows = build_diagnostic_rows(
-        unresolved
+    today = datetime.now().strftime(
+        "%Y-%m-%d"
+    )
+
+    diagnostic_rows = []
+
+    for row in unresolved:
+
+        diagnostic_rows.append(
+            build_diagnostic_row(
+                row,
+                today
+            )
+        )
+
+    # --------------------------------------------------------
+    # WRITE FORMULAS
+    # --------------------------------------------------------
+
+    if diagnostic_rows:
+
+        gf_ws.update(
+            range_name=(
+                f"A2:AE"
+                f"{len(diagnostic_rows) + 1}"
+            ),
+            values=diagnostic_rows
+        )
+
+    print(
+        "Google Finance identifier "
+        "formulas written: "
+        f"{len(diagnostic_rows)}"
     )
 
     # --------------------------------------------------------
-    # Write Google Finance formulas
-    # --------------------------------------------------------
-
-    write_diagnostic_formulas(
-        diagnostic_worksheet,
-        diagnostic_rows,
-    )
-
-    # --------------------------------------------------------
-    # Wait for Google Finance
+    # WAIT FOR GOOGLE FINANCE
     # --------------------------------------------------------
 
     print(
-        "Waiting for Google Finance formulas "
-        "to calculate..."
+        "Waiting for Google Finance "
+        f"formulas to calculate "
+        f"({WAIT_SECONDS} seconds)..."
     )
 
     time.sleep(
-        FORMULA_WAIT_SECONDS
+        WAIT_SECONDS
     )
 
     # --------------------------------------------------------
-    # Read calculated results
+    # READ RESULTS
     # --------------------------------------------------------
 
-    results = read_and_diagnose_results(
-        diagnostic_worksheet
+    values = (
+        gf_ws.get_all_values()
+    )
+
+    print(
+        "Diagnostic rows read: "
+        f"{len(values) - 1}"
     )
 
     # --------------------------------------------------------
-    # Write diagnosis
+    # DIAGNOSE
     # --------------------------------------------------------
 
-    write_final_diagnosis(
-        diagnostic_worksheet,
-        results,
+    (
+        diagnosis_updates,
+        resolved_count,
+        unresolved_count,
+        candidate_type_counts
+    ) = diagnose_rows(
+        values
     )
 
     # --------------------------------------------------------
-    # Print summary
+    # WRITE RESULTS
     # --------------------------------------------------------
 
-    print_summary(results)
+    write_diagnosis(
+        gf_ws,
+        diagnosis_updates
+    )
 
+    # --------------------------------------------------------
+    # SUMMARY
+    # --------------------------------------------------------
+
+    print("")
+    print(
+        "=========================================="
+    )
+    print(
+        "GOOGLE FINANCE IDENTIFIER DIAGNOSTIC"
+    )
+    print(
+        "=========================================="
+    )
+
+    print(
+        f"Unknown-Sector Equities : "
+        f"{len(unresolved)}"
+    )
+
+    print(
+        f"GF Identifier Found     : "
+        f"{resolved_count}"
+    )
+
+    print(
+        f"GF Identifier Not Found : "
+        f"{unresolved_count}"
+    )
+
+    print(
+        "------------------------------------------"
+    )
+
+    if candidate_type_counts:
+
+        print(
+            "Successful Identifier Types:"
+        )
+
+        for (
+            identifier_type,
+            count
+        ) in sorted(
+            candidate_type_counts.items(),
+            key=lambda x: (-x[1], x[0])
+        ):
+
+            print(
+                f"  {identifier_type:<28} "
+                f": {count}"
+            )
+
+    print(
+        "=========================================="
+    )
+
+    print(
+        f"Diagnostic Sheet: "
+        f"{DIAGNOSTIC_SHEET}"
+    )
+
+    print(
+        "==========================================" 
+    )
+
+
+# ============================================================
+# ENTRY POINT
+# ============================================================
 
 if __name__ == "__main__":
+
     main()
