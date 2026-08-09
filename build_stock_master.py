@@ -103,7 +103,9 @@ for ticker in portfolio_tickers:
     if ticker not in existing_tickers:
 
         universe.append({
-            "Ticker": ticker
+            "Ticker": ticker,
+            "Sector": "UNKNOWN",
+            "Asset Type": "EQUITY"
         })
 
 print(
@@ -140,6 +142,10 @@ nse_market_cap_fallback_count = 0
 for row in universe:
     
     ticker = row["Ticker"]
+
+    asset_type = str(
+        row.get("Asset Type", "EQUITY")
+    ).strip().upper()
     
     existing = existing_master.get(ticker)
 
@@ -176,14 +182,25 @@ for row in universe:
             market_cap = 0
 
         # Use cache ONLY when everything is valid
-        if (
+        cache_valid = (
             company_name != ""
             and sector != "UNKNOWN"
-            #and industry != "UNKNOWN"
-            and market_cap > 0
-            and market_cap_category != "UNKNOWN"
-        ):
-
+            and (
+                (
+                    asset_type == "EQUITY"
+                    and market_cap > 0
+                    and market_cap_category != "UNKNOWN"
+                )
+                or
+                (
+                    asset_type in ("ETF", "REIT", "INVIT")
+                    and market_cap_category == asset_type
+                )
+            )
+        )
+        
+        if cache_valid:    
+            
             stock_master_rows.append([
                 ticker,
                 company_name,
@@ -201,7 +218,40 @@ for row in universe:
 
     if ticker == "CPSEETF.NS":
         print("FOUND CPSEETF IN UNIVERSE")
-        
+
+    # --------------------------------
+    # NON-EQUITY ASSET HANDLING
+    # --------------------------------
+
+    if asset_type in ("ETF", "REIT", "INVIT"):
+
+        company_name = (
+            str(row.get("Company Name", "")).strip()
+            or ticker.replace(".NS", "")
+        )
+
+        sector = asset_type
+        industry = asset_type
+        market_cap = 0
+        market_cap_category = asset_type
+        index_name = "OTHER"
+
+        stock_master_rows.append([
+            ticker,
+            company_name,
+            sector,
+            industry,
+            market_cap,
+            market_cap_category,
+            index_name,
+            existing.get("First Seen", today)
+                if existing else today,
+            today,
+            "NSE_MASTER"
+        ])
+
+        continue
+
     try:
 
         ticker_obj = yf.Ticker(ticker)
@@ -345,7 +395,7 @@ for row in universe:
         
         market_cap = market_cap or 0
 
-        index_name = "NIFTY500"
+        index_name = "OTHER"
 
         if market_cap:
             if market_cap >= 200000000000:
@@ -388,8 +438,6 @@ for row in universe:
             "",              # Last Updated
             "FAILED"         # Data Source
         ])
-
-
 
 stock_master_ws = sheet.worksheet(
     "Stock_Master"
