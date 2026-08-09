@@ -188,6 +188,7 @@ for row in universe:
             and (
                 (
                     asset_type == "EQUITY"
+                    and industry != "UNKNOWN"
                     and market_cap > 0
                     and market_cap_category != "UNKNOWN"
                 )
