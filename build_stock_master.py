@@ -9,8 +9,11 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 #from data_loader import load_universe
 
-from engine.nse_master import load_all_nse_universe
-
+from engine.nse_master import (
+    load_all_nse_universe,
+    create_nse_session,
+    get_nse_quote_metadata
+)
 def load_existing_stock_master(sheet):
 
     ws = sheet.worksheet("Stock_Master")
@@ -136,6 +139,19 @@ stock_master_rows = [
 ]
 
 today = datetime.now().strftime("%Y-%m-%d")
+
+# --------------------------------
+# NSE FALLBACK SESSION
+# --------------------------------
+
+nse_session = create_nse_session()
+
+print("NSE fallback session created")
+
+nse_fallback_count = 0
+nse_sector_fallback_count = 0
+nse_industry_fallback_count = 0
+nse_market_cap_fallback_count = 0
 
 for row in universe:
     
@@ -279,74 +295,297 @@ for row in universe:
         
         sector = (
             info.get("sector")
-            or "UNKNOWN"
+            or ""
         )
-
+        
         industry = (
             info.get("industry")
-            or "UNKNOWN"
+            or ""
         )
+        
+        basic_industry = ""
+        
+        # --------------------------------
+        # NSE FALLBACK FOR SECTOR / INDUSTRY
+        # --------------------------------
+        
+        nse_metadata = {}
+        
+        if (
+            not sector
+            or not industry
+        ):
+        
+            nse_metadata = get_nse_quote_metadata(
+                nse_session,
+                ticker
+            )
+        
+            if nse_metadata:
+        
+                nse_fallback_count += 1
+        
+                if not sector:
+        
+                    sector = (
+                        nse_metadata.get("Sector")
+                        or ""
+                    )
+        
+                    if sector:
+        
+                        nse_sector_fallback_count += 1
+        
+                if not industry:
+        
+                    industry = (
+                        nse_metadata.get("Industry")
+                        or ""
+                    )
+        
+                    if industry:
+        
+                        nse_industry_fallback_count += 1
+        
+                basic_industry = (
+                    nse_metadata.get("Basic Industry")
+                    or ""
+                )
+        
+        sector = sector or "UNKNOWN"
+        
+        industry = industry or "UNKNOWN"
         
         # -------------------------
         # Market Cap
         # -------------------------
         
-        market_cap = info.get("marketCap")
-
-        if isinstance(market_cap, str):
+        market_cap = info.get(
+            "marketCap"
+        )
         
-            market_cap = market_cap.replace(",", "")
+        if isinstance(
+            market_cap,
+            str
+        ):
+        
+            market_cap = (
+                market_cap
+                .replace(",", "")
+                .replace("₹", "")
+                .strip()
+            )
         
         try:
         
-            market_cap = float(market_cap)
+            market_cap = float(
+                market_cap
+            )
         
         except:
         
             market_cap = 0
         
-        # Try fast_info
+        
+        # --------------------------------
+        # FAST INFO FALLBACK
+        # --------------------------------
         
         if not market_cap:
         
             try:
         
-                market_cap = ticker_obj.fast_info.get("market_cap")
+                market_cap = (
+                    ticker_obj
+                    .fast_info
+                    .get("market_cap")
+                )
+        
+                market_cap = float(
+                    market_cap or 0
+                )
         
             except:
         
-                pass
+                market_cap = 0
+        
         
         # --------------------------------
-        # MARKET CAP FALLBACKS
+        # SHARES OUTSTANDING FALLBACK
         # --------------------------------
         
-        # Last attempt:
-        # Price × Shares Outstanding
-
         if not market_cap:
-
+        
             try:
-
-                shares_outstanding = info.get(
-                    "sharesOutstanding"
-                )
-
-                price = (
-                    ticker_obj.history(
-                        period="1d"
-                    )["Close"].iloc[-1]
-                )
-
-                if shares_outstanding and price:
-
-                    market_cap = (
-                        shares_outstanding * price
+        
+                shares_outstanding = (
+                    info.get(
+                        "sharesOutstanding"
                     )
-
-            except Exception:
-
-                pass
+                    or
+                    info.get(
+                        "impliedSharesOutstanding"
+                    )
+                )
+        
+                if not shares_outstanding:
+        
+                    try:
+        
+                        shares_history = (
+                            ticker_obj
+                            .get_shares_full()
+                        )
+        
+                        if (
+                            shares_history
+                            is not None
+                        ):
+        
+                            shares_history = (
+                                shares_history
+                                .dropna()
+                            )
+        
+                            if not shares_history.empty:
+        
+                                shares_outstanding = (
+                                    float(
+                                        shares_history
+                                        .iloc[-1]
+                                    )
+                                )
+        
+                    except Exception as e:
+        
+                        print(
+                            f"SHARES HISTORY FAILED -> "
+                            f"{ticker} -> {e}"
+                        )
+        
+                if shares_outstanding:
+        
+                    price = None
+        
+                    try:
+        
+                        price = (
+                            ticker_obj
+                            .fast_info
+                            .get("last_price")
+                        )
+        
+                    except:
+        
+                        pass
+        
+                    if not price:
+        
+                        try:
+        
+                            history = (
+                                ticker_obj
+                                .history(
+                                    period="5d"
+                                )
+                            )
+        
+                            if not history.empty:
+        
+                                price = float(
+                                    history[
+                                        "Close"
+                                    ]
+                                    .dropna()
+                                    .iloc[-1]
+                                )
+        
+                        except:
+        
+                            pass
+        
+                    if (
+                        shares_outstanding
+                        and price
+                        and price > 0
+                    ):
+        
+                        market_cap = (
+                            float(
+                                shares_outstanding
+                            )
+                            *
+                            float(price)
+                        )
+        
+                        if market_cap > 0:
+        
+                            print(
+                                f"SHARES MARKET CAP FALLBACK -> "
+                                f"{ticker} -> "
+                                f"{market_cap:,.0f}"
+                            )
+        
+            except Exception as e:
+        
+                print(
+                    f"SHARES MARKET CAP FAILED -> "
+                    f"{ticker} -> {e}"
+                )
+        
+        
+        # --------------------------------
+        # NSE FALLBACK
+        # --------------------------------
+        
+        if not market_cap:
+        
+            if not nse_metadata:
+        
+                nse_metadata = (
+                    get_nse_quote_metadata(
+                        nse_session,
+                        ticker
+                    )
+                )
+        
+                if nse_metadata:
+        
+                    nse_fallback_count += 1
+        
+            if nse_metadata:
+        
+                nse_market_cap = (
+                    nse_metadata.get(
+                        "Market Cap",
+                        0
+                    )
+                )
+        
+                try:
+        
+                    nse_market_cap = float(
+                        nse_market_cap or 0
+                    )
+        
+                except:
+        
+                    nse_market_cap = 0
+        
+                if nse_market_cap > 0:
+        
+                    market_cap = (
+                        nse_market_cap
+                    )
+        
+                    nse_market_cap_fallback_count += 1
+        
+                    print(
+                        f"NSE MARKET CAP FALLBACK -> "
+                        f"{ticker} -> "
+                        f"{market_cap:,.0f}"
+                    )
+        
         
         market_cap = market_cap or 0
 
@@ -422,6 +661,101 @@ yf_count = sum(
     for row in stock_master_rows[1:]
     if row[-1] == "YFINANCE"
 )
+
+# --------------------------------
+# VALIDATION REPORT
+# --------------------------------
+
+data_rows = stock_master_rows[1:]
+
+unknown_sector_count = sum(
+    1
+    for row in data_rows
+    if str(row[2]).strip().upper()
+    in ("", "UNKNOWN")
+)
+
+unknown_industry_count = sum(
+    1
+    for row in data_rows
+    if str(row[3]).strip().upper()
+    in ("", "UNKNOWN")
+)
+
+zero_market_cap_count = sum(
+    1
+    for row in data_rows
+    if not row[4]
+    or float(row[4] or 0) <= 0
+)
+
+unresolved_count = sum(
+    1
+    for row in data_rows
+    if (
+        str(row[2]).strip().upper()
+        in ("", "UNKNOWN")
+        or
+        str(row[3]).strip().upper()
+        in ("", "UNKNOWN")
+        or
+        not row[4]
+        or
+        float(row[4] or 0) <= 0
+    )
+)
+
+print("")
+print("================================")
+print("STOCK MASTER VALIDATION")
+print("================================")
+
+print(
+    "Total Rows:",
+    len(data_rows)
+)
+
+print(
+    "Unknown Sector:",
+    unknown_sector_count
+)
+
+print(
+    "Unknown Industry:",
+    unknown_industry_count
+)
+
+print(
+    "Zero Market Cap:",
+    zero_market_cap_count
+)
+
+print(
+    "Unresolved Rows:",
+    unresolved_count
+)
+
+print(
+    "NSE Fallback Used:",
+    nse_fallback_count
+)
+
+print(
+    "NSE Sector Fallback:",
+    nse_sector_fallback_count
+)
+
+print(
+    "NSE Industry Fallback:",
+    nse_industry_fallback_count
+)
+
+print(
+    "NSE Market Cap Fallback:",
+    nse_market_cap_fallback_count
+)
+
+print("================================")
 
 print("Cache Used :", cache_count)
 print("Yahoo Used :", yf_count)
