@@ -221,6 +221,8 @@ def load_all_nse_universe():
             "Ticker": symbol + ".NS",
     
             "Sector": "",
+
+            "Industry": "UNKNOWN",
             
             "Asset Type": "EQUITY",
     
@@ -261,6 +263,8 @@ def load_all_nse_universe():
     
             "Sector": "ETF",
 
+            "Industry": "ETF",
+            
             "Asset Type": "ETF"
         })
 
@@ -286,6 +290,8 @@ def load_all_nse_universe():
             "Ticker": symbol + ".NS",
     
             "Sector": "REIT",
+
+            "Industry": "REIT",
 
             "Asset Type": "REIT"
         })
@@ -313,6 +319,8 @@ def load_all_nse_universe():
     
             "Sector": "INVIT",
 
+            "Industry": "INVIT",
+
             "Asset Type": "INVIT"
         })
     
@@ -327,6 +335,37 @@ def load_all_nse_universe():
     print(
         "Universe Created:",
         len(universe)
+    )
+    
+    asset_type_counts = {}
+    
+    for item in universe:
+    
+        asset_type = item.get(
+            "Asset Type",
+            "UNKNOWN"
+        )
+    
+        asset_type_counts[asset_type] = (
+            asset_type_counts.get(asset_type, 0) + 1
+        )
+    
+    print(
+        "Asset Type Counts:",
+        asset_type_counts
+    )
+    
+    missing_company_names = sum(
+        1
+        for item in universe
+        if not str(
+            item.get("Company Name", "")
+        ).strip()
+    )
+    
+    print(
+        "Missing Company Names:",
+        missing_company_names
     )
     
     return universe
