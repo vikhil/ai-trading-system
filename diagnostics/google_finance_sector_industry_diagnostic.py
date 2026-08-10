@@ -81,23 +81,46 @@ def connect_to_google_sheet():
 
 def find_column(headers, candidates, required=True):
     """
-    Find a column using case-insensitive matching.
+    Find a column using case-insensitive and whitespace-insensitive
+    matching.
+
+    Example:
+        'Company Name'
+        'Company_Name'
+        'company name'
+
+    are treated as equivalent.
     """
 
+    def normalize_header(value):
+        if value is None:
+            return ""
+
+        return (
+            str(value)
+            .strip()
+            .lower()
+            .replace("_", " ")
+            .replace("-", " ")
+        )
+
     normalized = {
-        str(header).strip().lower(): header
+        normalize_header(header): header
         for header in headers
     }
 
     for candidate in candidates:
-        key = candidate.strip().lower()
+
+        key = normalize_header(candidate)
 
         if key in normalized:
             return normalized[key]
 
     if required:
         raise RuntimeError(
-            f"Required column not found. Tried: {candidates}"
+            f"Required column not found. "
+            f"Tried: {candidates}. "
+            f"Available columns: {list(headers)}"
         )
 
     return None
@@ -116,7 +139,18 @@ def normalize_text(value):
 
 def read_stock_master(spreadsheet):
     """
-    Read Stock_Master and return only UNKNOWN-sector equities.
+    Read Stock_Master and return only rows where Sector is
+    currently UNKNOWN / blank.
+
+    NSE symbol is derived from the Ticker column whenever
+    the ticker is in Yahoo Finance format, e.g.:
+
+        3BBLACKBIO.NS -> 3BBLACKBIO
+        RELIANCE.NS   -> RELIANCE
+        KLBRENG-B.NS  -> KLBRENG-B
+
+    This avoids requiring a dedicated NSE Symbol column
+    in Stock_Master.
     """
 
     worksheet = spreadsheet.worksheet(STOCK_MASTER_SHEET)
@@ -128,48 +162,95 @@ def read_stock_master(spreadsheet):
 
     headers = values[0]
 
+    print("\nStock_Master columns detected:")
+    for header in headers:
+        print(f"  - {header}")
+
+    # --------------------------------------------------------
+    # Required columns
+    # --------------------------------------------------------
+
+    ticker_col = find_column(
+        headers,
+        [
+            "Ticker",
+            "Yahoo Ticker",
+            "Yahoo_Ticker",
+            "Symbol",
+        ]
+    )
+
+    company_col = find_column(
+        headers,
+        [
+            "Company Name",
+            "Company",
+            "Name",
+            "Company_Name",
+        ]
+    )
+
+    sector_col = find_column(
+        headers,
+        [
+            "Sector",
+            "sector",
+        ]
+    )
+
+    industry_col = find_column(
+        headers,
+        [
+            "Industry",
+            "industry",
+        ],
+        required=False
+    )
+
     records = [
         dict(zip(headers, row))
         for row in values[1:]
     ]
 
-    ticker_col = find_column(
-        headers,
-        ["Ticker", "Yahoo Ticker", "Symbol"]
-    )
-
-    nse_col = find_column(
-        headers,
-        ["NSE Symbol", "NSE_Symbol", "NSE", "Ticker"]
-    )
-
-    company_col = find_column(
-        headers,
-        ["Company Name", "Company", "Name"]
-    )
-
-    sector_col = find_column(
-        headers,
-        ["Sector"]
-    )
-
-    industry_col = find_column(
-        headers,
-        ["Industry"]
-    )
-
     selected = []
 
     for record in records:
 
-        sector = normalize_text(record.get(sector_col, ""))
+        # ----------------------------------------------------
+        # Existing sector
+        # ----------------------------------------------------
 
-        ticker = normalize_text(record.get(ticker_col, ""))
-        nse_symbol = normalize_text(record.get(nse_col, ""))
-        company_name = normalize_text(record.get(company_col, ""))
-        industry = normalize_text(record.get(industry_col, ""))
+        sector = normalize_text(
+            record.get(sector_col, "")
+        )
 
-        # Only process currently unknown sector records.
+        # ----------------------------------------------------
+        # Existing industry
+        # ----------------------------------------------------
+
+        industry = ""
+
+        if industry_col:
+            industry = normalize_text(
+                record.get(industry_col, "")
+            )
+
+        # ----------------------------------------------------
+        # Ticker
+        # ----------------------------------------------------
+
+        ticker = normalize_text(
+            record.get(ticker_col, "")
+        )
+
+        company_name = normalize_text(
+            record.get(company_col, "")
+        )
+
+        # ----------------------------------------------------
+        # Only process UNKNOWN / blank sectors
+        # ----------------------------------------------------
+
         if sector.upper() not in {
             "",
             "UNKNOWN",
@@ -180,15 +261,30 @@ def read_stock_master(spreadsheet):
         }:
             continue
 
-        # Ignore rows that do not have an NSE symbol.
+        # ----------------------------------------------------
+        # Derive NSE symbol from Yahoo ticker
+        # ----------------------------------------------------
+
+        nse_symbol = ticker
+
+        if ticker.upper().endswith(".NS"):
+            nse_symbol = ticker[:-3]
+
+        elif ticker.upper().endswith(".NSE"):
+            nse_symbol = ticker[:-4]
+
+        # ----------------------------------------------------
+        # If ticker is still empty, skip the row
+        # ----------------------------------------------------
+
         if not nse_symbol:
             continue
 
-        # Keep only equity-like rows.
-        if ticker and ticker.upper().endswith(".NS"):
-            equity_type = "EQUITY"
-        else:
-            equity_type = "EQUITY"
+        # ----------------------------------------------------
+        # Keep equity-like rows
+        # ----------------------------------------------------
+
+        equity_type = "EQUITY"
 
         selected.append({
             "Ticker": ticker,
@@ -199,8 +295,13 @@ def read_stock_master(spreadsheet):
             "Equity Type": equity_type,
         })
 
-    print(f"Stock Master Rows: {len(records)}")
-    print(f"Unknown-Sector Equity Rows: {len(selected)}")
+    print(
+        f"\nStock Master Rows: {len(records)}"
+    )
+
+    print(
+        f"Unknown-Sector Equity Rows: {len(selected)}"
+    )
 
     return selected
 
