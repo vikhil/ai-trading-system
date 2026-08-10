@@ -1,5 +1,6 @@
 import os
 import time
+import json
 from datetime import datetime
 
 import gspread
@@ -11,16 +12,6 @@ from oauth2client.service_account import ServiceAccountCredentials
 # ============================================================
 # CONFIGURATION
 # ============================================================
-
-SPREADSHEET_ID = os.getenv(
-    "GOOGLE_SHEET_ID",
-    ""
-)
-
-CREDENTIALS_FILE = os.getenv(
-    "GOOGLE_CREDENTIALS_FILE",
-    "credentials.json"
-)
 
 STOCK_MASTER_SHEET = "Stock_Master"
 DIAGNOSTIC_SHEET = "GF_Sector_Industry_Diagnostic"
@@ -47,20 +38,18 @@ NOT_RESOLVED = "NOT_RESOLVED"
 
 def connect_to_google_sheet():
     """
-    Connect to Google Sheets using the service-account credentials.
+    Connect to the existing Google Sheet using the project's
+    existing GOOGLE_CREDENTIALS environment-variable authentication.
     """
 
-    if not SPREADSHEET_ID:
-        raise RuntimeError(
-            "GOOGLE_SHEET_ID environment variable is not configured."
-        )
-
-    if not os.path.exists(CREDENTIALS_FILE):
-        raise FileNotFoundError(
-            f"Google credentials file not found: {CREDENTIALS_FILE}"
-        )
-
     print("Connecting to Google Sheet...")
+
+    google_credentials = os.getenv("GOOGLE_CREDENTIALS")
+
+    if not google_credentials:
+        raise RuntimeError(
+            "GOOGLE_CREDENTIALS environment variable is not configured."
+        )
 
     scope = [
         "https://spreadsheets.google.com/feeds",
@@ -68,14 +57,18 @@ def connect_to_google_sheet():
         "https://www.googleapis.com/auth/spreadsheets",
     ]
 
-    credentials = ServiceAccountCredentials.from_json_keyfile_name(
-        CREDENTIALS_FILE,
+    credentials_dict = json.loads(google_credentials)
+
+    credentials = ServiceAccountCredentials.from_json_keyfile_dict(
+        credentials_dict,
         scope
     )
 
     client = gspread.authorize(credentials)
 
-    spreadsheet = client.open_by_key(SPREADSHEET_ID)
+    spreadsheet = client.open_by_key(
+        "1qGsaLVDzxxPSuYnY_Qd2vcEiYXE4tWoTEuxLfH38hPI"
+    )
 
     print("Connected")
 
