@@ -24,9 +24,12 @@ jobs:
     - name: Install Libraries
       run: pip install -r requirements.txt
 
-    - name: Run Script
+    - name: Run Google Finance sector industry diagnostic
       env:
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         TG_TOKEN: ${{ secrets.TG_TOKEN }}
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
       run: python diagnostics/google_finance_sector_industry_diagnostic.py
+
+    - name: Resolve NSE sector and industry
+      run: python diagnostics/resolve_sector_industry.py
