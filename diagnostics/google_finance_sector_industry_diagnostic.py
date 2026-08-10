@@ -140,7 +140,7 @@ def read_stock_master(spreadsheet):
 
     nse_col = find_column(
         headers,
-        ["NSE Symbol", "NSE_Symbol", "NSE"]
+        ["NSE Symbol", "NSE_Symbol", "NSE", "Ticker"]
     )
 
     company_col = find_column(
