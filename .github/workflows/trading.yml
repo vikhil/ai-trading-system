@@ -2,7 +2,7 @@ name: Trading Bot
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: "*/30 * * * *"
 
   workflow_dispatch:
 
@@ -11,52 +11,112 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+
     steps:
 
-    - name: Checkout
-      uses: actions/checkout@v4
+      # ========================================================
+      # CHECKOUT
+      # ========================================================
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Install Libraries
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
+      # ========================================================
+      # PYTHON
+      # ========================================================
 
-    # ========================================================
-    # EXISTING GOOGLE FINANCE / MARKET DIAGNOSTIC
-    # ========================================================
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
 
-    - name: Run Google Finance Sector Industry Diagnostic
-      env:
-        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-        TG_TOKEN: ${{ secrets.TG_TOKEN }}
-        TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-      run: |
-        python diagnostics/google_finance_sector_industry_diagnostic.py
+      # ========================================================
+      # INSTALL LIBRARIES
+      # ========================================================
 
-    # ========================================================
-    # UPDATE / CHECK NSE CLASSIFICATION CACHE
-    # ========================================================
+      - name: Install Libraries
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-    - name: Update NSE Industry Classification
-      env:
-        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-        NSE_CLASSIFICATION_FILE: data/nse_industry_classification.csv
-        NSE_COMPANY_CLASSIFICATION_FILE: data/nse_company_classification.csv
-      run: |
-        python diagnostics/update_nse_industry_classification.py
+      # ========================================================
+      # GOOGLE FINANCE / MARKET DIAGNOSTIC
+      # ========================================================
 
-    # ========================================================
-    # RESOLVE STOCK MASTER CLASSIFICATIONS
-    # ========================================================
+      - name: Run Google Finance Sector Industry Diagnostic
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: |
+          python diagnostics/google_finance_sector_industry_diagnostic.py
 
-    - name: Resolve NSE Sector and Industry
-      env:
-        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-        NSE_CLASSIFICATION_FILE: data/nse_industry_classification.csv
-      run: |
-        python diagnostics/resolve_sector_industry.py
+      # ========================================================
+      # UPDATE NSE COMPANY CLASSIFICATION
+      # ========================================================
+      #
+      # IMPORTANT:
+      # This runs BEFORE resolve_sector_industry.py.
+      #
+      # The update script retrieves company classification
+      # information from NSE and maintains its checkpoint.
+      #
+      # It is NOT dependent on manually maintaining the
+      # NSE classification CSV.
+      #
+      # ========================================================
+
+      - name: Update NSE Industry Classification
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+          NSE_CLASSIFICATION_MAX_RETRIES: "5"
+          NSE_CLASSIFICATION_TIMEOUT: "30"
+
+          NSE_CLASSIFICATION_MIN_DELAY: "5"
+          NSE_CLASSIFICATION_MAX_DELAY: "10"
+
+          NSE_CLASSIFICATION_CHECKPOINT_EVERY: "5"
+
+        run: |
+          python diagnostics/update_nse_industry_classification.py
+
+      # ========================================================
+      # SAVE NSE CHECKPOINT
+      # ========================================================
+
+      - name: Save NSE classification checkpoint
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if [ -f data/nse_classification_checkpoint.json ]; then
+            git add data/nse_classification_checkpoint.json
+
+            git diff --cached --quiet || \
+              git commit -m "Update NSE classification checkpoint"
+
+            git push
+          else
+            echo "No NSE classification checkpoint file found."
+          fi
+
+      # ========================================================
+      # RESOLVE STOCK MASTER CLASSIFICATIONS
+      # ========================================================
+
+      - name: Resolve NSE Sector and Industry
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+
+          NSE_CLASSIFICATION_FILE: data/nse_industry_classification.csv
+
+          NSE_COMPANY_CLASSIFICATION_FILE: data/nse_company_classification.csv
+
+        run: |
+          python diagnostics/resolve_sector_industry.py
