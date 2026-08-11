@@ -22,16 +22,41 @@ jobs:
         python-version: '3.10'
 
     - name: Install Libraries
-      run: pip install -r requirements.txt
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
 
-    - name: Run Google Finance sector industry diagnostic
+    # ========================================================
+    # EXISTING GOOGLE FINANCE / MARKET DIAGNOSTIC
+    # ========================================================
+
+    - name: Run Google Finance Sector Industry Diagnostic
       env:
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         TG_TOKEN: ${{ secrets.TG_TOKEN }}
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-      run: python diagnostics/google_finance_sector_industry_diagnostic.py
-    
-    - name: Resolve NSE sector and industry
+      run: |
+        python diagnostics/google_finance_sector_industry_diagnostic.py
+
+    # ========================================================
+    # UPDATE / CHECK NSE CLASSIFICATION CACHE
+    # ========================================================
+
+    - name: Update NSE Industry Classification
       env:
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-      run: python diagnostics/resolve_sector_industry.py
+        NSE_CLASSIFICATION_FILE: data/nse_industry_classification.csv
+        NSE_COMPANY_CLASSIFICATION_FILE: data/nse_company_classification.csv
+      run: |
+        python diagnostics/update_nse_industry_classification.py
+
+    # ========================================================
+    # RESOLVE STOCK MASTER CLASSIFICATIONS
+    # ========================================================
+
+    - name: Resolve NSE Sector and Industry
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        NSE_CLASSIFICATION_FILE: data/nse_industry_classification.csv
+      run: |
+        python diagnostics/resolve_sector_industry.py
