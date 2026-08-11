@@ -31,11 +31,6 @@ jobs:
         TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
       run: python diagnostics/google_finance_sector_industry_diagnostic.py
     
-    - name: Update NSE classification master
-      env:
-        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-      run: python diagnostics/update_nse_industry_classification.py
-    
     - name: Resolve NSE sector and industry
       env:
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
