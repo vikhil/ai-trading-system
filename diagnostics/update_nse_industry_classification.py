@@ -1543,9 +1543,18 @@ def main():
             # Store result immediately.
             # ------------------------------------------------
 
-            checkpoint[symbol] = (
-                classification
-            )
+            if (
+                classification[
+                    "Classification Confidence"
+                ]
+                in {
+                    HIGH_CONFIDENCE,
+                    MEDIUM_CONFIDENCE,
+                    LOW_CONFIDENCE
+                }
+            ):
+            
+                checkpoint[symbol] = classification
 
             successful_since_checkpoint += 1
 
