@@ -1,9 +1,11 @@
 import os
 import csv
 import json
-import re
+import time
+import random
 from datetime import datetime
 
+import requests
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -14,37 +16,77 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 STOCK_MASTER_SHEET = "Stock_Master"
 
-CLASSIFICATION_DIAGNOSTIC_SHEET = (
+DIAGNOSTIC_SHEET = (
     "NSE_Sector_Industry_Diagnostic"
 )
 
-CLASSIFICATION_FILE = os.getenv(
-    "NSE_CLASSIFICATION_FILE",
-    "data/nse_industry_classification.csv"
+SPREADSHEET_ID = (
+    "1qGsaLVDzxxPSuYnY_Qd2vcEiYXE4tWoTEuxLfH38hPI"
 )
 
-# Optional company-classification mapping file.
-#
-# This is deliberately separate from the NSE taxonomy file.
-#
-# Expected columns:
-# NSE Symbol
-# Macro-Economic Sector
-# Sector
-# Industry
-# Basic Industry
-#
-# If this file does not exist, the script will NOT fail.
-# It will simply report that no company mappings are available.
-COMPANY_CLASSIFICATION_FILE = os.getenv(
-    "NSE_COMPANY_CLASSIFICATION_FILE",
-    "data/nse_company_classification.csv"
+NSE_BASE_URL = "https://www.nseindia.com"
+
+NSE_HOME_URL = (
+    "https://www.nseindia.com/"
 )
 
-HIGH_CONFIDENCE = "HIGH"
-MEDIUM_CONFIDENCE = "MEDIUM"
-LOW_CONFIDENCE = "LOW"
-NOT_RESOLVED = "NOT_RESOLVED"
+NSE_QUOTE_PAGE_URL = (
+    "https://www.nseindia.com/get-quotes/equity"
+)
+
+NSE_QUOTE_API_URL = (
+    "https://www.nseindia.com/api/quote-equity"
+)
+
+# ------------------------------------------------------------
+# Checkpoint file
+# ------------------------------------------------------------
+
+CHECKPOINT_FILE = os.getenv(
+    "NSE_CLASSIFICATION_CHECKPOINT",
+    "data/nse_classification_checkpoint.json"
+)
+
+# ------------------------------------------------------------
+# Request controls
+# ------------------------------------------------------------
+
+MAX_RETRIES_PER_SYMBOL = int(
+    os.getenv(
+        "NSE_CLASSIFICATION_MAX_RETRIES",
+        "5"
+    )
+)
+
+REQUEST_TIMEOUT = int(
+    os.getenv(
+        "NSE_CLASSIFICATION_TIMEOUT",
+        "30"
+    )
+)
+
+MIN_DELAY = float(
+    os.getenv(
+        "NSE_CLASSIFICATION_MIN_DELAY",
+        "2.0"
+    )
+)
+
+MAX_DELAY = float(
+    os.getenv(
+        "NSE_CLASSIFICATION_MAX_DELAY",
+        "5.0"
+    )
+)
+
+# Number of successful symbols after which
+# checkpoint is persisted.
+CHECKPOINT_EVERY = int(
+    os.getenv(
+        "NSE_CLASSIFICATION_CHECKPOINT_EVERY",
+        "5"
+    )
+)
 
 
 # ============================================================
@@ -60,15 +102,20 @@ def connect_to_google_sheet():
     )
 
     if not google_credentials:
+
         raise RuntimeError(
             "GOOGLE_CREDENTIALS environment variable "
             "is not configured."
         )
 
     scope = [
+
         "https://spreadsheets.google.com/feeds",
+
         "https://www.googleapis.com/auth/drive",
+
         "https://www.googleapis.com/auth/spreadsheets",
+
     ]
 
     credentials_dict = json.loads(
@@ -83,10 +130,12 @@ def connect_to_google_sheet():
         )
     )
 
-    client = gspread.authorize(credentials)
+    client = gspread.authorize(
+        credentials
+    )
 
     spreadsheet = client.open_by_key(
-        "1qGsaLVDzxxPSuYnY_Qd2vcEiYXE4tWoTEuxLfH38hPI"
+        SPREADSHEET_ID
     )
 
     print("Connected")
@@ -101,6 +150,7 @@ def connect_to_google_sheet():
 def normalize_text(value):
 
     if value is None:
+
         return ""
 
     return str(value).strip()
@@ -108,25 +158,24 @@ def normalize_text(value):
 
 def normalize_symbol(value):
 
-    value = normalize_text(value).upper()
+    value = normalize_text(
+        value
+    ).upper()
 
     if value.startswith("NSE:"):
+
         value = value[4:]
 
     if value.endswith(".NS"):
+
         value = value[:-3]
 
     return value.strip()
 
 
-def normalize_header(value):
-
-    return re.sub(
-        r"[^a-z0-9]+",
-        " ",
-        normalize_text(value).lower()
-    ).strip()
-
+# ============================================================
+# COLUMN HELPER
+# ============================================================
 
 def find_column(
     headers,
@@ -135,15 +184,25 @@ def find_column(
 ):
 
     normalized = {
-        normalize_header(header): header
+
+        str(header)
+        .strip()
+        .lower(): header
+
         for header in headers
+
     }
 
     for candidate in candidates:
 
-        key = normalize_header(candidate)
+        key = (
+            candidate
+            .strip()
+            .lower()
+        )
 
         if key in normalized:
+
             return normalized[key]
 
     if required:
@@ -157,10 +216,12 @@ def find_column(
 
 
 # ============================================================
-# STOCK MASTER
+# READ STOCK MASTER
 # ============================================================
 
-def read_unknown_stocks(spreadsheet):
+def read_unknown_stocks(
+    spreadsheet
+):
 
     worksheet = spreadsheet.worksheet(
         STOCK_MASTER_SHEET
@@ -175,6 +236,16 @@ def read_unknown_stocks(spreadsheet):
         )
 
     headers = values[0]
+
+    print(
+        "\nStock_Master columns detected:"
+    )
+
+    for header in headers:
+
+        print(
+            f"  - {header}"
+        )
 
     ticker_col = find_column(
         headers,
@@ -196,17 +267,29 @@ def read_unknown_stocks(spreadsheet):
 
     sector_col = find_column(
         headers,
-        ["Sector"]
+        [
+            "Sector"
+        ]
     )
 
     industry_col = find_column(
         headers,
-        ["Industry"]
+        [
+            "Industry"
+        ]
     )
 
     records = [
-        dict(zip(headers, row))
+
+        dict(
+            zip(
+                headers,
+                row
+            )
+        )
+
         for row in values[1:]
+
     ]
 
     selected = []
@@ -214,48 +297,86 @@ def read_unknown_stocks(spreadsheet):
     for record in records:
 
         ticker = normalize_text(
-            record.get(ticker_col, "")
+            record.get(
+                ticker_col,
+                ""
+            )
         )
 
         company_name = normalize_text(
-            record.get(company_col, "")
+            record.get(
+                company_col,
+                ""
+            )
         )
 
         sector = normalize_text(
-            record.get(sector_col, "")
+            record.get(
+                sector_col,
+                ""
+            )
         )
 
         industry = normalize_text(
-            record.get(industry_col, "")
+            record.get(
+                industry_col,
+                ""
+            )
         )
 
         if not ticker:
+
             continue
 
+        # Only process stocks whose sector
+        # is currently unknown.
         if sector.upper() not in {
+
             "",
             "UNKNOWN",
             "N/A",
             "NA",
             "NULL",
             "NONE"
+
         }:
+
+            continue
+
+        nse_symbol = normalize_symbol(
+            ticker
+        )
+
+        if not nse_symbol:
+
             continue
 
         selected.append({
-            "Ticker": ticker,
-            "NSE Symbol": normalize_symbol(ticker),
-            "Company Name": company_name,
-            "Existing Sector": sector,
-            "Existing Industry": industry,
+
+            "Ticker":
+                ticker,
+
+            "NSE Symbol":
+                nse_symbol,
+
+            "Company Name":
+                company_name,
+
+            "Existing Sector":
+                sector,
+
+            "Existing Industry":
+                industry,
+
         })
 
     print(
-        f"Stock Master Rows: {len(records)}"
+        f"\nStock Master Rows: "
+        f"{len(records)}"
     )
 
     print(
-        f"Unknown-Sector Equity Rows: "
+        "Unknown-Sector Equity Rows: "
         f"{len(selected)}"
     )
 
@@ -263,360 +384,723 @@ def read_unknown_stocks(spreadsheet):
 
 
 # ============================================================
-# LOAD CLASSIFICATION TAXONOMY
+# NSE SESSION
 # ============================================================
 
-def load_classification_taxonomy():
+def create_nse_session():
+
+    session = requests.Session()
+
+    # Browser-like headers.
+    #
+    # These are intentionally kept at the
+    # session level so all NSE requests share
+    # the same browser context.
+
+    session.headers.update({
+
+        "User-Agent":
+            (
+                "Mozilla/5.0 "
+                "(Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 "
+                "(KHTML, like Gecko) "
+                "Chrome/151.0.0.0 "
+                "Safari/537.36"
+            ),
+
+        "Accept":
+            "application/json,text/plain,*/*",
+
+        "Accept-Language":
+            "en-US,en;q=0.9,hi;q=0.8",
+
+        "Accept-Encoding":
+            "gzip, deflate, br",
+
+        "Connection":
+            "keep-alive",
+
+        "DNT":
+            "1",
+
+        "Sec-Fetch-Dest":
+            "empty",
+
+        "Sec-Fetch-Mode":
+            "cors",
+
+        "Sec-Fetch-Site":
+            "same-origin",
+
+    })
 
     print(
-        "\nLoading NSE classification taxonomy:"
+        "\nInitializing NSE session..."
     )
 
-    print(
-        f"  {CLASSIFICATION_FILE}"
-    )
+    try:
 
-    if not os.path.exists(
-        CLASSIFICATION_FILE
-    ):
+        response = session.get(
+            NSE_HOME_URL,
+            timeout=REQUEST_TIMEOUT
+        )
 
         print(
-            "WARNING: Classification taxonomy "
-            "file does not exist."
+            "NSE homepage status: "
+            f"{response.status_code}"
+        )
+
+        if response.status_code == 403:
+
+            print(
+                "WARNING: NSE homepage returned "
+                "403 during session initialization."
+            )
+
+            print(
+                "Quote requests may also be blocked "
+                "from this GitHub Actions runner."
+            )
+
+        elif response.status_code >= 400:
+
+            print(
+                "WARNING: NSE homepage returned "
+                f"HTTP {response.status_code}"
+            )
+
+    except requests.RequestException as error:
+
+        print(
+            "WARNING: NSE homepage request failed:"
+        )
+
+        print(
+            f"  {error}"
+        )
+
+    return session
+
+
+# ============================================================
+# CHECKPOINT
+# ============================================================
+
+def load_checkpoint():
+
+    if not os.path.exists(
+        CHECKPOINT_FILE
+    ):
+
+        return {}
+
+    try:
+
+        with open(
+            CHECKPOINT_FILE,
+            "r",
+            encoding="utf-8"
+        ) as file:
+
+            checkpoint = json.load(
+                file
+            )
+
+        if not isinstance(
+            checkpoint,
+            dict
+        ):
+
+            return {}
+
+        print(
+            "\nCheckpoint loaded:"
+        )
+
+        print(
+            f"  Records: "
+            f"{len(checkpoint)}"
+        )
+
+        return checkpoint
+
+    except (
+        OSError,
+        json.JSONDecodeError
+    ) as error:
+
+        print(
+            "WARNING: Could not load "
+            "checkpoint:"
+        )
+
+        print(
+            f"  {error}"
         )
 
         return {}
 
-    with open(
-        CLASSIFICATION_FILE,
-        "r",
-        encoding="utf-8-sig",
-        newline=""
-    ) as file:
 
-        reader = csv.DictReader(file)
+def save_checkpoint(
+    checkpoint
+):
 
-        if not reader.fieldnames:
-
-            raise RuntimeError(
-                "Classification CSV has no headers."
-            )
-
-        headers = reader.fieldnames
-
-        symbol_col = find_column(
-            headers,
-            [
-                "NSE Symbol",
-                "NSE_Symbol",
-                "Symbol",
-                "Ticker"
-            ],
-            required=False
-        )
-
-        macro_col = find_column(
-            headers,
-            [
-                "Macro-Economic Sector",
-                "Macro Economic Sector",
-                "Macro Sector",
-                "Macro_Economic_Sector"
-            ],
-            required=False
-        )
-
-        sector_col = find_column(
-            headers,
-            ["Sector"],
-            required=False
-        )
-
-        industry_col = find_column(
-            headers,
-            ["Industry"],
-            required=False
-        )
-
-        basic_col = find_column(
-            headers,
-            [
-                "Basic Industry",
-                "Basic_Industry",
-                "Basic Industry Name"
-            ],
-            required=False
-        )
-
-        taxonomy = []
-
-        for row in reader:
-
-            record = {
-                "NSE Symbol":
-                    normalize_symbol(
-                        row.get(symbol_col, "")
-                    )
-                    if symbol_col
-                    else "",
-
-                "Macro-Economic Sector":
-                    normalize_text(
-                        row.get(macro_col, "")
-                    )
-                    if macro_col
-                    else "",
-
-                "Sector":
-                    normalize_text(
-                        row.get(sector_col, "")
-                    )
-                    if sector_col
-                    else "",
-
-                "Industry":
-                    normalize_text(
-                        row.get(industry_col, "")
-                    )
-                    if industry_col
-                    else "",
-
-                "Basic Industry":
-                    normalize_text(
-                        row.get(basic_col, "")
-                    )
-                    if basic_col
-                    else "",
-            }
-
-            # Ignore completely empty rows.
-            if not any(
-                record.values()
-            ):
-                continue
-
-            taxonomy.append(record)
-
-    print(
-        f"Classification taxonomy records: "
-        f"{len(taxonomy)}"
+    directory = os.path.dirname(
+        CHECKPOINT_FILE
     )
 
-    return taxonomy
+    if directory:
 
-
-# ============================================================
-# LOAD COMPANY CLASSIFICATION MAPPING
-# ============================================================
-
-def load_company_classification():
-
-    print(
-        "\nLoading company classification mapping:"
-    )
-
-    print(
-        f"  {COMPANY_CLASSIFICATION_FILE}"
-    )
-
-    if not os.path.exists(
-        COMPANY_CLASSIFICATION_FILE
-    ):
-
-        print(
-            "Company classification mapping "
-            "file not found."
+        os.makedirs(
+            directory,
+            exist_ok=True
         )
 
-        print(
-            "No company-level classifications "
-            "will be applied in this run."
-        )
-
-        return {}
+    temporary_file = (
+        CHECKPOINT_FILE
+        + ".tmp"
+    )
 
     with open(
-        COMPANY_CLASSIFICATION_FILE,
-        "r",
-        encoding="utf-8-sig",
-        newline=""
+        temporary_file,
+        "w",
+        encoding="utf-8"
     ) as file:
 
-        reader = csv.DictReader(file)
-
-        if not reader.fieldnames:
-
-            raise RuntimeError(
-                "Company classification CSV "
-                "has no headers."
-            )
-
-        headers = reader.fieldnames
-
-        symbol_col = find_column(
-            headers,
-            [
-                "NSE Symbol",
-                "NSE_Symbol",
-                "Symbol",
-                "Ticker"
-            ]
+        json.dump(
+            checkpoint,
+            file,
+            indent=2,
+            ensure_ascii=False
         )
 
-        macro_col = find_column(
-            headers,
-            [
-                "Macro-Economic Sector",
-                "Macro Economic Sector",
-                "Macro Sector"
-            ],
-            required=False
-        )
-
-        sector_col = find_column(
-            headers,
-            ["Sector"],
-            required=False
-        )
-
-        industry_col = find_column(
-            headers,
-            ["Industry"],
-            required=False
-        )
-
-        basic_col = find_column(
-            headers,
-            [
-                "Basic Industry",
-                "Basic_Industry"
-            ],
-            required=False
-        )
-
-        mapping = {}
-
-        for row in reader:
-
-            symbol = normalize_symbol(
-                row.get(symbol_col, "")
-            )
-
-            if not symbol:
-                continue
-
-            mapping[symbol] = {
-                "Macro-Economic Sector":
-                    normalize_text(
-                        row.get(
-                            macro_col,
-                            ""
-                        )
-                    )
-                    if macro_col
-                    else "",
-
-                "Sector":
-                    normalize_text(
-                        row.get(
-                            sector_col,
-                            ""
-                        )
-                    )
-                    if sector_col
-                    else "",
-
-                "Industry":
-                    normalize_text(
-                        row.get(
-                            industry_col,
-                            ""
-                        )
-                    )
-                    if industry_col
-                    else "",
-
-                "Basic Industry":
-                    normalize_text(
-                        row.get(
-                            basic_col,
-                            ""
-                        )
-                    )
-                    if basic_col
-                    else "",
-            }
-
-    print(
-        f"Company classification records: "
-        f"{len(mapping)}"
+    os.replace(
+        temporary_file,
+        CHECKPOINT_FILE
     )
 
-    return mapping
+    print(
+        "Checkpoint saved."
+    )
 
 
 # ============================================================
-# RESOLUTION
+# NSE QUOTE
 # ============================================================
 
-def resolve_classification(
-    nse_symbol,
-    company_mapping
+def request_nse_quote(
+    session,
+    symbol
 ):
 
     symbol = normalize_symbol(
-        nse_symbol
-    )
-
-    result = company_mapping.get(
         symbol
     )
 
-    if not result:
+    url = NSE_QUOTE_API_URL
+
+    headers = {
+
+        "Referer":
+            (
+                f"{NSE_QUOTE_PAGE_URL}"
+                f"?symbol={symbol}"
+            ),
+
+        "Accept":
+            "application/json,text/plain,*/*",
+
+        "X-Requested-With":
+            "XMLHttpRequest",
+
+    }
+
+    for attempt in range(
+        1,
+        MAX_RETRIES_PER_SYMBOL + 1
+    ):
+
+        try:
+
+            print(
+                f"    NSE request "
+                f"{attempt}/"
+                f"{MAX_RETRIES_PER_SYMBOL}"
+            )
+
+            response = session.get(
+
+                url,
+
+                params={
+                    "symbol": symbol
+                },
+
+                headers=headers,
+
+                timeout=REQUEST_TIMEOUT
+
+            )
+
+            status = (
+                response.status_code
+            )
+
+            print(
+                f"    HTTP status: "
+                f"{status}"
+            )
+
+            # ------------------------------------------------
+            # SUCCESS
+            # ------------------------------------------------
+
+            if status == 200:
+
+                try:
+
+                    payload = (
+                        response.json()
+                    )
+
+                except ValueError:
+
+                    print(
+                        "    NSE returned "
+                        "non-JSON response."
+                    )
+
+                    payload = None
+
+                if isinstance(
+                    payload,
+                    dict
+                ):
+
+                    return {
+
+                        "success":
+                            True,
+
+                        "payload":
+                            payload,
+
+                        "error":
+                            "",
+
+                    }
+
+                print(
+                    "    NSE response "
+                    "did not contain JSON object."
+                )
+
+            # ------------------------------------------------
+            # FORBIDDEN
+            # ------------------------------------------------
+
+            elif status == 403:
+
+                print(
+                    "    NSE returned "
+                    "403 Forbidden."
+                )
+
+                if attempt < MAX_RETRIES_PER_SYMBOL:
+
+                    backoff = min(
+                        60,
+                        (
+                            5
+                            * (
+                                2
+                                ** (
+                                    attempt - 1
+                                )
+                            )
+                        )
+                    )
+
+                    jitter = random.uniform(
+                        1,
+                        5
+                    )
+
+                    sleep_for = (
+                        backoff
+                        + jitter
+                    )
+
+                    print(
+                        "    Backing off for "
+                        f"{sleep_for:.1f}s"
+                    )
+
+                    time.sleep(
+                        sleep_for
+                    )
+
+                    # Reinitialize session after
+                    # repeated 403 responses.
+                    if attempt >= 2:
+
+                        print(
+                            "    Reinitializing "
+                            "NSE session..."
+                        )
+
+                        session.close()
+
+                        session = (
+                            create_nse_session()
+                        )
+
+                    continue
+
+            # ------------------------------------------------
+            # RATE LIMIT
+            # ------------------------------------------------
+
+            elif status in {
+                429,
+                500,
+                502,
+                503,
+                504
+            }:
+
+                print(
+                    "    Temporary NSE/server "
+                    f"error: {status}"
+                )
+
+                if attempt < MAX_RETRIES_PER_SYMBOL:
+
+                    backoff = min(
+                        60,
+                        (
+                            5
+                            * (
+                                2
+                                ** (
+                                    attempt - 1
+                                )
+                            )
+                        )
+                    )
+
+                    jitter = random.uniform(
+                        1,
+                        5
+                    )
+
+                    sleep_for = (
+                        backoff
+                        + jitter
+                    )
+
+                    print(
+                        "    Backing off for "
+                        f"{sleep_for:.1f}s"
+                    )
+
+                    time.sleep(
+                        sleep_for
+                    )
+
+                    continue
+
+            else:
+
+                print(
+                    "    Unexpected HTTP "
+                    f"status: {status}"
+                )
+
+        except requests.RequestException as error:
+
+            print(
+                "    NSE request exception:"
+            )
+
+            print(
+                f"    {error}"
+            )
+
+            if attempt < MAX_RETRIES_PER_SYMBOL:
+
+                sleep_for = (
+                    5
+                    * (
+                        2
+                        ** (
+                            attempt - 1
+                        )
+                    )
+                    + random.uniform(
+                        1,
+                        5
+                    )
+                )
+
+                print(
+                    "    Retrying after "
+                    f"{sleep_for:.1f}s"
+                )
+
+                time.sleep(
+                    sleep_for
+                )
+
+    return {
+
+        "success":
+            False,
+
+        "payload":
+            {},
+
+        "error":
+            (
+                "NSE_QUOTE_REQUEST_FAILED"
+            ),
+
+    }
+
+
+# ============================================================
+# EXTRACT INDUSTRY INFORMATION
+# ============================================================
+
+def extract_industry_info(
+    payload
+):
+
+    if not isinstance(
+        payload,
+        dict
+    ):
 
         return {
-            "Macro-Economic Sector": "",
-            "Sector": "",
-            "Industry": "",
-            "Basic Industry": "",
-            "Classification Source": "",
-            "Classification Confidence":
-                NOT_RESOLVED,
-            "Diagnosis":
-                "COMPANY_CLASSIFICATION_NOT_FOUND",
+
+            "Macro-Economic Sector":
+                "",
+
+            "Sector":
+                "",
+
+            "Industry":
+                "",
+
+            "Basic Industry":
+                "",
+
+            "success":
+                False,
+
+            "error":
+                "INVALID_NSE_PAYLOAD",
+
+        }
+
+    industry_info = payload.get(
+        "industryInfo"
+    )
+
+    if not isinstance(
+        industry_info,
+        dict
+    ):
+
+        return {
+
+            "Macro-Economic Sector":
+                "",
+
+            "Sector":
+                "",
+
+            "Industry":
+                "",
+
+            "Basic Industry":
+                "",
+
+            "success":
+                False,
+
+            "error":
+                "INDUSTRY_INFO_NOT_FOUND",
+
         }
 
     macro = normalize_text(
-        result.get(
-            "Macro-Economic Sector",
+        industry_info.get(
+            "macro",
             ""
         )
     )
 
     sector = normalize_text(
-        result.get(
-            "Sector",
+        industry_info.get(
+            "sector",
             ""
         )
     )
 
     industry = normalize_text(
-        result.get(
-            "Industry",
+        industry_info.get(
+            "industry",
             ""
         )
     )
 
     basic = normalize_text(
-        result.get(
-            "Basic Industry",
+        industry_info.get(
+            "basicIndustry",
             ""
         )
     )
 
     populated = sum(
-        bool(x)
-        for x in [
+        bool(value)
+        for value in [
+            macro,
+            sector,
+            industry,
+            basic
+        ]
+    )
+
+    return {
+
+        "Macro-Economic Sector":
+            macro,
+
+        "Sector":
+            sector,
+
+        "Industry":
+            industry,
+
+        "Basic Industry":
+            basic,
+
+        "success":
+            populated > 0,
+
+        "error":
+            ""
+            if populated > 0
+            else "INDUSTRY_INFO_EMPTY",
+
+    }
+
+
+# ============================================================
+# RESOLVE ONE STOCK
+# ============================================================
+
+def resolve_stock(
+    session,
+    record
+):
+
+    symbol = record[
+        "NSE Symbol"
+    ]
+
+    print(
+        f"\nResolving: "
+        f"{symbol} - "
+        f"{record['Company Name']}"
+    )
+
+    result = request_nse_quote(
+        session,
+        symbol
+    )
+
+    if not result["success"]:
+
+        return {
+
+            "Macro-Economic Sector":
+                "",
+
+            "Sector":
+                "",
+
+            "Industry":
+                "",
+
+            "Basic Industry":
+                "",
+
+            "Classification Source":
+                "",
+
+            "Classification Confidence":
+                NOT_RESOLVED,
+
+            "Diagnosis":
+                result["error"],
+
+        }
+
+    classification = (
+        extract_industry_info(
+            result["payload"]
+        )
+    )
+
+    if not classification["success"]:
+
+        return {
+
+            "Macro-Economic Sector":
+                "",
+
+            "Sector":
+                "",
+
+            "Industry":
+                "",
+
+            "Basic Industry":
+                "",
+
+            "Classification Source":
+                "",
+
+            "Classification Confidence":
+                NOT_RESOLVED,
+
+            "Diagnosis":
+                classification["error"],
+
+        }
+
+    macro = classification[
+        "Macro-Economic Sector"
+    ]
+
+    sector = classification[
+        "Sector"
+    ]
+
+    industry = classification[
+        "Industry"
+    ]
+
+    basic = classification[
+        "Basic Industry"
+    ]
+
+    populated = sum(
+        bool(value)
+        for value in [
             macro,
             sector,
             industry,
@@ -626,153 +1110,135 @@ def resolve_classification(
 
     if populated == 4:
 
-        confidence = HIGH_CONFIDENCE
+        confidence = "HIGH"
 
         diagnosis = (
-            "COMPANY_CLASSIFICATION_RESOLVED"
+            "NSE_QUOTE_INDUSTRY_INFO_RESOLVED"
         )
 
     elif populated >= 2:
 
-        confidence = MEDIUM_CONFIDENCE
+        confidence = "MEDIUM"
 
         diagnosis = (
-            "COMPANY_CLASSIFICATION_PARTIAL"
-        )
-
-    elif populated == 1:
-
-        confidence = LOW_CONFIDENCE
-
-        diagnosis = (
-            "COMPANY_CLASSIFICATION_INCOMPLETE"
+            "NSE_QUOTE_INDUSTRY_INFO_PARTIAL"
         )
 
     else:
 
-        confidence = NOT_RESOLVED
+        confidence = "LOW"
 
         diagnosis = (
-            "COMPANY_CLASSIFICATION_EMPTY"
+            "NSE_QUOTE_INDUSTRY_INFO_INCOMPLETE"
         )
 
     return {
-        "Macro-Economic Sector": macro,
-        "Sector": sector,
-        "Industry": industry,
-        "Basic Industry": basic,
+
+        "Macro-Economic Sector":
+            macro,
+
+        "Sector":
+            sector,
+
+        "Industry":
+            industry,
+
+        "Basic Industry":
+            basic,
+
         "Classification Source":
-            "NSE_INDICES_COMPANY_MAPPING",
+            "NSE_QUOTE_EQUITY",
+
         "Classification Confidence":
             confidence,
-        "Diagnosis": diagnosis,
+
+        "Diagnosis":
+            diagnosis,
+
     }
 
 
 # ============================================================
-# DIAGNOSTIC ROWS
+# BUILD DIAGNOSTIC ROW
 # ============================================================
 
-def create_diagnostic_rows(
-    records,
-    company_mapping
+def build_diagnostic_row(
+    record,
+    classification
 ):
 
-    run_date = datetime.now().strftime(
-        "%Y-%m-%d"
-    )
+    return {
 
-    rows = []
+        "Run Date":
+            datetime.now().strftime(
+                "%Y-%m-%d"
+            ),
 
-    total = len(records)
+        "Ticker":
+            record[
+                "Ticker"
+            ],
 
-    for index, record in enumerate(
-        records,
-        start=1
-    ):
+        "NSE Symbol":
+            record[
+                "NSE Symbol"
+            ],
 
-        nse_symbol = record[
-            "NSE Symbol"
-        ]
+        "Company Name":
+            record[
+                "Company Name"
+            ],
 
-        company_name = record[
-            "Company Name"
-        ]
+        "Existing Sector":
+            record[
+                "Existing Sector"
+            ],
 
-        print(
-            f"[{index}/{total}] "
-            f"{nse_symbol} - "
-            f"{company_name}"
-        )
+        "Existing Industry":
+            record[
+                "Existing Industry"
+            ],
 
-        classification = (
-            resolve_classification(
-                nse_symbol,
-                company_mapping
-            )
-        )
+        "Macro-Economic Sector":
+            classification[
+                "Macro-Economic Sector"
+            ],
 
-        rows.append({
+        "Sector":
+            classification[
+                "Sector"
+            ],
 
-            "Run Date":
-                run_date,
+        "Industry":
+            classification[
+                "Industry"
+            ],
 
-            "Ticker":
-                record["Ticker"],
+        "Basic Industry":
+            classification[
+                "Basic Industry"
+            ],
 
-            "NSE Symbol":
-                nse_symbol,
+        "Classification Source":
+            classification[
+                "Classification Source"
+            ],
 
-            "Company Name":
-                company_name,
+        "Classification Confidence":
+            classification[
+                "Classification Confidence"
+            ],
 
-            "Existing Sector":
-                record["Existing Sector"],
+        "Diagnosis":
+            classification[
+                "Diagnosis"
+            ],
 
-            "Existing Industry":
-                record["Existing Industry"],
-
-            "Macro-Economic Sector":
-                classification[
-                    "Macro-Economic Sector"
-                ],
-
-            "Sector":
-                classification[
-                    "Sector"
-                ],
-
-            "Industry":
-                classification[
-                    "Industry"
-                ],
-
-            "Basic Industry":
-                classification[
-                    "Basic Industry"
-                ],
-
-            "Classification Source":
-                classification[
-                    "Classification Source"
-                ],
-
-            "Classification Confidence":
-                classification[
-                    "Classification Confidence"
-                ],
-
-            "Diagnosis":
-                classification[
-                    "Diagnosis"
-                ],
-        })
-
-    return rows
+    }
 
 
 # ============================================================
-# WRITE DIAGNOSTIC SHEET
+# WRITE GOOGLE SHEET
 # ============================================================
 
 def write_diagnostic_sheet(
@@ -783,45 +1249,62 @@ def write_diagnostic_sheet(
     headers = [
 
         "Run Date",
+
         "Ticker",
+
         "NSE Symbol",
+
         "Company Name",
+
         "Existing Sector",
+
         "Existing Industry",
+
         "Macro-Economic Sector",
+
         "Sector",
+
         "Industry",
+
         "Basic Industry",
+
         "Classification Source",
+
         "Classification Confidence",
+
         "Diagnosis",
+
     ]
 
     try:
 
         worksheet = spreadsheet.worksheet(
-            CLASSIFICATION_DIAGNOSTIC_SHEET
+            DIAGNOSTIC_SHEET
         )
 
         print(
             f"\nUsing existing worksheet: "
-            f"{CLASSIFICATION_DIAGNOSTIC_SHEET}"
+            f"{DIAGNOSTIC_SHEET}"
         )
 
     except gspread.WorksheetNotFound:
 
         print(
             f"\nCreating worksheet: "
-            f"{CLASSIFICATION_DIAGNOSTIC_SHEET}"
+            f"{DIAGNOSTIC_SHEET}"
         )
 
         worksheet = spreadsheet.add_worksheet(
-            title=CLASSIFICATION_DIAGNOSTIC_SHEET,
+
+            title=DIAGNOSTIC_SHEET,
+
             rows=max(
                 len(rows) + 2,
                 100
             ),
+
             cols=len(headers)
+
         )
 
     print(
@@ -830,27 +1313,33 @@ def write_diagnostic_sheet(
 
     worksheet.clear()
 
-    data = [headers]
+    data = [
+        headers
+    ]
 
     for row in rows:
 
         data.append([
+
             row.get(
                 header,
                 ""
             )
+
             for header in headers
+
         ])
 
-    end_column = "M"
-
     worksheet.update(
+
         range_name=(
-            f"A1:{end_column}"
-            f"{len(data)}"
+            f"A1:M{len(data)}"
         ),
+
         values=data,
+
         value_input_option="USER_ENTERED"
+
     )
 
     print(
@@ -863,7 +1352,9 @@ def write_diagnostic_sheet(
 # SUMMARY
 # ============================================================
 
-def print_summary(rows):
+def print_summary(
+    rows
+):
 
     total = len(rows)
 
@@ -897,13 +1388,15 @@ def print_summary(rows):
 
     print("\n")
     print("=" * 60)
+
     print(
         "NSE SECTOR & INDUSTRY DIAGNOSTIC"
     )
+
     print("=" * 60)
 
     print(
-        f"Unknown-Sector Equities : {total}"
+        f"Processed Rows         : {total}"
     )
 
     print(
@@ -926,10 +1419,14 @@ def print_summary(rows):
 
     if total:
 
-        resolved = high + medium + low
+        resolved = (
+            high
+            + medium
+            + low
+        )
 
         print(
-            f"Resolution Rate        : "
+            "Resolution Rate        : "
             f"{(resolved / total) * 100:.1f}%"
         )
 
@@ -937,7 +1434,7 @@ def print_summary(rows):
 
     print(
         f"Diagnostic Sheet       : "
-        f"{CLASSIFICATION_DIAGNOSTIC_SHEET}"
+        f"{DIAGNOSTIC_SHEET}"
     )
 
     print("=" * 60)
@@ -979,32 +1476,145 @@ def main():
 
         return
 
-    # Load taxonomy only for validation/
-    # architecture visibility.
-    #
-    # It is NOT used to guess a company's
-    # classification.
-    taxonomy = (
-        load_classification_taxonomy()
+    checkpoint = (
+        load_checkpoint()
     )
 
-    if taxonomy:
+    session = (
+        create_nse_session()
+    )
+
+    diagnostic_rows = []
+
+    successful_since_checkpoint = 0
+
+    unresolved_count = 0
+
+    for index, record in enumerate(
+        records,
+        start=1
+    ):
+
+        symbol = record[
+            "NSE Symbol"
+        ]
+
+        # ----------------------------------------------------
+        # Reuse successful checkpoint
+        # ----------------------------------------------------
+
+        checkpoint_result = (
+            checkpoint.get(symbol)
+        )
+
+        if (
+            isinstance(
+                checkpoint_result,
+                dict
+            )
+            and checkpoint_result.get(
+                "Classification Confidence"
+            )
+            in {
+                HIGH_CONFIDENCE,
+                MEDIUM_CONFIDENCE,
+                LOW_CONFIDENCE
+            }
+        ):
+
+            print(
+                f"\n[{index}/{len(records)}] "
+                f"{symbol} "
+                "already resolved in checkpoint."
+            )
+
+            classification = (
+                checkpoint_result
+            )
+
+        else:
+
+            print(
+                f"\n[{index}/{len(records)}]"
+            )
+
+            classification = (
+                resolve_stock(
+                    session,
+                    record
+                )
+            )
+
+            # ------------------------------------------------
+            # Store result immediately.
+            # ------------------------------------------------
+
+            checkpoint[symbol] = (
+                classification
+            )
+
+            successful_since_checkpoint += 1
+
+            # ------------------------------------------------
+            # Persist checkpoint periodically.
+            # ------------------------------------------------
+
+            if (
+                successful_since_checkpoint
+                >= CHECKPOINT_EVERY
+            ):
+
+                save_checkpoint(
+                    checkpoint
+                )
+
+                successful_since_checkpoint = 0
+
+        if (
+            classification[
+                "Classification Confidence"
+            ]
+            == NOT_RESOLVED
+        ):
+
+            unresolved_count += 1
+
+        diagnostic_rows.append(
+            build_diagnostic_row(
+                record,
+                classification
+            )
+        )
+
+        # ----------------------------------------------------
+        # Random delay between symbols.
+        # ----------------------------------------------------
+
+        delay = random.uniform(
+            MIN_DELAY,
+            MAX_DELAY
+        )
 
         print(
-            f"\nTaxonomy loaded successfully: "
-            f"{len(taxonomy)} records"
+            f"Waiting {delay:.1f}s "
+            "before next symbol..."
         )
 
-    company_mapping = (
-        load_company_classification()
+        time.sleep(
+            delay
+        )
+
+    # ========================================================
+    # FINAL CHECKPOINT SAVE
+    # ========================================================
+
+    save_checkpoint(
+        checkpoint
     )
 
-    diagnostic_rows = (
-        create_diagnostic_rows(
-            records,
-            company_mapping
-        )
-    )
+    # ========================================================
+    # WRITE DIAGNOSTIC SHEET
+    # ========================================================
 
     write_diagnostic_sheet(
         spreadsheet,
@@ -1015,6 +1625,16 @@ def main():
         diagnostic_rows
     )
 
+    print(
+        "\nUnresolved rows in this run: "
+        f"{unresolved_count}"
+    )
+
+    print(
+        "\nNSE classification update complete."
+    )
+
 
 if __name__ == "__main__":
+
     main()
