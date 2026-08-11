@@ -432,6 +432,18 @@ def load_classification_master():
                     else "",
             }
 
+    # ========================================================
+    # VALIDATE CLASSIFICATION MASTER
+    # ========================================================
+
+    if not classification:
+
+        raise RuntimeError(
+            "NSE classification master is empty. "
+            f"{CLASSIFICATION_FILE} contains headers "
+            "but no records."
+        )
+        
     print(
         "\nClassification master records: "
         f"{len(classification)}"
