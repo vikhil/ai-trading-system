@@ -1,12 +1,10 @@
 import os
 import csv
 import json
-import time
-import random
+import re
+from datetime import datetime
 
-import requests
 import gspread
-
 from oauth2client.service_account import ServiceAccountCredentials
 
 
@@ -16,20 +14,37 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 STOCK_MASTER_SHEET = "Stock_Master"
 
+CLASSIFICATION_DIAGNOSTIC_SHEET = (
+    "NSE_Sector_Industry_Diagnostic"
+)
+
 CLASSIFICATION_FILE = os.getenv(
     "NSE_CLASSIFICATION_FILE",
     "data/nse_industry_classification.csv"
 )
 
-SPREADSHEET_ID = (
-    "1qGsaLVDzxxPSuYnY_Qd2vcEiYXE4tWoTEuxLfH38hPI"
+# Optional company-classification mapping file.
+#
+# This is deliberately separate from the NSE taxonomy file.
+#
+# Expected columns:
+# NSE Symbol
+# Macro-Economic Sector
+# Sector
+# Industry
+# Basic Industry
+#
+# If this file does not exist, the script will NOT fail.
+# It will simply report that no company mappings are available.
+COMPANY_CLASSIFICATION_FILE = os.getenv(
+    "NSE_COMPANY_CLASSIFICATION_FILE",
+    "data/nse_company_classification.csv"
 )
 
-NSE_HOME_URL = "https://www.nseindia.com"
-
-NSE_QUOTE_URL = (
-    "https://www.nseindia.com/api/quote-equity"
-)
+HIGH_CONFIDENCE = "HIGH"
+MEDIUM_CONFIDENCE = "MEDIUM"
+LOW_CONFIDENCE = "LOW"
+NOT_RESOLVED = "NOT_RESOLVED"
 
 
 # ============================================================
@@ -68,12 +83,10 @@ def connect_to_google_sheet():
         )
     )
 
-    client = gspread.authorize(
-        credentials
-    )
+    client = gspread.authorize(credentials)
 
     spreadsheet = client.open_by_key(
-        SPREADSHEET_ID
+        "1qGsaLVDzxxPSuYnY_Qd2vcEiYXE4tWoTEuxLfH38hPI"
     )
 
     print("Connected")
@@ -82,7 +95,7 @@ def connect_to_google_sheet():
 
 
 # ============================================================
-# HELPERS
+# NORMALIZATION
 # ============================================================
 
 def normalize_text(value):
@@ -106,23 +119,48 @@ def normalize_symbol(value):
     return value.strip()
 
 
-def is_unknown(value):
+def normalize_header(value):
 
-    return normalize_text(value).upper() in {
-        "",
-        "UNKNOWN",
-        "N/A",
-        "NA",
-        "NULL",
-        "NONE",
+    return re.sub(
+        r"[^a-z0-9]+",
+        " ",
+        normalize_text(value).lower()
+    ).strip()
+
+
+def find_column(
+    headers,
+    candidates,
+    required=True
+):
+
+    normalized = {
+        normalize_header(header): header
+        for header in headers
     }
 
+    for candidate in candidates:
+
+        key = normalize_header(candidate)
+
+        if key in normalized:
+            return normalized[key]
+
+    if required:
+
+        raise RuntimeError(
+            "Required column not found. "
+            f"Tried: {candidates}"
+        )
+
+    return None
+
 
 # ============================================================
-# READ STOCK MASTER
+# STOCK MASTER
 # ============================================================
 
-def get_unknown_symbols(spreadsheet):
+def read_unknown_stocks(spreadsheet):
 
     worksheet = spreadsheet.worksheet(
         STOCK_MASTER_SHEET
@@ -131,46 +169,56 @@ def get_unknown_symbols(spreadsheet):
     values = worksheet.get_all_values()
 
     if not values:
+
         raise RuntimeError(
             "Stock_Master is empty."
         )
 
     headers = values[0]
 
-    header_map = {
-        str(h).strip().lower(): h
-        for h in headers
-    }
+    ticker_col = find_column(
+        headers,
+        [
+            "Ticker",
+            "Yahoo Ticker",
+            "Symbol"
+        ]
+    )
 
-    ticker_col = header_map.get("ticker")
-    sector_col = header_map.get("sector")
-    industry_col = header_map.get("industry")
+    company_col = find_column(
+        headers,
+        [
+            "Company Name",
+            "Company",
+            "Name"
+        ]
+    )
 
-    if not ticker_col:
-        raise RuntimeError(
-            "Ticker column not found in Stock_Master."
-        )
+    sector_col = find_column(
+        headers,
+        ["Sector"]
+    )
 
-    if not sector_col:
-        raise RuntimeError(
-            "Sector column not found in Stock_Master."
-        )
+    industry_col = find_column(
+        headers,
+        ["Industry"]
+    )
 
-    if not industry_col:
-        raise RuntimeError(
-            "Industry column not found in Stock_Master."
-        )
+    records = [
+        dict(zip(headers, row))
+        for row in values[1:]
+    ]
 
-    unknown_symbols = []
+    selected = []
 
-    for row in values[1:]:
+    for record in records:
 
-        record = dict(
-            zip(headers, row)
-        )
-
-        ticker = normalize_symbol(
+        ticker = normalize_text(
             record.get(ticker_col, "")
+        )
+
+        company_name = normalize_text(
+            record.get(company_col, "")
         )
 
         sector = normalize_text(
@@ -184,223 +232,58 @@ def get_unknown_symbols(spreadsheet):
         if not ticker:
             continue
 
-        if is_unknown(sector) or is_unknown(industry):
+        if sector.upper() not in {
+            "",
+            "UNKNOWN",
+            "N/A",
+            "NA",
+            "NULL",
+            "NONE"
+        }:
+            continue
 
-            unknown_symbols.append(ticker)
+        selected.append({
+            "Ticker": ticker,
+            "NSE Symbol": normalize_symbol(ticker),
+            "Company Name": company_name,
+            "Existing Sector": sector,
+            "Existing Industry": industry,
+        })
 
-    # Remove duplicates
-    unknown_symbols = list(
-        dict.fromkeys(
-            unknown_symbols
-        )
+    print(
+        f"Stock Master Rows: {len(records)}"
     )
 
     print(
-        f"Unknown classification symbols: "
-        f"{len(unknown_symbols)}"
+        f"Unknown-Sector Equity Rows: "
+        f"{len(selected)}"
     )
 
-    return unknown_symbols
+    return selected
 
 
 # ============================================================
-# NSE SESSION
+# LOAD CLASSIFICATION TAXONOMY
 # ============================================================
 
-def create_nse_session():
-
-    session = requests.Session()
-
-    session.headers.update({
-
-        "User-Agent":
-            "Mozilla/5.0 "
-            "(X11; Linux x86_64) "
-            "AppleWebKit/537.36 "
-            "(KHTML, like Gecko) "
-            "Chrome/131.0.0.0 "
-            "Safari/537.36",
-
-        "Accept":
-            "application/json,text/plain,*/*",
-
-        "Accept-Language":
-            "en-US,en;q=0.9",
-
-        "Referer":
-            NSE_HOME_URL + "/",
-
-        "Connection":
-            "keep-alive",
-    })
-
-    # Establish NSE cookies/session
-    response = session.get(
-        NSE_HOME_URL,
-        timeout=20
-    )
-
-    response.raise_for_status()
-
-    return session
-
-
-# ============================================================
-# FETCH NSE CLASSIFICATION
-# ============================================================
-
-def fetch_nse_classification(
-    session,
-    symbol,
-    max_attempts=3
-):
+def load_classification_taxonomy():
 
     print(
-        f"  NSE lookup: "
-        f"{symbol}"
+        "\nLoading NSE classification taxonomy:"
     )
 
-    for attempt in range(
-        1,
-        max_attempts + 1
-    ):
-
-        try:
-
-            response = session.get(
-                NSE_QUOTE_URL,
-                params={
-                    "symbol": symbol
-                },
-                timeout=20
-            )
-
-            if response.status_code != 200:
-
-                print(
-                    f"    HTTP "
-                    f"{response.status_code}"
-                )
-
-                time.sleep(
-                    2 + attempt
-                )
-
-                continue
-
-            data = response.json()
-
-            industry_info = (
-                data.get(
-                    "industryInfo"
-                )
-            )
-
-            if not industry_info:
-
-                print(
-                    "    industryInfo missing"
-                )
-
-                time.sleep(
-                    2 + attempt
-                )
-
-                continue
-
-            macro = normalize_text(
-                industry_info.get(
-                    "macro"
-                )
-            )
-
-            sector = normalize_text(
-                industry_info.get(
-                    "sector"
-                )
-            )
-
-            industry = normalize_text(
-                industry_info.get(
-                    "industry"
-                )
-            )
-
-            basic_industry = normalize_text(
-                industry_info.get(
-                    "basicIndustry"
-                )
-            )
-
-            print(
-                f"    Macro: "
-                f"{macro}"
-            )
-
-            print(
-                f"    Sector: "
-                f"{sector}"
-            )
-
-            print(
-                f"    Industry: "
-                f"{industry}"
-            )
-
-            print(
-                f"    Basic Industry: "
-                f"{basic_industry}"
-            )
-
-            return {
-
-                "NSE Symbol":
-                    symbol,
-
-                "Macro-Economic Sector":
-                    macro,
-
-                "Sector":
-                    sector,
-
-                "Industry":
-                    industry,
-
-                "Basic Industry":
-                    basic_industry,
-            }
-
-        except Exception as error:
-
-            print(
-                f"    Attempt "
-                f"{attempt} failed: "
-                f"{error}"
-            )
-
-            time.sleep(
-                2 + attempt
-            )
-
-    return None
-
-
-# ============================================================
-# LOAD EXISTING CSV
-# ============================================================
-
-def load_existing_classification():
-
-    os.makedirs(
-        os.path.dirname(
-            CLASSIFICATION_FILE
-        ),
-        exist_ok=True
+    print(
+        f"  {CLASSIFICATION_FILE}"
     )
 
     if not os.path.exists(
         CLASSIFICATION_FILE
     ):
+
+        print(
+            "WARNING: Classification taxonomy "
+            "file does not exist."
+        )
 
         return {}
 
@@ -411,117 +294,653 @@ def load_existing_classification():
         newline=""
     ) as file:
 
-        reader = csv.DictReader(
-            file
+        reader = csv.DictReader(file)
+
+        if not reader.fieldnames:
+
+            raise RuntimeError(
+                "Classification CSV has no headers."
+            )
+
+        headers = reader.fieldnames
+
+        symbol_col = find_column(
+            headers,
+            [
+                "NSE Symbol",
+                "NSE_Symbol",
+                "Symbol",
+                "Ticker"
+            ],
+            required=False
         )
 
-        existing = {}
+        macro_col = find_column(
+            headers,
+            [
+                "Macro-Economic Sector",
+                "Macro Economic Sector",
+                "Macro Sector",
+                "Macro_Economic_Sector"
+            ],
+            required=False
+        )
+
+        sector_col = find_column(
+            headers,
+            ["Sector"],
+            required=False
+        )
+
+        industry_col = find_column(
+            headers,
+            ["Industry"],
+            required=False
+        )
+
+        basic_col = find_column(
+            headers,
+            [
+                "Basic Industry",
+                "Basic_Industry",
+                "Basic Industry Name"
+            ],
+            required=False
+        )
+
+        taxonomy = []
+
+        for row in reader:
+
+            record = {
+                "NSE Symbol":
+                    normalize_symbol(
+                        row.get(symbol_col, "")
+                    )
+                    if symbol_col
+                    else "",
+
+                "Macro-Economic Sector":
+                    normalize_text(
+                        row.get(macro_col, "")
+                    )
+                    if macro_col
+                    else "",
+
+                "Sector":
+                    normalize_text(
+                        row.get(sector_col, "")
+                    )
+                    if sector_col
+                    else "",
+
+                "Industry":
+                    normalize_text(
+                        row.get(industry_col, "")
+                    )
+                    if industry_col
+                    else "",
+
+                "Basic Industry":
+                    normalize_text(
+                        row.get(basic_col, "")
+                    )
+                    if basic_col
+                    else "",
+            }
+
+            # Ignore completely empty rows.
+            if not any(
+                record.values()
+            ):
+                continue
+
+            taxonomy.append(record)
+
+    print(
+        f"Classification taxonomy records: "
+        f"{len(taxonomy)}"
+    )
+
+    return taxonomy
+
+
+# ============================================================
+# LOAD COMPANY CLASSIFICATION MAPPING
+# ============================================================
+
+def load_company_classification():
+
+    print(
+        "\nLoading company classification mapping:"
+    )
+
+    print(
+        f"  {COMPANY_CLASSIFICATION_FILE}"
+    )
+
+    if not os.path.exists(
+        COMPANY_CLASSIFICATION_FILE
+    ):
+
+        print(
+            "Company classification mapping "
+            "file not found."
+        )
+
+        print(
+            "No company-level classifications "
+            "will be applied in this run."
+        )
+
+        return {}
+
+    with open(
+        COMPANY_CLASSIFICATION_FILE,
+        "r",
+        encoding="utf-8-sig",
+        newline=""
+    ) as file:
+
+        reader = csv.DictReader(file)
+
+        if not reader.fieldnames:
+
+            raise RuntimeError(
+                "Company classification CSV "
+                "has no headers."
+            )
+
+        headers = reader.fieldnames
+
+        symbol_col = find_column(
+            headers,
+            [
+                "NSE Symbol",
+                "NSE_Symbol",
+                "Symbol",
+                "Ticker"
+            ]
+        )
+
+        macro_col = find_column(
+            headers,
+            [
+                "Macro-Economic Sector",
+                "Macro Economic Sector",
+                "Macro Sector"
+            ],
+            required=False
+        )
+
+        sector_col = find_column(
+            headers,
+            ["Sector"],
+            required=False
+        )
+
+        industry_col = find_column(
+            headers,
+            ["Industry"],
+            required=False
+        )
+
+        basic_col = find_column(
+            headers,
+            [
+                "Basic Industry",
+                "Basic_Industry"
+            ],
+            required=False
+        )
+
+        mapping = {}
 
         for row in reader:
 
             symbol = normalize_symbol(
-                row.get(
-                    "NSE Symbol",
-                    ""
-                )
+                row.get(symbol_col, "")
             )
 
             if not symbol:
                 continue
 
-            existing[symbol] = row
+            mapping[symbol] = {
+                "Macro-Economic Sector":
+                    normalize_text(
+                        row.get(
+                            macro_col,
+                            ""
+                        )
+                    )
+                    if macro_col
+                    else "",
+
+                "Sector":
+                    normalize_text(
+                        row.get(
+                            sector_col,
+                            ""
+                        )
+                    )
+                    if sector_col
+                    else "",
+
+                "Industry":
+                    normalize_text(
+                        row.get(
+                            industry_col,
+                            ""
+                        )
+                    )
+                    if industry_col
+                    else "",
+
+                "Basic Industry":
+                    normalize_text(
+                        row.get(
+                            basic_col,
+                            ""
+                        )
+                    )
+                    if basic_col
+                    else "",
+            }
 
     print(
-        f"Existing classification "
-        f"records: {len(existing)}"
+        f"Company classification records: "
+        f"{len(mapping)}"
     )
 
-    return existing
+    return mapping
 
 
 # ============================================================
-# WRITE CSV
+# RESOLUTION
 # ============================================================
 
-def write_classification_csv(
-    classifications
+def resolve_classification(
+    nse_symbol,
+    company_mapping
+):
+
+    symbol = normalize_symbol(
+        nse_symbol
+    )
+
+    result = company_mapping.get(
+        symbol
+    )
+
+    if not result:
+
+        return {
+            "Macro-Economic Sector": "",
+            "Sector": "",
+            "Industry": "",
+            "Basic Industry": "",
+            "Classification Source": "",
+            "Classification Confidence":
+                NOT_RESOLVED,
+            "Diagnosis":
+                "COMPANY_CLASSIFICATION_NOT_FOUND",
+        }
+
+    macro = normalize_text(
+        result.get(
+            "Macro-Economic Sector",
+            ""
+        )
+    )
+
+    sector = normalize_text(
+        result.get(
+            "Sector",
+            ""
+        )
+    )
+
+    industry = normalize_text(
+        result.get(
+            "Industry",
+            ""
+        )
+    )
+
+    basic = normalize_text(
+        result.get(
+            "Basic Industry",
+            ""
+        )
+    )
+
+    populated = sum(
+        bool(x)
+        for x in [
+            macro,
+            sector,
+            industry,
+            basic
+        ]
+    )
+
+    if populated == 4:
+
+        confidence = HIGH_CONFIDENCE
+
+        diagnosis = (
+            "COMPANY_CLASSIFICATION_RESOLVED"
+        )
+
+    elif populated >= 2:
+
+        confidence = MEDIUM_CONFIDENCE
+
+        diagnosis = (
+            "COMPANY_CLASSIFICATION_PARTIAL"
+        )
+
+    elif populated == 1:
+
+        confidence = LOW_CONFIDENCE
+
+        diagnosis = (
+            "COMPANY_CLASSIFICATION_INCOMPLETE"
+        )
+
+    else:
+
+        confidence = NOT_RESOLVED
+
+        diagnosis = (
+            "COMPANY_CLASSIFICATION_EMPTY"
+        )
+
+    return {
+        "Macro-Economic Sector": macro,
+        "Sector": sector,
+        "Industry": industry,
+        "Basic Industry": basic,
+        "Classification Source":
+            "NSE_INDICES_COMPANY_MAPPING",
+        "Classification Confidence":
+            confidence,
+        "Diagnosis": diagnosis,
+    }
+
+
+# ============================================================
+# DIAGNOSTIC ROWS
+# ============================================================
+
+def create_diagnostic_rows(
+    records,
+    company_mapping
+):
+
+    run_date = datetime.now().strftime(
+        "%Y-%m-%d"
+    )
+
+    rows = []
+
+    total = len(records)
+
+    for index, record in enumerate(
+        records,
+        start=1
+    ):
+
+        nse_symbol = record[
+            "NSE Symbol"
+        ]
+
+        company_name = record[
+            "Company Name"
+        ]
+
+        print(
+            f"[{index}/{total}] "
+            f"{nse_symbol} - "
+            f"{company_name}"
+        )
+
+        classification = (
+            resolve_classification(
+                nse_symbol,
+                company_mapping
+            )
+        )
+
+        rows.append({
+
+            "Run Date":
+                run_date,
+
+            "Ticker":
+                record["Ticker"],
+
+            "NSE Symbol":
+                nse_symbol,
+
+            "Company Name":
+                company_name,
+
+            "Existing Sector":
+                record["Existing Sector"],
+
+            "Existing Industry":
+                record["Existing Industry"],
+
+            "Macro-Economic Sector":
+                classification[
+                    "Macro-Economic Sector"
+                ],
+
+            "Sector":
+                classification[
+                    "Sector"
+                ],
+
+            "Industry":
+                classification[
+                    "Industry"
+                ],
+
+            "Basic Industry":
+                classification[
+                    "Basic Industry"
+                ],
+
+            "Classification Source":
+                classification[
+                    "Classification Source"
+                ],
+
+            "Classification Confidence":
+                classification[
+                    "Classification Confidence"
+                ],
+
+            "Diagnosis":
+                classification[
+                    "Diagnosis"
+                ],
+        })
+
+    return rows
+
+
+# ============================================================
+# WRITE DIAGNOSTIC SHEET
+# ============================================================
+
+def write_diagnostic_sheet(
+    spreadsheet,
+    rows
 ):
 
     headers = [
 
+        "Run Date",
+        "Ticker",
         "NSE Symbol",
-
+        "Company Name",
+        "Existing Sector",
+        "Existing Industry",
         "Macro-Economic Sector",
-
         "Sector",
-
         "Industry",
-
         "Basic Industry",
+        "Classification Source",
+        "Classification Confidence",
+        "Diagnosis",
     ]
 
-    sorted_records = sorted(
-        classifications.values(),
-        key=lambda x:
-            normalize_symbol(
-                x.get(
-                    "NSE Symbol",
-                    ""
-                )
-            )
-    )
+    try:
 
-    temp_file = (
-        CLASSIFICATION_FILE
-        + ".tmp"
-    )
-
-    with open(
-        temp_file,
-        "w",
-        encoding="utf-8",
-        newline=""
-    ) as file:
-
-        writer = csv.DictWriter(
-            file,
-            fieldnames=headers
+        worksheet = spreadsheet.worksheet(
+            CLASSIFICATION_DIAGNOSTIC_SHEET
         )
 
-        writer.writeheader()
+        print(
+            f"\nUsing existing worksheet: "
+            f"{CLASSIFICATION_DIAGNOSTIC_SHEET}"
+        )
 
-        for record in sorted_records:
+    except gspread.WorksheetNotFound:
 
-            writer.writerow({
+        print(
+            f"\nCreating worksheet: "
+            f"{CLASSIFICATION_DIAGNOSTIC_SHEET}"
+        )
 
-                header:
-                    normalize_text(
-                        record.get(
-                            header,
-                            ""
-                        )
-                    )
+        worksheet = spreadsheet.add_worksheet(
+            title=CLASSIFICATION_DIAGNOSTIC_SHEET,
+            rows=max(
+                len(rows) + 2,
+                100
+            ),
+            cols=len(headers)
+        )
 
-                for header in headers
-            })
+    print(
+        "\nClearing diagnostic worksheet..."
+    )
 
-    os.replace(
-        temp_file,
-        CLASSIFICATION_FILE
+    worksheet.clear()
+
+    data = [headers]
+
+    for row in rows:
+
+        data.append([
+            row.get(
+                header,
+                ""
+            )
+            for header in headers
+        ])
+
+    end_column = "M"
+
+    worksheet.update(
+        range_name=(
+            f"A1:{end_column}"
+            f"{len(data)}"
+        ),
+        values=data,
+        value_input_option="USER_ENTERED"
     )
 
     print(
-        f"\nClassification CSV updated:"
+        f"Diagnostic rows written: "
+        f"{len(rows)}"
+    )
+
+
+# ============================================================
+# SUMMARY
+# ============================================================
+
+def print_summary(rows):
+
+    total = len(rows)
+
+    high = sum(
+        row[
+            "Classification Confidence"
+        ] == HIGH_CONFIDENCE
+        for row in rows
+    )
+
+    medium = sum(
+        row[
+            "Classification Confidence"
+        ] == MEDIUM_CONFIDENCE
+        for row in rows
+    )
+
+    low = sum(
+        row[
+            "Classification Confidence"
+        ] == LOW_CONFIDENCE
+        for row in rows
+    )
+
+    unresolved = sum(
+        row[
+            "Classification Confidence"
+        ] == NOT_RESOLVED
+        for row in rows
+    )
+
+    print("\n")
+    print("=" * 60)
+    print(
+        "NSE SECTOR & INDUSTRY DIAGNOSTIC"
+    )
+    print("=" * 60)
+
+    print(
+        f"Unknown-Sector Equities : {total}"
     )
 
     print(
-        f"  {CLASSIFICATION_FILE}"
+        f"High Confidence        : {high}"
     )
 
     print(
-        f"  Records: "
-        f"{len(sorted_records)}"
+        f"Medium Confidence      : {medium}"
     )
+
+    print(
+        f"Low Confidence         : {low}"
+    )
+
+    print(
+        f"Not Resolved           : {unresolved}"
+    )
+
+    print("-" * 60)
+
+    if total:
+
+        resolved = high + medium + low
+
+        print(
+            f"Resolution Rate        : "
+            f"{(resolved / total) * 100:.1f}%"
+        )
+
+    print("-" * 60)
+
+    print(
+        f"Diagnostic Sheet       : "
+        f"{CLASSIFICATION_DIAGNOSTIC_SHEET}"
+    )
+
+    print("=" * 60)
 
 
 # ============================================================
@@ -531,8 +950,7 @@ def write_classification_csv(
 def main():
 
     print(
-        "\n"
-        "=============================================="
+        "\n=============================================="
     )
 
     print(
@@ -547,97 +965,54 @@ def main():
         connect_to_google_sheet()
     )
 
-    symbols = (
-        get_unknown_symbols(
+    records = (
+        read_unknown_stocks(
             spreadsheet
         )
     )
 
-    classifications = (
-        load_existing_classification()
-    )
-
-    if not symbols:
+    if not records:
 
         print(
-            "No unknown classifications found."
+            "\nNo UNKNOWN-sector equities found."
         )
 
         return
 
-    session = (
-        create_nse_session()
+    # Load taxonomy only for validation/
+    # architecture visibility.
+    #
+    # It is NOT used to guess a company's
+    # classification.
+    taxonomy = (
+        load_classification_taxonomy()
     )
 
-    resolved = 0
-    failed = 0
-
-    total = len(symbols)
-
-    for index, symbol in enumerate(
-        symbols,
-        start=1
-    ):
+    if taxonomy:
 
         print(
-            f"\n[{index}/{total}] "
-            f"{symbol}"
+            f"\nTaxonomy loaded successfully: "
+            f"{len(taxonomy)} records"
         )
 
-        result = (
-            fetch_nse_classification(
-                session,
-                symbol
-            )
+    company_mapping = (
+        load_company_classification()
+    )
+
+    diagnostic_rows = (
+        create_diagnostic_rows(
+            records,
+            company_mapping
         )
-
-        if result:
-
-            classifications[
-                symbol
-            ] = result
-
-            resolved += 1
-
-        else:
-
-            failed += 1
-
-            print(
-                "    FAILED"
-            )
-
-        # Avoid hammering NSE
-        time.sleep(
-            random.uniform(
-                1.0,
-                2.0
-            )
-        )
-
-    write_classification_csv(
-        classifications
     )
 
-    print(
-        "\n"
-        "=============================================="
+    write_diagnostic_sheet(
+        spreadsheet,
+        diagnostic_rows
     )
 
-    print(
-        f"Symbols processed : {total}"
-    )
-
-    print(
-        f"Resolved          : {resolved}"
-    )
-
-    print(
-        f"Failed            : {failed}"
-    )
-
-    print(
-        "=============================================="
+    print_summary(
+        diagnostic_rows
     )
 
 
