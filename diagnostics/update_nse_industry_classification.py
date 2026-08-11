@@ -750,12 +750,6 @@ def request_nse_quote(
                             "NSE session..."
                         )
 
-                        session.close()
-
-                        session = (
-                            create_nse_session()
-                        )
-
                     continue
 
             # ------------------------------------------------
