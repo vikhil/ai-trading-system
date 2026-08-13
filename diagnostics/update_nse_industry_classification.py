@@ -1,9 +1,10 @@
+# update_nse_industry_classification.py
+
 import os
-import csv
 import json
 import time
 import random
-from datetime import datetime
+from datetime import datetime, timezone
 
 import requests
 import gspread
@@ -38,25 +39,36 @@ NSE_QUOTE_API_URL = (
     "https://www.nseindia.com/api/quote-equity"
 )
 
-# ------------------------------------------------------------
-# Checkpoint file
-# ------------------------------------------------------------
+
+# ============================================================
+# CLASSIFICATION STATUS
+# ============================================================
+
+HIGH_CONFIDENCE = "HIGH"
+MEDIUM_CONFIDENCE = "MEDIUM"
+LOW_CONFIDENCE = "LOW"
+NOT_RESOLVED = "NOT_RESOLVED"
+
+STATUS_RESOLVED = "RESOLVED"
+STATUS_BLOCKED = "NSE_ACCESS_BLOCKED"
+STATUS_FAILED = "NSE_REQUEST_FAILED"
+STATUS_NOT_FOUND = "NSE_SYMBOL_NOT_FOUND"
+STATUS_INVALID = "NSE_RESPONSE_INVALID"
+
+
+# ============================================================
+# CHECKPOINT
+# ============================================================
 
 CHECKPOINT_FILE = os.getenv(
     "NSE_CLASSIFICATION_CHECKPOINT",
     "data/nse_classification_checkpoint.json"
 )
 
-# ------------------------------------------------------------
-# Request controls
-# ------------------------------------------------------------
 
-MAX_RETRIES_PER_SYMBOL = int(
-    os.getenv(
-        "NSE_CLASSIFICATION_MAX_RETRIES",
-        "5"
-    )
-)
+# ============================================================
+# REQUEST CONTROLS
+# ============================================================
 
 REQUEST_TIMEOUT = int(
     os.getenv(
@@ -65,22 +77,41 @@ REQUEST_TIMEOUT = int(
     )
 )
 
+# 403 is deliberately NOT retried repeatedly.
+#
+# We allow one complete session re-bootstrap after
+# the first 403. If the new session is also blocked,
+# the symbol is marked NSE_ACCESS_BLOCKED and the
+# script moves on.
+MAX_403_RETRIES = int(
+    os.getenv(
+        "NSE_CLASSIFICATION_403_RETRIES",
+        "1"
+    )
+)
+
+# Retry only genuinely transient failures.
+MAX_TRANSIENT_RETRIES = int(
+    os.getenv(
+        "NSE_CLASSIFICATION_TRANSIENT_RETRIES",
+        "3"
+    )
+)
+
 MIN_DELAY = float(
     os.getenv(
         "NSE_CLASSIFICATION_MIN_DELAY",
-        "2.0"
+        "3.0"
     )
 )
 
 MAX_DELAY = float(
     os.getenv(
         "NSE_CLASSIFICATION_MAX_DELAY",
-        "5.0"
+        "7.0"
     )
 )
 
-# Number of successful symbols after which
-# checkpoint is persisted.
 CHECKPOINT_EVERY = int(
     os.getenv(
         "NSE_CLASSIFICATION_CHECKPOINT_EVERY",
@@ -109,13 +140,9 @@ def connect_to_google_sheet():
         )
 
     scope = [
-
         "https://spreadsheets.google.com/feeds",
-
         "https://www.googleapis.com/auth/drive",
-
         "https://www.googleapis.com/auth/spreadsheets",
-
     ]
 
     credentials_dict = json.loads(
@@ -150,7 +177,6 @@ def connect_to_google_sheet():
 def normalize_text(value):
 
     if value is None:
-
         return ""
 
     return str(value).strip()
@@ -163,11 +189,9 @@ def normalize_symbol(value):
     ).upper()
 
     if value.startswith("NSE:"):
-
         value = value[4:]
 
     if value.endswith(".NS"):
-
         value = value[:-3]
 
     return value.strip()
@@ -184,25 +208,19 @@ def find_column(
 ):
 
     normalized = {
-
-        str(header)
-        .strip()
-        .lower(): header
-
+        normalize_text(header).lower():
+            header
         for header in headers
-
     }
 
     for candidate in candidates:
 
         key = (
-            candidate
-            .strip()
+            normalize_text(candidate)
             .lower()
         )
 
         if key in normalized:
-
             return normalized[key]
 
     if required:
@@ -267,29 +285,22 @@ def read_unknown_stocks(
 
     sector_col = find_column(
         headers,
-        [
-            "Sector"
-        ]
+        ["Sector"]
     )
 
     industry_col = find_column(
         headers,
-        [
-            "Industry"
-        ]
+        ["Industry"]
     )
 
     records = [
-
         dict(
             zip(
                 headers,
                 row
             )
         )
-
         for row in values[1:]
-
     ]
 
     selected = []
@@ -325,22 +336,18 @@ def read_unknown_stocks(
         )
 
         if not ticker:
-
             continue
 
-        # Only process stocks whose sector
-        # is currently unknown.
+        # Only process rows where Sector is
+        # currently unknown/empty.
         if sector.upper() not in {
-
             "",
             "UNKNOWN",
             "N/A",
             "NA",
             "NULL",
             "NONE"
-
         }:
-
             continue
 
         nse_symbol = normalize_symbol(
@@ -348,7 +355,6 @@ def read_unknown_stocks(
         )
 
         if not nse_symbol:
-
             continue
 
         selected.append({
@@ -391,32 +397,28 @@ def create_nse_session():
 
     session = requests.Session()
 
-    # Browser-like headers.
-    #
-    # These are intentionally kept at the
-    # session level so all NSE requests share
-    # the same browser context.
+    user_agent = (
+        "Mozilla/5.0 "
+        "(Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 "
+        "(KHTML, like Gecko) "
+        "Chrome/151.0.0.0 "
+        "Safari/537.36"
+    )
 
     session.headers.update({
 
         "User-Agent":
-            (
-                "Mozilla/5.0 "
-                "(Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 "
-                "(KHTML, like Gecko) "
-                "Chrome/151.0.0.0 "
-                "Safari/537.36"
-            ),
+            user_agent,
 
         "Accept":
             "application/json,text/plain,*/*",
 
         "Accept-Language":
-            "en-US,en;q=0.9,hi;q=0.8",
+            "en-US,en;q=0.9",
 
         "Accept-Encoding":
-            "gzip, deflate, br",
+            "gzip, deflate",
 
         "Connection":
             "keep-alive",
@@ -424,22 +426,27 @@ def create_nse_session():
         "DNT":
             "1",
 
-        "Sec-Fetch-Dest":
-            "empty",
-
-        "Sec-Fetch-Mode":
-            "cors",
-
-        "Sec-Fetch-Site":
-            "same-origin",
+        "Upgrade-Insecure-Requests":
+            "1",
 
     })
+
+    return session
+
+
+def initialize_nse_session():
 
     print(
         "\nInitializing NSE session..."
     )
 
+    session = create_nse_session()
+
     try:
+
+        # ----------------------------------------------------
+        # Step 1: NSE homepage
+        # ----------------------------------------------------
 
         response = session.get(
             NSE_HOME_URL,
@@ -451,29 +458,47 @@ def create_nse_session():
             f"{response.status_code}"
         )
 
-        if response.status_code == 403:
+        # ----------------------------------------------------
+        # Step 2: NSE quote page
+        #
+        # This is important because the quote API may
+        # expect cookies/context established by the page.
+        # ----------------------------------------------------
+
+        response = session.get(
+            NSE_QUOTE_PAGE_URL,
+            timeout=REQUEST_TIMEOUT,
+            headers={
+                "Referer": NSE_HOME_URL
+            }
+        )
+
+        print(
+            "NSE quote page status: "
+            f"{response.status_code}"
+        )
+
+        if response.status_code >= 400:
 
             print(
-                "WARNING: NSE homepage returned "
-                "403 during session initialization."
-            )
-
-            print(
-                "Quote requests may also be blocked "
-                "from this GitHub Actions runner."
-            )
-
-        elif response.status_code >= 400:
-
-            print(
-                "WARNING: NSE homepage returned "
+                "WARNING: NSE quote page returned "
                 f"HTTP {response.status_code}"
             )
+
+        # ----------------------------------------------------
+        # Display cookies for diagnostics.
+        # ----------------------------------------------------
+
+        print(
+            "NSE session cookies: "
+            f"{len(session.cookies)}"
+        )
 
     except requests.RequestException as error:
 
         print(
-            "WARNING: NSE homepage request failed:"
+            "WARNING: NSE session initialization "
+            "failed:"
         )
 
         print(
@@ -492,6 +517,10 @@ def load_checkpoint():
     if not os.path.exists(
         CHECKPOINT_FILE
     ):
+
+        print(
+            "\nNo checkpoint file found."
+        )
 
         return {}
 
@@ -586,7 +615,60 @@ def save_checkpoint(
 
 
 # ============================================================
-# NSE QUOTE
+# CLASSIFICATION HELPERS
+# ============================================================
+
+def build_classification_result(
+    macro="",
+    sector="",
+    industry="",
+    basic="",
+    source="",
+    confidence=NOT_RESOLVED,
+    diagnosis="",
+    status=STATUS_FAILED,
+    http_status=""
+):
+
+    return {
+
+        "Macro-Economic Sector":
+            normalize_text(macro),
+
+        "Sector":
+            normalize_text(sector),
+
+        "Industry":
+            normalize_text(industry),
+
+        "Basic Industry":
+            normalize_text(basic),
+
+        "Classification Source":
+            normalize_text(source),
+
+        "Classification Confidence":
+            confidence,
+
+        "Diagnosis":
+            diagnosis,
+
+        "Status":
+            status,
+
+        "HTTP Status":
+            http_status,
+
+        "Resolved At":
+            datetime.now(
+                timezone.utc
+            ).isoformat(),
+
+    }
+
+
+# ============================================================
+# NSE QUOTE REQUEST
 # ============================================================
 
 def request_nse_quote(
@@ -598,46 +680,60 @@ def request_nse_quote(
         symbol
     )
 
-    url = NSE_QUOTE_API_URL
+    # --------------------------------------------------------
+    # The quote page is requested before the API.
+    #
+    # This gives the API request the same session/cookie
+    # context that a normal browser visit would establish.
+    # --------------------------------------------------------
 
-    headers = {
+    referer = (
+        f"{NSE_QUOTE_PAGE_URL}"
+        f"?symbol={symbol}"
+    )
+
+    api_headers = {
 
         "Referer":
-            (
-                f"{NSE_QUOTE_PAGE_URL}"
-                f"?symbol={symbol}"
-            ),
+            referer,
 
         "Accept":
-            "application/json,text/plain,*/*",
+            "application/json, text/plain, */*",
 
         "X-Requested-With":
             "XMLHttpRequest",
 
+        "Sec-Fetch-Dest":
+            "empty",
+
+        "Sec-Fetch-Mode":
+            "cors",
+
+        "Sec-Fetch-Site":
+            "same-origin",
+
     }
 
-    for attempt in range(
-        1,
-        MAX_RETRIES_PER_SYMBOL + 1
-    ):
+    transient_attempt = 0
+    forbidden_attempt = 0
+
+    while True:
 
         try:
 
             print(
-                f"    NSE request "
-                f"{attempt}/"
-                f"{MAX_RETRIES_PER_SYMBOL}"
+                "    Requesting NSE quote..."
             )
 
             response = session.get(
 
-                url,
+                NSE_QUOTE_API_URL,
 
                 params={
                     "symbol": symbol
                 },
 
-                headers=headers,
+                headers=api_headers,
 
                 timeout=REQUEST_TIMEOUT
 
@@ -652,9 +748,9 @@ def request_nse_quote(
                 f"{status}"
             )
 
-            # ------------------------------------------------
+            # =================================================
             # SUCCESS
-            # ------------------------------------------------
+            # =================================================
 
             if status == 200:
 
@@ -666,14 +762,26 @@ def request_nse_quote(
 
                 except ValueError:
 
-                    print(
-                        "    NSE returned "
-                        "non-JSON response."
-                    )
+                    return {
 
-                    payload = None
+                        "success":
+                            False,
 
-                if isinstance(
+                        "payload":
+                            {},
+
+                        "status":
+                            STATUS_INVALID,
+
+                        "error":
+                            "NSE_RESPONSE_NOT_JSON",
+
+                        "http_status":
+                            status,
+
+                    }
+
+                if not isinstance(
                     payload,
                     dict
                 ):
@@ -681,82 +789,141 @@ def request_nse_quote(
                     return {
 
                         "success":
-                            True,
+                            False,
 
                         "payload":
-                            payload,
+                            {},
+
+                        "status":
+                            STATUS_INVALID,
 
                         "error":
-                            "",
+                            "NSE_RESPONSE_NOT_OBJECT",
+
+                        "http_status":
+                            status,
 
                     }
 
-                print(
-                    "    NSE response "
-                    "did not contain JSON object."
-                )
+                return {
 
-            # ------------------------------------------------
-            # FORBIDDEN
-            # ------------------------------------------------
+                    "success":
+                        True,
 
-            elif status == 403:
+                    "payload":
+                        payload,
+
+                    "status":
+                        STATUS_RESOLVED,
+
+                    "error":
+                        "",
+
+                    "http_status":
+                        status,
+
+                }
+
+            # =================================================
+            # 403 FORBIDDEN
+            # =================================================
+            #
+            # IMPORTANT:
+            #
+            # Do NOT repeatedly retry 403.
+            #
+            # The previous implementation spent several
+            # minutes retrying the same blocked endpoint.
+            #
+            # Instead:
+            #
+            # 1. Recreate the entire session once.
+            # 2. Bootstrap homepage + quote page again.
+            # 3. Retry the API once.
+            # 4. If still 403 -> mark blocked.
+            #
+            # =================================================
+
+            if status == 403:
+
+                forbidden_attempt += 1
 
                 print(
                     "    NSE returned "
                     "403 Forbidden."
                 )
 
-                if attempt < MAX_RETRIES_PER_SYMBOL:
-
-                    backoff = min(
-                        60,
-                        (
-                            5
-                            * (
-                                2
-                                ** (
-                                    attempt - 1
-                                )
-                            )
-                        )
-                    )
-
-                    jitter = random.uniform(
-                        1,
-                        5
-                    )
-
-                    sleep_for = (
-                        backoff
-                        + jitter
-                    )
+                if (
+                    forbidden_attempt
+                    > MAX_403_RETRIES
+                ):
 
                     print(
-                        "    Backing off for "
-                        f"{sleep_for:.1f}s"
+                        "    NSE quote endpoint "
+                        "remains blocked."
                     )
 
-                    time.sleep(
-                        sleep_for
+                    return {
+
+                        "success":
+                            False,
+
+                        "payload":
+                            {},
+
+                        "status":
+                            STATUS_BLOCKED,
+
+                        "error":
+                            "NSE_ACCESS_BLOCKED",
+
+                        "http_status":
+                            status,
+
+                    }
+
+                print(
+                    "    Recreating NSE session "
+                    "after 403..."
+                )
+
+                time.sleep(
+                    random.uniform(
+                        3,
+                        6
                     )
+                )
 
-                    # Reinitialize session after
-                    # repeated 403 responses.
-                    if attempt >= 2:
+                # Return a special state so the
+                # caller can actually recreate
+                # the session object.
+                return {
 
-                        print(
-                            "    Reinitializing "
-                            "NSE session..."
-                        )
+                    "success":
+                        False,
 
-                    continue
+                    "payload":
+                        {},
 
-            # ------------------------------------------------
-            # RATE LIMIT
-            # ------------------------------------------------
+                    "status":
+                        STATUS_BLOCKED,
 
-            elif status in {
+                    "error":
+                        "NSE_SESSION_REINITIALIZE_REQUIRED",
+
+                    "http_status":
+                        status,
+
+                    "reinitialize":
+                        True,
+
+                }
+
+            # =================================================
+            # TRANSIENT HTTP ERRORS
+            # =================================================
+
+            if status in {
                 429,
                 500,
                 502,
@@ -764,55 +931,102 @@ def request_nse_quote(
                 504
             }:
 
+                transient_attempt += 1
+
                 print(
                     "    Temporary NSE/server "
                     f"error: {status}"
                 )
 
-                if attempt < MAX_RETRIES_PER_SYMBOL:
+                if (
+                    transient_attempt
+                    > MAX_TRANSIENT_RETRIES
+                ):
 
-                    backoff = min(
-                        60,
-                        (
-                            5
-                            * (
-                                2
-                                ** (
-                                    attempt - 1
-                                )
-                            )
+                    return {
+
+                        "success":
+                            False,
+
+                        "payload":
+                            {},
+
+                        "status":
+                            STATUS_FAILED,
+
+                        "error":
+                            (
+                                "NSE_TRANSIENT_ERROR_"
+                                f"{status}"
+                            ),
+
+                        "http_status":
+                            status,
+
+                    }
+
+                backoff = min(
+                    45,
+                    5
+                    * (
+                        2
+                        ** (
+                            transient_attempt
+                            - 1
                         )
                     )
-
-                    jitter = random.uniform(
-                        1,
-                        5
-                    )
-
-                    sleep_for = (
-                        backoff
-                        + jitter
-                    )
-
-                    print(
-                        "    Backing off for "
-                        f"{sleep_for:.1f}s"
-                    )
-
-                    time.sleep(
-                        sleep_for
-                    )
-
-                    continue
-
-            else:
-
-                print(
-                    "    Unexpected HTTP "
-                    f"status: {status}"
                 )
 
+                jitter = random.uniform(
+                    1,
+                    4
+                )
+
+                sleep_for = (
+                    backoff
+                    + jitter
+                )
+
+                print(
+                    "    Backing off for "
+                    f"{sleep_for:.1f}s"
+                )
+
+                time.sleep(
+                    sleep_for
+                )
+
+                continue
+
+            # =================================================
+            # OTHER HTTP ERROR
+            # =================================================
+
+            return {
+
+                "success":
+                    False,
+
+                "payload":
+                    {},
+
+                "status":
+                    STATUS_FAILED,
+
+                "error":
+                    (
+                        "NSE_HTTP_ERROR_"
+                        f"{status}"
+                    ),
+
+                "http_status":
+                    status,
+
+            }
+
         except requests.RequestException as error:
+
+            transient_attempt += 1
 
             print(
                 "    NSE request exception:"
@@ -822,45 +1036,56 @@ def request_nse_quote(
                 f"    {error}"
             )
 
-            if attempt < MAX_RETRIES_PER_SYMBOL:
+            if (
+                transient_attempt
+                > MAX_TRANSIENT_RETRIES
+            ):
 
-                sleep_for = (
+                return {
+
+                    "success":
+                        False,
+
+                    "payload":
+                        {},
+
+                    "status":
+                        STATUS_FAILED,
+
+                    "error":
+                        "NSE_REQUEST_EXCEPTION",
+
+                    "http_status":
+                        "",
+
+                }
+
+            sleep_for = (
+                min(
+                    45,
                     5
                     * (
                         2
                         ** (
-                            attempt - 1
+                            transient_attempt
+                            - 1
                         )
                     )
-                    + random.uniform(
-                        1,
-                        5
-                    )
                 )
-
-                print(
-                    "    Retrying after "
-                    f"{sleep_for:.1f}s"
+                + random.uniform(
+                    1,
+                    4
                 )
+            )
 
-                time.sleep(
-                    sleep_for
-                )
+            print(
+                "    Retrying after "
+                f"{sleep_for:.1f}s"
+            )
 
-    return {
-
-        "success":
-            False,
-
-        "payload":
-            {},
-
-        "error":
-            (
-                "NSE_QUOTE_REQUEST_FAILED"
-            ),
-
-    }
+            time.sleep(
+                sleep_for
+            )
 
 
 # ============================================================
@@ -876,30 +1101,20 @@ def extract_industry_info(
         dict
     ):
 
-        return {
+        return build_classification_result(
 
-            "Macro-Economic Sector":
-                "",
-
-            "Sector":
-                "",
-
-            "Industry":
-                "",
-
-            "Basic Industry":
-                "",
-
-            "success":
-                False,
-
-            "error":
+            diagnosis=
                 "INVALID_NSE_PAYLOAD",
 
-        }
+            status=
+                STATUS_INVALID
 
-    industry_info = payload.get(
-        "industryInfo"
+        )
+
+    industry_info = (
+        payload.get(
+            "industryInfo"
+        )
     )
 
     if not isinstance(
@@ -907,27 +1122,15 @@ def extract_industry_info(
         dict
     ):
 
-        return {
+        return build_classification_result(
 
-            "Macro-Economic Sector":
-                "",
-
-            "Sector":
-                "",
-
-            "Industry":
-                "",
-
-            "Basic Industry":
-                "",
-
-            "success":
-                False,
-
-            "error":
+            diagnosis=
                 "INDUSTRY_INFO_NOT_FOUND",
 
-        }
+            status=
+                STATUS_NOT_FOUND
+
+        )
 
     macro = normalize_text(
         industry_info.get(
@@ -967,29 +1170,93 @@ def extract_industry_info(
         ]
     )
 
-    return {
+    if populated == 4:
 
-        "Macro-Economic Sector":
-            macro,
+        return build_classification_result(
 
-        "Sector":
-            sector,
+            macro=macro,
 
-        "Industry":
-            industry,
+            sector=sector,
 
-        "Basic Industry":
-            basic,
+            industry=industry,
 
-        "success":
-            populated > 0,
+            basic=basic,
 
-        "error":
-            ""
-            if populated > 0
-            else "INDUSTRY_INFO_EMPTY",
+            source=
+                "NSE_QUOTE_EQUITY",
 
-    }
+            confidence=
+                HIGH_CONFIDENCE,
+
+            diagnosis=
+                "NSE_QUOTE_INDUSTRY_INFO_RESOLVED",
+
+            status=
+                STATUS_RESOLVED
+
+        )
+
+    if populated >= 2:
+
+        return build_classification_result(
+
+            macro=macro,
+
+            sector=sector,
+
+            industry=industry,
+
+            basic=basic,
+
+            source=
+                "NSE_QUOTE_EQUITY",
+
+            confidence=
+                MEDIUM_CONFIDENCE,
+
+            diagnosis=
+                "NSE_QUOTE_INDUSTRY_INFO_PARTIAL",
+
+            status=
+                STATUS_RESOLVED
+
+        )
+
+    if populated == 1:
+
+        return build_classification_result(
+
+            macro=macro,
+
+            sector=sector,
+
+            industry=industry,
+
+            basic=basic,
+
+            source=
+                "NSE_QUOTE_EQUITY",
+
+            confidence=
+                LOW_CONFIDENCE,
+
+            diagnosis=
+                "NSE_QUOTE_INDUSTRY_INFO_INCOMPLETE",
+
+            status=
+                STATUS_RESOLVED
+
+        )
+
+    return build_classification_result(
+
+        diagnosis=
+            "NSE_QUOTE_INDUSTRY_INFO_EMPTY",
+
+        status=
+            STATUS_NOT_FOUND
+
+    )
 
 
 # ============================================================
@@ -1005,43 +1272,121 @@ def resolve_stock(
         "NSE Symbol"
     ]
 
+    company_name = record[
+        "Company Name"
+    ]
+
     print(
         f"\nResolving: "
         f"{symbol} - "
-        f"{record['Company Name']}"
+        f"{company_name}"
     )
+
+    # --------------------------------------------------------
+    # First request.
+    # --------------------------------------------------------
 
     result = request_nse_quote(
         session,
         symbol
     )
 
+    # --------------------------------------------------------
+    # 403 requires a genuine new session.
+    #
+    # This is different from merely printing
+    # "Reinitializing NSE session".
+    # --------------------------------------------------------
+
+    if result.get(
+        "reinitialize"
+    ):
+
+        print(
+            "    Creating a completely "
+            "new NSE session..."
+        )
+
+        session = (
+            initialize_nse_session()
+        )
+
+        result = request_nse_quote(
+            session,
+            symbol
+        )
+
+    # --------------------------------------------------------
+    # Failed request.
+    # --------------------------------------------------------
+
     if not result["success"]:
 
-        return {
+        status = result.get(
+            "status",
+            STATUS_FAILED
+        )
 
-            "Macro-Economic Sector":
-                "",
+        error = result.get(
+            "error",
+            "NSE_REQUEST_FAILED"
+        )
 
-            "Sector":
-                "",
+        if status == STATUS_BLOCKED:
 
-            "Industry":
-                "",
+            return session, build_classification_result(
 
-            "Basic Industry":
-                "",
+                diagnosis=
+                    "NSE_ACCESS_BLOCKED",
 
-            "Classification Source":
-                "",
+                status=
+                    STATUS_BLOCKED,
 
-            "Classification Confidence":
-                NOT_RESOLVED,
+                http_status=
+                    result.get(
+                        "http_status",
+                        403
+                    )
 
-            "Diagnosis":
-                result["error"],
+            )
 
-        }
+        if status == STATUS_NOT_FOUND:
+
+            return session, build_classification_result(
+
+                diagnosis=
+                    error,
+
+                status=
+                    STATUS_NOT_FOUND,
+
+                http_status=
+                    result.get(
+                        "http_status",
+                        ""
+                    )
+
+            )
+
+        return session, build_classification_result(
+
+            diagnosis=
+                error,
+
+            status=
+                STATUS_FAILED,
+
+            http_status=
+                result.get(
+                    "http_status",
+                    ""
+                )
+
+        )
+
+    # --------------------------------------------------------
+    # Parse NSE response.
+    # --------------------------------------------------------
 
     classification = (
         extract_industry_info(
@@ -1049,107 +1394,14 @@ def resolve_stock(
         )
     )
 
-    if not classification["success"]:
-
-        return {
-
-            "Macro-Economic Sector":
-                "",
-
-            "Sector":
-                "",
-
-            "Industry":
-                "",
-
-            "Basic Industry":
-                "",
-
-            "Classification Source":
-                "",
-
-            "Classification Confidence":
-                NOT_RESOLVED,
-
-            "Diagnosis":
-                classification["error"],
-
-        }
-
-    macro = classification[
-        "Macro-Economic Sector"
-    ]
-
-    sector = classification[
-        "Sector"
-    ]
-
-    industry = classification[
-        "Industry"
-    ]
-
-    basic = classification[
-        "Basic Industry"
-    ]
-
-    populated = sum(
-        bool(value)
-        for value in [
-            macro,
-            sector,
-            industry,
-            basic
-        ]
+    classification[
+        "HTTP Status"
+    ] = result.get(
+        "http_status",
+        200
     )
 
-    if populated == 4:
-
-        confidence = "HIGH"
-
-        diagnosis = (
-            "NSE_QUOTE_INDUSTRY_INFO_RESOLVED"
-        )
-
-    elif populated >= 2:
-
-        confidence = "MEDIUM"
-
-        diagnosis = (
-            "NSE_QUOTE_INDUSTRY_INFO_PARTIAL"
-        )
-
-    else:
-
-        confidence = "LOW"
-
-        diagnosis = (
-            "NSE_QUOTE_INDUSTRY_INFO_INCOMPLETE"
-        )
-
-    return {
-
-        "Macro-Economic Sector":
-            macro,
-
-        "Sector":
-            sector,
-
-        "Industry":
-            industry,
-
-        "Basic Industry":
-            basic,
-
-        "Classification Source":
-            "NSE_QUOTE_EQUITY",
-
-        "Classification Confidence":
-            confidence,
-
-        "Diagnosis":
-            diagnosis,
-
-    }
+    return session, classification
 
 
 # ============================================================
@@ -1194,45 +1446,70 @@ def build_diagnostic_row(
             ],
 
         "Macro-Economic Sector":
-            classification[
-                "Macro-Economic Sector"
-            ],
+            classification.get(
+                "Macro-Economic Sector",
+                ""
+            ),
 
         "Sector":
-            classification[
-                "Sector"
-            ],
+            classification.get(
+                "Sector",
+                ""
+            ),
 
         "Industry":
-            classification[
-                "Industry"
-            ],
+            classification.get(
+                "Industry",
+                ""
+            ),
 
         "Basic Industry":
-            classification[
-                "Basic Industry"
-            ],
+            classification.get(
+                "Basic Industry",
+                ""
+            ),
 
         "Classification Source":
-            classification[
-                "Classification Source"
-            ],
+            classification.get(
+                "Classification Source",
+                ""
+            ),
 
         "Classification Confidence":
-            classification[
-                "Classification Confidence"
-            ],
+            classification.get(
+                "Classification Confidence",
+                NOT_RESOLVED
+            ),
 
         "Diagnosis":
-            classification[
-                "Diagnosis"
-            ],
+            classification.get(
+                "Diagnosis",
+                ""
+            ),
+
+        "Status":
+            classification.get(
+                "Status",
+                STATUS_FAILED
+            ),
+
+        "HTTP Status":
+            classification.get(
+                "HTTP Status",
+                ""
+            ),
+
+        "Resolved At":
+            classification.get(
+                "Resolved At",
+                ""
+            ),
 
     }
 
 
 # ============================================================
-# WRITE GOOGLE SHEET
+# WRITE DIAGNOSTIC SHEET
 # ============================================================
 
 def write_diagnostic_sheet(
@@ -1267,6 +1544,12 @@ def write_diagnostic_sheet(
         "Classification Confidence",
 
         "Diagnosis",
+
+        "Status",
+
+        "HTTP Status",
+
+        "Resolved At",
 
     ]
 
@@ -1324,10 +1607,11 @@ def write_diagnostic_sheet(
 
         ])
 
+    # 16 columns = P
     worksheet.update(
 
         range_name=(
-            f"A1:M{len(data)}"
+            f"A1:P{len(data)}"
         ),
 
         values=data,
@@ -1353,85 +1637,178 @@ def print_summary(
     total = len(rows)
 
     high = sum(
-        row[
+        row.get(
             "Classification Confidence"
-        ] == HIGH_CONFIDENCE
+        ) == HIGH_CONFIDENCE
         for row in rows
     )
 
     medium = sum(
-        row[
+        row.get(
             "Classification Confidence"
-        ] == MEDIUM_CONFIDENCE
+        ) == MEDIUM_CONFIDENCE
         for row in rows
     )
 
     low = sum(
-        row[
+        row.get(
             "Classification Confidence"
-        ] == LOW_CONFIDENCE
+        ) == LOW_CONFIDENCE
         for row in rows
     )
 
     unresolved = sum(
-        row[
+        row.get(
             "Classification Confidence"
-        ] == NOT_RESOLVED
+        ) == NOT_RESOLVED
         for row in rows
     )
 
+    blocked = sum(
+        row.get(
+            "Status"
+        ) == STATUS_BLOCKED
+        for row in rows
+    )
+
+    failed = sum(
+        row.get(
+            "Status"
+        ) == STATUS_FAILED
+        for row in rows
+    )
+
+    not_found = sum(
+        row.get(
+            "Status"
+        ) == STATUS_NOT_FOUND
+        for row in rows
+    )
+
+    resolved = (
+        high
+        + medium
+        + low
+    )
+
     print("\n")
-    print("=" * 60)
+    print("=" * 70)
 
     print(
         "NSE SECTOR & INDUSTRY DIAGNOSTIC"
     )
 
-    print("=" * 60)
+    print("=" * 70)
 
     print(
-        f"Processed Rows         : {total}"
+        f"Processed Rows          : {total}"
     )
 
     print(
-        f"High Confidence        : {high}"
+        f"High Confidence         : {high}"
     )
 
     print(
-        f"Medium Confidence      : {medium}"
+        f"Medium Confidence       : {medium}"
     )
 
     print(
-        f"Low Confidence         : {low}"
+        f"Low Confidence          : {low}"
     )
 
     print(
-        f"Not Resolved           : {unresolved}"
+        f"Not Resolved            : {unresolved}"
     )
 
-    print("-" * 60)
+    print(
+        f"NSE Access Blocked      : {blocked}"
+    )
+
+    print(
+        f"Request Failed          : {failed}"
+    )
+
+    print(
+        f"Symbol/Info Not Found   : {not_found}"
+    )
+
+    print("-" * 70)
 
     if total:
 
-        resolved = (
-            high
-            + medium
-            + low
-        )
-
         print(
-            "Resolution Rate        : "
+            "Resolution Rate         : "
             f"{(resolved / total) * 100:.1f}%"
         )
 
-    print("-" * 60)
+        print(
+            "NSE Access Block Rate   : "
+            f"{(blocked / total) * 100:.1f}%"
+        )
+
+    print("-" * 70)
 
     print(
-        f"Diagnostic Sheet       : "
+        f"Diagnostic Sheet        : "
         f"{DIAGNOSTIC_SHEET}"
     )
 
-    print("=" * 60)
+    print(
+        f"Checkpoint File         : "
+        f"{CHECKPOINT_FILE}"
+    )
+
+    print("=" * 70)
+
+
+# ============================================================
+# CHECKPOINT RESULT VALIDATION
+# ============================================================
+
+def is_reusable_checkpoint(
+    checkpoint_result
+):
+
+    if not isinstance(
+        checkpoint_result,
+        dict
+    ):
+        return False
+
+    status = checkpoint_result.get(
+        "Status",
+        ""
+    )
+
+    confidence = checkpoint_result.get(
+        "Classification Confidence",
+        NOT_RESOLVED
+    )
+
+    # Successful classifications are reusable.
+    if (
+        status == STATUS_RESOLVED
+        and confidence in {
+            HIGH_CONFIDENCE,
+            MEDIUM_CONFIDENCE,
+            LOW_CONFIDENCE
+        }
+    ):
+        return True
+
+    # We also deliberately retain blocked status
+    # so repeated GitHub Actions runs don't hammer
+    # the same NSE-blocked symbols every 30 minutes.
+    if status == STATUS_BLOCKED:
+
+        return True
+
+    # Symbol-not-found can also be reused.
+    if status == STATUS_NOT_FOUND:
+
+        return True
+
+    return False
 
 
 # ============================================================
@@ -1475,14 +1852,25 @@ def main():
     )
 
     session = (
-        create_nse_session()
+        initialize_nse_session()
     )
 
     diagnostic_rows = []
 
-    successful_since_checkpoint = 0
+    completed_since_checkpoint = 0
 
-    unresolved_count = 0
+    blocked_count = 0
+
+    resolved_count = 0
+
+    print(
+        "\nBeginning NSE company classification..."
+    )
+
+    print(
+        f"Symbols to process: "
+        f"{len(records)}"
+    )
 
     for index, record in enumerate(
         records,
@@ -1493,33 +1881,22 @@ def main():
             "NSE Symbol"
         ]
 
-        # ----------------------------------------------------
-        # Reuse successful checkpoint
-        # ----------------------------------------------------
+        # ====================================================
+        # CHECKPOINT
+        # ====================================================
 
         checkpoint_result = (
             checkpoint.get(symbol)
         )
 
-        if (
-            isinstance(
-                checkpoint_result,
-                dict
-            )
-            and checkpoint_result.get(
-                "Classification Confidence"
-            )
-            in {
-                HIGH_CONFIDENCE,
-                MEDIUM_CONFIDENCE,
-                LOW_CONFIDENCE
-            }
+        if is_reusable_checkpoint(
+            checkpoint_result
         ):
 
             print(
                 f"\n[{index}/{len(records)}] "
                 f"{symbol} "
-                "already resolved in checkpoint."
+                "reusing checkpoint."
             )
 
             classification = (
@@ -1532,38 +1909,32 @@ def main():
                 f"\n[{index}/{len(records)}]"
             )
 
-            classification = (
+            session, classification = (
                 resolve_stock(
                     session,
                     record
                 )
             )
 
-            # ------------------------------------------------
-            # Store result immediately.
-            # ------------------------------------------------
+            # =================================================
+            # CHECKPOINT EVERY RESULT
+            #
+            # This is intentional.
+            #
+            # Previously only successful classifications
+            # were checkpointed.
+            #
+            # Now a persistent 403 is also remembered.
+            # =================================================
+
+            checkpoint[symbol] = (
+                classification
+            )
+
+            completed_since_checkpoint += 1
 
             if (
-                classification[
-                    "Classification Confidence"
-                ]
-                in {
-                    HIGH_CONFIDENCE,
-                    MEDIUM_CONFIDENCE,
-                    LOW_CONFIDENCE
-                }
-            ):
-            
-                checkpoint[symbol] = classification
-
-            successful_since_checkpoint += 1
-
-            # ------------------------------------------------
-            # Persist checkpoint periodically.
-            # ------------------------------------------------
-
-            if (
-                successful_since_checkpoint
+                completed_since_checkpoint
                 >= CHECKPOINT_EVERY
             ):
 
@@ -1571,16 +1942,39 @@ def main():
                     checkpoint
                 )
 
-                successful_since_checkpoint = 0
+                completed_since_checkpoint = 0
+
+        # ====================================================
+        # COUNTERS
+        # ====================================================
+
+        status = classification.get(
+            "Status",
+            STATUS_FAILED
+        )
+
+        confidence = classification.get(
+            "Classification Confidence",
+            NOT_RESOLVED
+        )
 
         if (
-            classification[
-                "Classification Confidence"
-            ]
-            == NOT_RESOLVED
+            confidence in {
+                HIGH_CONFIDENCE,
+                MEDIUM_CONFIDENCE,
+                LOW_CONFIDENCE
+            }
         ):
 
-            unresolved_count += 1
+            resolved_count += 1
+
+        if status == STATUS_BLOCKED:
+
+            blocked_count += 1
+
+        # ====================================================
+        # DIAGNOSTIC ROW
+        # ====================================================
 
         diagnostic_rows.append(
             build_diagnostic_row(
@@ -1589,26 +1983,30 @@ def main():
             )
         )
 
-        # ----------------------------------------------------
-        # Random delay between symbols.
-        # ----------------------------------------------------
+        # ====================================================
+        # DELAY
+        #
+        # Don't delay after the final symbol.
+        # ====================================================
 
-        delay = random.uniform(
-            MIN_DELAY,
-            MAX_DELAY
-        )
+        if index < len(records):
 
-        print(
-            f"Waiting {delay:.1f}s "
-            "before next symbol..."
-        )
+            delay = random.uniform(
+                MIN_DELAY,
+                MAX_DELAY
+            )
 
-        time.sleep(
-            delay
-        )
+            print(
+                f"Waiting {delay:.1f}s "
+                "before next symbol..."
+            )
+
+            time.sleep(
+                delay
+            )
 
     # ========================================================
-    # FINAL CHECKPOINT SAVE
+    # FINAL CHECKPOINT
     # ========================================================
 
     save_checkpoint(
@@ -1616,7 +2014,7 @@ def main():
     )
 
     # ========================================================
-    # WRITE DIAGNOSTIC SHEET
+    # WRITE DIAGNOSTIC
     # ========================================================
 
     write_diagnostic_sheet(
@@ -1624,19 +2022,32 @@ def main():
         diagnostic_rows
     )
 
+    # ========================================================
+    # SUMMARY
+    # ========================================================
+
     print_summary(
         diagnostic_rows
     )
 
     print(
-        "\nUnresolved rows in this run: "
-        f"{unresolved_count}"
+        "\nResolved this run: "
+        f"{resolved_count}"
+    )
+
+    print(
+        "NSE-blocked this run: "
+        f"{blocked_count}"
     )
 
     print(
         "\nNSE classification update complete."
     )
 
+
+# ============================================================
+# ENTRY POINT
+# ============================================================
 
 if __name__ == "__main__":
 
