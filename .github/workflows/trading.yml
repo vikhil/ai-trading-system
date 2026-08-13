@@ -59,14 +59,10 @@ jobs:
       # UPDATE NSE COMPANY CLASSIFICATION
       # ========================================================
       #
-      # IMPORTANT:
+      # Retrieves company classification information from NSE
+      # and maintains the NSE classification checkpoint.
+      #
       # This runs BEFORE resolve_sector_industry.py.
-      #
-      # The update script retrieves company classification
-      # information from NSE and maintains its checkpoint.
-      #
-      # It is NOT dependent on manually maintaining the
-      # NSE classification CSV.
       #
       # ========================================================
 
@@ -86,7 +82,7 @@ jobs:
           python diagnostics/update_nse_industry_classification.py
 
       # ========================================================
-      # SAVE NSE CHECKPOINT
+      # SAVE NSE CLASSIFICATION CHECKPOINT
       # ========================================================
 
       - name: Save NSE classification checkpoint
@@ -98,16 +94,23 @@ jobs:
           if [ -f data/nse_classification_checkpoint.json ]; then
             git add data/nse_classification_checkpoint.json
 
-            git diff --cached --quiet || \
+            if ! git diff --cached --quiet; then
               git commit -m "Update NSE classification checkpoint"
-
-            git push
+              git push
+            else
+              echo "No checkpoint changes to commit."
+            fi
           else
             echo "No NSE classification checkpoint file found."
           fi
 
       # ========================================================
       # RESOLVE STOCK MASTER CLASSIFICATIONS
+      # ========================================================
+      #
+      # Uses the classification data produced by the NSE update
+      # process to populate unresolved Stock_Master records.
+      #
       # ========================================================
 
       - name: Resolve NSE Sector and Industry
