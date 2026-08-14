@@ -12,7 +12,6 @@ from oauth2client.service_account import ServiceAccountCredentials
 # ============================================================
 
 STOCK_MASTER_SHEET = "Stock_Master"
-
 DIAGNOSTIC_SHEET = "NSE_Sector_Industry_Diagnostic"
 
 CLASSIFICATION_FILE = os.getenv(
@@ -20,10 +19,24 @@ CLASSIFICATION_FILE = os.getenv(
     "data/nse_industry_classification.csv"
 )
 
+CHECKPOINT_FILE = os.getenv(
+    "NSE_CLASSIFICATION_CHECKPOINT",
+    "data/nse_classification_checkpoint.json"
+)
+
 HIGH_CONFIDENCE = "HIGH"
 MEDIUM_CONFIDENCE = "MEDIUM"
 LOW_CONFIDENCE = "LOW"
 NOT_RESOLVED = "NOT_RESOLVED"
+
+UNKNOWN_VALUES = {
+    "",
+    "UNKNOWN",
+    "N/A",
+    "NA",
+    "NULL",
+    "NONE",
+}
 
 
 # ============================================================
@@ -102,6 +115,14 @@ def normalize_symbol(value):
     return value.strip()
 
 
+def is_unknown(value):
+
+    return (
+        normalize_text(value).upper()
+        in UNKNOWN_VALUES
+    )
+
+
 def find_column(
     headers,
     candidates,
@@ -130,6 +151,46 @@ def find_column(
     return None
 
 
+def classification_has_any_value(
+    classification
+):
+
+    return any(
+        normalize_text(
+            classification.get(
+                field,
+                ""
+            )
+        )
+        for field in [
+            "Macro-Economic Sector",
+            "Sector",
+            "Industry",
+            "Basic Industry",
+        ]
+    )
+
+
+def classification_is_complete(
+    classification
+):
+
+    return all(
+        normalize_text(
+            classification.get(
+                field,
+                ""
+            )
+        )
+        for field in [
+            "Macro-Economic Sector",
+            "Sector",
+            "Industry",
+            "Basic Industry",
+        ]
+    )
+
+
 # ============================================================
 # READ STOCK MASTER
 # ============================================================
@@ -137,6 +198,8 @@ def find_column(
 def read_stock_master(
     spreadsheet
 ):
+
+    print("\nReading Stock_Master...")
 
     worksheet = spreadsheet.worksheet(
         STOCK_MASTER_SHEET
@@ -157,10 +220,17 @@ def read_stock_master(
     )
 
     for header in headers:
-        print(f"  - {header}")
+        print(
+            f"  - {header}"
+        )
 
     records = [
-        dict(zip(headers, row))
+        dict(
+            zip(
+                headers,
+                row
+            )
+        )
         for row in values[1:]
     ]
 
@@ -169,7 +239,7 @@ def read_stock_master(
         [
             "Ticker",
             "Yahoo Ticker",
-            "Symbol"
+            "Symbol",
         ]
     )
 
@@ -178,21 +248,21 @@ def read_stock_master(
         [
             "Company Name",
             "Company",
-            "Name"
+            "Name",
         ]
     )
 
     sector_col = find_column(
         headers,
         [
-            "Sector"
+            "Sector",
         ]
     )
 
     industry_col = find_column(
         headers,
         [
-            "Industry"
+            "Industry",
         ]
     )
 
@@ -203,6 +273,13 @@ def read_stock_master(
         sector = normalize_text(
             record.get(
                 sector_col,
+                ""
+            )
+        )
+
+        industry = normalize_text(
+            record.get(
+                industry_col,
                 ""
             )
         )
@@ -221,25 +298,19 @@ def read_stock_master(
             )
         )
 
-        industry = normalize_text(
-            record.get(
-                industry_col,
-                ""
-            )
-        )
+        # ----------------------------------------------------
+        # IMPORTANT:
+        # We only resolve currently unresolved sectors.
+        # ----------------------------------------------------
 
-        if sector.upper() not in {
-            "",
-            "UNKNOWN",
-            "N/A",
-            "NA",
-            "NULL",
-            "NONE"
-        }:
+        if not is_unknown(
+            sector
+        ):
 
             continue
 
         if not ticker:
+
             continue
 
         selected.append({
@@ -276,176 +347,252 @@ def read_stock_master(
 
 
 # ============================================================
-# LOAD NSE CLASSIFICATION MASTER
+# EMPTY CLASSIFICATION STRUCTURE
+# ============================================================
+
+def empty_classification():
+
+    return {
+
+        "Macro-Economic Sector": "",
+
+        "Sector": "",
+
+        "Industry": "",
+
+        "Basic Industry": "",
+
+    }
+
+
+# ============================================================
+# LOAD CSV CLASSIFICATION MASTER
 # ============================================================
 
 def load_classification_master():
 
     print(
-        "\nLoading NSE classification master:"
+        "\n============================================================"
     )
 
     print(
-        f"  {CLASSIFICATION_FILE}"
+        "LOAD NSE CLASSIFICATION MASTER"
     )
+
+    print(
+        "============================================================"
+    )
+
+    print(
+        f"Classification file: "
+        f"{CLASSIFICATION_FILE}"
+    )
+
+    classification = {}
+
+    # --------------------------------------------------------
+    # Missing file
+    # --------------------------------------------------------
 
     if not os.path.exists(
         CLASSIFICATION_FILE
     ):
 
-        raise RuntimeError(
-            "NSE classification master "
-            "file not found.\n"
-            f"Expected: {CLASSIFICATION_FILE}"
+        print(
+            "\nWARNING: NSE classification CSV "
+            "does not exist."
         )
-
-    with open(
-        CLASSIFICATION_FILE,
-        "r",
-        encoding="utf-8-sig",
-        newline=""
-    ) as file:
-
-        reader = csv.DictReader(
-            file
-        )
-
-        if not reader.fieldnames:
-
-            raise RuntimeError(
-                "Classification CSV has "
-                "no headers."
-            )
-
-        headers = reader.fieldnames
 
         print(
-            "\nClassification columns detected:"
+            "This is NOT treated as a fatal error."
         )
 
-        for header in headers:
-            print(
-                f"  - {header}"
+        return classification
+
+    # --------------------------------------------------------
+    # Read CSV
+    # --------------------------------------------------------
+
+    try:
+
+        with open(
+            CLASSIFICATION_FILE,
+            "r",
+            encoding="utf-8-sig",
+            newline=""
+        ) as file:
+
+            reader = csv.DictReader(
+                file
             )
 
-        symbol_col = find_column(
-            headers,
-            [
-                "NSE Symbol",
-                "NSE_Symbol",
-                "Symbol",
-                "Ticker"
-            ]
-        )
+            if not reader.fieldnames:
 
-        macro_col = find_column(
-            headers,
-            [
-                "Macro-Economic Sector",
-                "Macro Economic Sector",
-                "Macro Sector",
-                "Macro_Economic_Sector"
-            ],
-            required=False
-        )
-
-        sector_col = find_column(
-            headers,
-            [
-                "Sector"
-            ],
-            required=False
-        )
-
-        industry_col = find_column(
-            headers,
-            [
-                "Industry"
-            ],
-            required=False
-        )
-
-        basic_industry_col = find_column(
-            headers,
-            [
-                "Basic Industry",
-                "Basic_Industry",
-                "Basic Industry Name"
-            ],
-            required=False
-        )
-
-        classification = {}
-
-        for row in reader:
-
-            symbol = normalize_symbol(
-                row.get(
-                    symbol_col,
-                    ""
+                print(
+                    "WARNING: Classification CSV "
+                    "contains no headers."
                 )
+
+                return classification
+
+            headers = reader.fieldnames
+
+            print(
+                "\nClassification columns detected:"
             )
 
-            if not symbol:
-                continue
+            for header in headers:
 
-            classification[symbol] = {
+                print(
+                    f"  - {header}"
+                )
 
-                "Macro-Economic Sector":
-                    normalize_text(
-                        row.get(
-                            macro_col,
-                            ""
-                        )
+            symbol_col = find_column(
+                headers,
+                [
+                    "NSE Symbol",
+                    "NSE_Symbol",
+                    "Symbol",
+                    "Ticker",
+                ],
+                required=False
+            )
+
+            if not symbol_col:
+
+                print(
+                    "\nWARNING: No NSE symbol column "
+                    "found in classification CSV."
+                )
+
+                return classification
+
+            macro_col = find_column(
+                headers,
+                [
+                    "Macro-Economic Sector",
+                    "Macro Economic Sector",
+                    "Macro Sector",
+                    "Macro_Economic_Sector",
+                ],
+                required=False
+            )
+
+            sector_col = find_column(
+                headers,
+                [
+                    "Sector",
+                ],
+                required=False
+            )
+
+            industry_col = find_column(
+                headers,
+                [
+                    "Industry",
+                ],
+                required=False
+            )
+
+            basic_industry_col = find_column(
+                headers,
+                [
+                    "Basic Industry",
+                    "Basic_Industry",
+                    "Basic Industry Name",
+                ],
+                required=False
+            )
+
+            for row in reader:
+
+                symbol = normalize_symbol(
+                    row.get(
+                        symbol_col,
+                        ""
                     )
-                    if macro_col
-                    else "",
+                )
 
-                "Sector":
-                    normalize_text(
-                        row.get(
-                            sector_col,
-                            ""
+                if not symbol:
+
+                    continue
+
+                classification[symbol] = {
+
+                    "Macro-Economic Sector":
+                        normalize_text(
+                            row.get(
+                                macro_col,
+                                ""
+                            )
                         )
-                    )
-                    if sector_col
-                    else "",
+                        if macro_col
+                        else "",
 
-                "Industry":
-                    normalize_text(
-                        row.get(
-                            industry_col,
-                            ""
+                    "Sector":
+                        normalize_text(
+                            row.get(
+                                sector_col,
+                                ""
+                            )
                         )
-                    )
-                    if industry_col
-                    else "",
+                        if sector_col
+                        else "",
 
-                "Basic Industry":
-                    normalize_text(
-                        row.get(
-                            basic_industry_col,
-                            ""
+                    "Industry":
+                        normalize_text(
+                            row.get(
+                                industry_col,
+                                ""
+                            )
                         )
-                    )
-                    if basic_industry_col
-                    else "",
-            }
+                        if industry_col
+                        else "",
 
-    # ========================================================
-    # VALIDATE CLASSIFICATION MASTER
-    # ========================================================
+                    "Basic Industry":
+                        normalize_text(
+                            row.get(
+                                basic_industry_col,
+                                ""
+                            )
+                        )
+                        if basic_industry_col
+                        else "",
+                }
+
+    except Exception as error:
+
+        print(
+            "\nWARNING: Unable to read NSE "
+            "classification CSV."
+        )
+
+        print(
+            f"Reason: {error}"
+        )
+
+        return {}
+
+    # --------------------------------------------------------
+    # Empty CSV
+    # --------------------------------------------------------
 
     if not classification:
 
-        raise RuntimeError(
-            "NSE classification master is empty. "
-            f"{CLASSIFICATION_FILE} contains headers "
-            "but no records."
+        print(
+            "\nWARNING: NSE classification CSV "
+            "contains headers but no records."
         )
-        
+
+        print(
+            "CSV will NOT be treated as a valid "
+            "classification source."
+        )
+
+        return {}
+
     print(
-        "\nClassification master records: "
+        "\nNSE CSV classification records: "
         f"{len(classification)}"
     )
 
@@ -453,23 +600,322 @@ def load_classification_master():
 
 
 # ============================================================
-# RESOLVE CLASSIFICATION
+# CHECKPOINT CLASSIFICATION LOADER
 # ============================================================
 
-def resolve_classification(
+def load_checkpoint_classification():
+
+    print(
+        "\n============================================================"
+    )
+
+    print(
+        "LOAD NSE CHECKPOINT"
+    )
+
+    print(
+        "============================================================"
+    )
+
+    print(
+        f"Checkpoint file: "
+        f"{CHECKPOINT_FILE}"
+    )
+
+    checkpoint_classification = {}
+
+    if not os.path.exists(
+        CHECKPOINT_FILE
+    ):
+
+        print(
+            "No NSE checkpoint found."
+        )
+
+        return checkpoint_classification
+
+    try:
+
+        with open(
+            CHECKPOINT_FILE,
+            "r",
+            encoding="utf-8"
+        ) as file:
+
+            checkpoint = json.load(
+                file
+            )
+
+    except Exception as error:
+
+        print(
+            "WARNING: Unable to read "
+            "NSE checkpoint."
+        )
+
+        print(
+            f"Reason: {error}"
+        )
+
+        return checkpoint_classification
+
+    # --------------------------------------------------------
+    # The collector may store classifications under different
+    # top-level keys depending on the previous implementation.
+    #
+    # We deliberately support several structures rather than
+    # assuming one exact checkpoint schema.
+    # --------------------------------------------------------
+
+    possible_containers = []
+
+    if isinstance(
+        checkpoint,
+        dict
+    ):
+
+        for key in [
+            "classifications",
+            "classification",
+            "results",
+            "records",
+            "data",
+            "symbols",
+        ]:
+
+            value = checkpoint.get(
+                key
+            )
+
+            if isinstance(
+                value,
+                dict
+            ):
+
+                possible_containers.append(
+                    value
+                )
+
+    # The checkpoint itself may already be a
+    # symbol -> classification dictionary.
+    if isinstance(
+        checkpoint,
+        dict
+    ):
+
+        possible_containers.append(
+            checkpoint
+        )
+
+    # --------------------------------------------------------
+    # Extract symbol-level records.
+    # --------------------------------------------------------
+
+    for container in possible_containers:
+
+        for raw_symbol, raw_value in (
+            container.items()
+        ):
+
+            symbol = normalize_symbol(
+                raw_symbol
+            )
+
+            if not symbol:
+
+                continue
+
+            if not isinstance(
+                raw_value,
+                dict
+            ):
+
+                continue
+
+            # ------------------------------------------------
+            # Some checkpoint formats may contain a nested
+            # classification object.
+            # ------------------------------------------------
+
+            candidate = raw_value
+
+            for nested_key in [
+                "classification",
+                "data",
+                "result",
+            ]:
+
+                nested = raw_value.get(
+                    nested_key
+                )
+
+                if isinstance(
+                    nested,
+                    dict
+                ):
+
+                    candidate = nested
+
+                    break
+
+            classification = {
+
+                "Macro-Economic Sector":
+                    normalize_text(
+                        candidate.get(
+                            "Macro-Economic Sector",
+                            candidate.get(
+                                "Macro Economic Sector",
+                                candidate.get(
+                                    "macro_sector",
+                                    ""
+                                )
+                            )
+                        )
+                    ),
+
+                "Sector":
+                    normalize_text(
+                        candidate.get(
+                            "Sector",
+                            candidate.get(
+                                "sector",
+                                ""
+                            )
+                        )
+                    ),
+
+                "Industry":
+                    normalize_text(
+                        candidate.get(
+                            "Industry",
+                            candidate.get(
+                                "industry",
+                                ""
+                            )
+                        )
+                    ),
+
+                "Basic Industry":
+                    normalize_text(
+                        candidate.get(
+                            "Basic Industry",
+                            candidate.get(
+                                "Basic_Industry",
+                                candidate.get(
+                                    "basic_industry",
+                                    ""
+                                )
+                            )
+                        )
+                    ),
+            }
+
+            if classification_has_any_value(
+                classification
+            ):
+
+                checkpoint_classification[
+                    symbol
+                ] = classification
+
+    print(
+        "Checkpoint classification records: "
+        f"{len(checkpoint_classification)}"
+    )
+
+    return checkpoint_classification
+
+
+# ============================================================
+# RESOLVE FROM SOURCES
+# ============================================================
+
+def resolve_from_sources(
     nse_symbol,
-    classification_master
+    csv_classification,
+    checkpoint_classification
 ):
 
     symbol = normalize_symbol(
         nse_symbol
     )
 
-    result = classification_master.get(
+    # --------------------------------------------------------
+    # SOURCE 1:
+    # Current NSE classification CSV
+    #
+    # This is preferred because it represents the latest
+    # successfully retrieved classification master.
+    # --------------------------------------------------------
+
+    csv_result = csv_classification.get(
         symbol
     )
 
-    if not result:
+    if (
+        csv_result
+        and classification_has_any_value(
+            csv_result
+        )
+    ):
+
+        return (
+            csv_result,
+            "NSE_CLASSIFICATION_CSV"
+        )
+
+    # --------------------------------------------------------
+    # SOURCE 2:
+    # Previously retrieved checkpoint
+    #
+    # IMPORTANT:
+    # A checkpoint is NOT a guess.
+    #
+    # It is only accepted if it actually contains
+    # classification fields.
+    # --------------------------------------------------------
+
+    checkpoint_result = (
+        checkpoint_classification.get(
+            symbol
+        )
+    )
+
+    if (
+        checkpoint_result
+        and classification_has_any_value(
+            checkpoint_result
+        )
+    ):
+
+        return (
+            checkpoint_result,
+            "NSE_CHECKPOINT"
+        )
+
+    # --------------------------------------------------------
+    # No actual NSE classification available.
+    # --------------------------------------------------------
+
+    return (
+        empty_classification(),
+        ""
+    )
+
+
+# ============================================================
+# BUILD RESOLUTION RESULT
+# ============================================================
+
+def build_resolution_result(
+    classification,
+    source
+):
+
+    if not classification_has_any_value(
+        classification
+    ):
 
         return {
 
@@ -487,28 +933,40 @@ def resolve_classification(
                 NOT_RESOLVED,
 
             "Diagnosis":
-                "NSE_CLASSIFICATION_NOT_FOUND",
+                "NSE_CLASSIFICATION_NOT_AVAILABLE",
         }
 
-    macro = result.get(
-        "Macro-Economic Sector",
-        ""
+    macro = normalize_text(
+        classification.get(
+            "Macro-Economic Sector",
+            ""
+        )
     )
 
-    sector = result.get(
-        "Sector",
-        ""
+    sector = normalize_text(
+        classification.get(
+            "Sector",
+            ""
+        )
     )
 
-    industry = result.get(
-        "Industry",
-        ""
+    industry = normalize_text(
+        classification.get(
+            "Industry",
+            ""
+        )
     )
 
-    basic = result.get(
-        "Basic Industry",
-        ""
+    basic = normalize_text(
+        classification.get(
+            "Basic Industry",
+            ""
+        )
     )
+
+    # --------------------------------------------------------
+    # Full four-level classification.
+    # --------------------------------------------------------
 
     if (
         macro
@@ -523,6 +981,10 @@ def resolve_classification(
             "NSE_CLASSIFICATION_RESOLVED"
         )
 
+    # --------------------------------------------------------
+    # Three-level classification.
+    # --------------------------------------------------------
+
     elif (
         sector
         and industry
@@ -535,25 +997,16 @@ def resolve_classification(
             "NSE_CLASSIFICATION_PARTIALLY_RESOLVED"
         )
 
-    elif (
-        macro
-        or sector
-        or industry
-        or basic
-    ):
+    # --------------------------------------------------------
+    # Partial classification.
+    # --------------------------------------------------------
+
+    else:
 
         confidence = LOW_CONFIDENCE
 
         diagnosis = (
             "NSE_CLASSIFICATION_INCOMPLETE"
-        )
-
-    else:
-
-        confidence = NOT_RESOLVED
-
-        diagnosis = (
-            "NSE_CLASSIFICATION_EMPTY"
         )
 
     return {
@@ -571,7 +1024,7 @@ def resolve_classification(
             basic,
 
         "Classification Source":
-            "NSE_INDICES",
+            source,
 
         "Classification Confidence":
             confidence,
@@ -587,7 +1040,8 @@ def resolve_classification(
 
 def create_diagnostic_rows(
     records,
-    classification_master
+    csv_classification,
+    checkpoint_classification
 ):
 
     run_date = datetime.now().strftime(
@@ -615,18 +1069,39 @@ def create_diagnostic_rows(
             "Company Name"
         ]
 
+        existing_sector = record[
+            "Existing Sector"
+        ]
+
+        existing_industry = record[
+            "Existing Industry"
+        ]
+
         print(
             f"[{index}/{total}] "
             f"{nse_symbol} - "
             f"{company_name}"
         )
 
-        classification = (
-            resolve_classification(
+        classification, source = (
+            resolve_from_sources(
                 nse_symbol,
-                classification_master
+                csv_classification,
+                checkpoint_classification
             )
         )
+
+        result = build_resolution_result(
+            classification,
+            source
+        )
+
+        # ----------------------------------------------------
+        # IMPORTANT:
+        # This script is intentionally diagnostic.
+        #
+        # It does not manufacture classifications.
+        # ----------------------------------------------------
 
         rows.append({
 
@@ -643,47 +1118,52 @@ def create_diagnostic_rows(
                 company_name,
 
             "Existing Sector":
-                record[
-                    "Existing Sector"
-                ],
+                existing_sector,
 
             "Existing Industry":
-                record[
-                    "Existing Industry"
-                ],
+                existing_industry,
+
+            "NSE Classification Status":
+                (
+                    "RESOLVED"
+                    if result[
+                        "Classification Confidence"
+                    ] != NOT_RESOLVED
+                    else "NOT_AVAILABLE"
+                ),
 
             "Macro-Economic Sector":
-                classification[
+                result[
                     "Macro-Economic Sector"
                 ],
 
             "Sector":
-                classification[
+                result[
                     "Sector"
                 ],
 
             "Industry":
-                classification[
+                result[
                     "Industry"
                 ],
 
             "Basic Industry":
-                classification[
+                result[
                     "Basic Industry"
                 ],
 
             "Classification Source":
-                classification[
+                result[
                     "Classification Source"
                 ],
 
             "Classification Confidence":
-                classification[
+                result[
                     "Classification Confidence"
                 ],
 
             "Diagnosis":
-                classification[
+                result[
                     "Diagnosis"
                 ],
         })
@@ -713,6 +1193,8 @@ def write_diagnostic_sheet(
         "Existing Sector",
 
         "Existing Industry",
+
+        "NSE Classification Status",
 
         "Macro-Economic Sector",
 
@@ -775,11 +1257,12 @@ def write_diagnostic_sheet(
         ])
 
     print(
-        "Writing diagnostic rows: "
-        f"{len(rows)}"
+        "Writing NSE sector/industry "
+        f"diagnostic rows: {len(rows)}"
     )
 
-    end_column = "M"
+    # 14 columns = A:N
+    end_column = "N"
 
     worksheet.update(
         range_name=(
@@ -800,7 +1283,11 @@ def write_diagnostic_sheet(
 # SUMMARY
 # ============================================================
 
-def print_summary(rows):
+def print_summary(
+    rows,
+    csv_count,
+    checkpoint_count
+):
 
     total = len(rows)
 
@@ -836,12 +1323,28 @@ def print_summary(rows):
         ] == NOT_RESOLVED
     )
 
-    print("\n")
-    print("=" * 60)
-    print(
-        "NSE SECTOR & INDUSTRY DIAGNOSTIC"
+    csv_resolved = sum(
+        1
+        for row in rows
+        if row[
+            "Classification Source"
+        ] == "NSE_CLASSIFICATION_CSV"
     )
-    print("=" * 60)
+
+    checkpoint_resolved = sum(
+        1
+        for row in rows
+        if row[
+            "Classification Source"
+        ] == "NSE_CHECKPOINT"
+    )
+
+    print("\n")
+    print("=" * 70)
+    print(
+        "NSE SECTOR & INDUSTRY RESOLUTION"
+    )
+    print("=" * 70)
 
     print(
         f"Unknown-Sector Equities : {total}"
@@ -863,13 +1366,33 @@ def print_summary(rows):
         f"Not Resolved           : {unresolved}"
     )
 
-    print("-" * 60)
+    print("-" * 70)
+
+    print(
+        f"CSV records available  : {csv_count}"
+    )
+
+    print(
+        f"Checkpoint records     : {checkpoint_count}"
+    )
+
+    print(
+        f"Resolved from CSV      : {csv_resolved}"
+    )
+
+    print(
+        f"Resolved from Checkpoint: "
+        f"{checkpoint_resolved}"
+    )
+
+    print("-" * 70)
 
     if total:
 
         resolved = (
             high
             + medium
+            + low
         )
 
         print(
@@ -877,14 +1400,57 @@ def print_summary(rows):
             f"{(resolved / total) * 100:.1f}%"
         )
 
-    print("-" * 60)
+    print("-" * 70)
 
     print(
-        f"Diagnostic Sheet       : "
+        "IMPORTANT:"
+    )
+
+    if unresolved == total:
+
+        print(
+            "No actual NSE classification was "
+            "available for the unresolved stocks."
+        )
+
+        print(
+            "The resolver did NOT guess or invent "
+            "sector/industry values."
+        )
+
+    elif unresolved:
+
+        print(
+            f"{unresolved} stocks remain unresolved "
+            "because no retrieved NSE classification "
+            "was available."
+        )
+
+    else:
+
+        print(
+            "All currently unresolved stocks have "
+            "some retrieved NSE classification data."
+        )
+
+    print("-" * 70)
+
+    print(
+        f"Diagnostic Sheet: "
         f"{DIAGNOSTIC_SHEET}"
     )
 
-    print("=" * 60)
+    print(
+        f"Classification CSV: "
+        f"{CLASSIFICATION_FILE}"
+    )
+
+    print(
+        f"Checkpoint: "
+        f"{CHECKPOINT_FILE}"
+    )
+
+    print("=" * 70)
 
 
 # ============================================================
@@ -894,8 +1460,16 @@ def print_summary(rows):
 def main():
 
     print(
-        "Run "
-        "resolve_sector_industry.py"
+        "\n"
+        "============================================================"
+    )
+
+    print(
+        "Run resolve_sector_industry.py"
+    )
+
+    print(
+        "============================================================"
     )
 
     spreadsheet = (
@@ -911,31 +1485,69 @@ def main():
     if not records:
 
         print(
-            "No UNKNOWN-sector equities found."
+            "\nNo UNKNOWN-sector equities found."
         )
 
         return
 
-    classification_master = (
+    # --------------------------------------------------------
+    # Load whatever actual NSE data is available.
+    #
+    # Neither source is mandatory.
+    # --------------------------------------------------------
+
+    csv_classification = (
         load_classification_master()
     )
+
+    checkpoint_classification = (
+        load_checkpoint_classification()
+    )
+
+    # --------------------------------------------------------
+    # Resolve.
+    # --------------------------------------------------------
 
     diagnostic_rows = (
         create_diagnostic_rows(
             records,
-            classification_master
+            csv_classification,
+            checkpoint_classification
         )
     )
+
+    # --------------------------------------------------------
+    # Always write diagnostic output.
+    #
+    # This is important even when NSE is blocked.
+    # --------------------------------------------------------
 
     write_diagnostic_sheet(
         spreadsheet,
         diagnostic_rows
     )
 
+    # --------------------------------------------------------
+    # Summary.
+    # --------------------------------------------------------
+
     print_summary(
-        diagnostic_rows
+        diagnostic_rows,
+        len(csv_classification),
+        len(checkpoint_classification)
+    )
+
+    print(
+        "\nResolver completed successfully."
+    )
+
+    print(
+        "NSE unavailability is treated as a "
+        "data-availability condition, not a "
+        "workflow-fatal error."
     )
 
 
 if __name__ == "__main__":
+
     main()
