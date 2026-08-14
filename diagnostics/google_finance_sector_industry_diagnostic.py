@@ -601,9 +601,20 @@ def create_diagnostic_rows(records):
                 ""
             ),
 
+            "Yahoo Sector": yahoo_data.get(
+                "Yahoo Sector",
+                ""
+            ),
+            
+            "Yahoo Industry": yahoo_data.get(
+                "Yahoo Industry",
+                ""
+            ),
+            
             "Resolved Sector": resolved_sector,
+            
             "Resolved Industry": resolved_industry,
-
+            
             "Resolution Source": yahoo_data.get(
                 "Resolution Source",
                 ""
@@ -634,18 +645,19 @@ def add_google_finance_formulas(rows):
     """
     Add Google Finance validation formulas.
 
-    These formulas validate the identifier again and provide
-    market data directly from Google Finance.
-
-    Sector / Industry are NOT obtained from Google Finance.
+    Google Finance is used only for market-data validation.
+    Sector and Industry are NOT assumed to be available
+    through GOOGLEFINANCE().
     """
 
     for row in rows:
 
         identifier = row["GF Identifier"]
 
-        # Formula strings are intentionally stored for the
-        # diagnostic worksheet.
+        # ----------------------------------------------------
+        # Google Finance price
+        # ----------------------------------------------------
+
         row["GF Price Formula"] = (
             f'=IFERROR('
             f'GOOGLEFINANCE("{identifier}","price"),'
@@ -653,9 +665,24 @@ def add_google_finance_formulas(rows):
             f')'
         )
 
+        # ----------------------------------------------------
+        # Google Finance market capitalization
+        # ----------------------------------------------------
+
         row["GF Market Cap Formula"] = (
             f'=IFERROR('
             f'GOOGLEFINANCE("{identifier}","marketcap"),'
+            f'""'
+            f')'
+        )
+
+        # ----------------------------------------------------
+        # Google Finance identifier validation
+        # ----------------------------------------------------
+
+        row["GF Identifier Formula"] = (
+            f'=IFERROR('
+            f'GOOGLEFINANCE("{identifier}","price"),'
             f'""'
             f')'
         )
@@ -669,38 +696,42 @@ def add_google_finance_formulas(rows):
 
 def write_diagnostic_sheet(spreadsheet, rows):
 
-    headers = [
-        "Run Date",
-        "Ticker",
-        "NSE Symbol",
-        "Company Name",
+headers = [
+    "Run Date",
+    "Ticker",
+    "NSE Symbol",
+    "Company Name",
 
-        "Existing Sector",
-        "Existing Industry",
+    "Existing Sector",
+    "Existing Industry",
 
-        "GF Identifier",
-        "Yahoo Ticker",
-        "GF Identifier Status",
+    "GF Identifier",
+    "Yahoo Ticker",
+    "GF Identifier Status",
 
-        "GF Price",
-        "GF Market Cap",
+    "GF Price",
+    "GF Market Cap",
 
-        "Yahoo Price",
-        "Yahoo Market Cap",
-        "Currency",
+    "Yahoo Price",
+    "Yahoo Market Cap",
+    "Currency",
 
-        "Resolved Sector",
-        "Resolved Industry",
+    "Yahoo Sector",
+    "Yahoo Industry",
 
-        "Resolution Source",
-        "Resolution Confidence",
+    "Resolved Sector",
+    "Resolved Industry",
 
-        "Diagnosis",
-        "Lookup Error",
+    "Resolution Source",
+    "Resolution Confidence",
 
-        "GF Price Formula",
-        "GF Market Cap Formula",
-    ]
+    "Diagnosis",
+    "Lookup Error",
+
+    "GF Identifier Formula",
+    "GF Price Formula",
+    "GF Market Cap Formula",
+]
 
     try:
         worksheet = spreadsheet.worksheet(
