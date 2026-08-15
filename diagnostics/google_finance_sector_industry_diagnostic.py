@@ -776,7 +776,7 @@ def write_diagnostic_sheet(spreadsheet, rows):
 
     # One batch write.
     worksheet.update(
-        range_name=f"A1:W{len(data)}",
+        range_name=f"A1:X{len(data)}",
         values=data,
         value_input_option="USER_ENTERED"
     )
