@@ -1021,6 +1021,31 @@ def add_google_finance_formulas(rows):
         identifier = row["GF Identifier"]
 
         # ----------------------------------------------------
+        # Google Finance identifier validation
+        # ----------------------------------------------------
+
+        row["GF Identifier Status Formula"] = (
+            f'=IF('
+            f'ISNUMBER('
+            f'IFERROR(GOOGLEFINANCE("{identifier}","price"),"")'
+            f'),'
+            f'"VALID",'
+            f'"INVALID"'
+            f')'
+        )
+
+        # ----------------------------------------------------
+        # Google Finance identifier / price validation
+        # ----------------------------------------------------
+
+        row["GF Identifier Formula"] = (
+            f'=IFERROR('
+            f'GOOGLEFINANCE("{identifier}","price"),'
+            f'""'
+            f')'
+        )
+
+        # ----------------------------------------------------
         # Google Finance price
         # ----------------------------------------------------
 
@@ -1038,27 +1063,6 @@ def add_google_finance_formulas(rows):
         row["GF Market Cap Formula"] = (
             f'=IFERROR('
             f'GOOGLEFINANCE("{identifier}","marketcap"),'
-            f'""'
-            f')'
-        )
-
-        # ----------------------------------------------------
-        # Google Finance identifier validation
-        # ----------------------------------------------------
-
-        row["GF Identifier Status Formula"] = (
-            f'=IF('
-            f'ISNUMBER('
-            f'IFERROR(GOOGLEFINANCE("{identifier}","price"),"")'
-            f'),'
-            f'"VALID",'
-            f'"INVALID"'
-            f')'
-        )
-
-        row["GF Identifier Formula"] = (
-            f'=IFERROR('
-            f'GOOGLEFINANCE("{identifier}","price"),'
             f'""'
             f')'
         )
