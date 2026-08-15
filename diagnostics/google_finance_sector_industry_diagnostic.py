@@ -6,6 +6,7 @@ from datetime import datetime
 import gspread
 import pandas as pd
 import yfinance as yf
+from gspread.utils import rowcol_to_a1
 from oauth2client.service_account import ServiceAccountCredentials
 
 
@@ -775,8 +776,13 @@ def write_diagnostic_sheet(spreadsheet, rows):
     )
 
     # One batch write.
+    end_column = rowcol_to_a1(
+        1,
+        len(headers)
+    ).rstrip("1")
+    
     worksheet.update(
-        range_name=f"A1:X{len(data)}",
+        range_name=f"A1:{end_column}{len(data)}",
         values=data,
         value_input_option="USER_ENTERED"
     )
