@@ -19,14 +19,22 @@ CLASSIFICATION_FILE = os.getenv(
     "data/nse_industry_classification.csv"
 )
 
+BSE_CLASSIFICATION_FILE = os.getenv(
+    "BSE_CLASSIFICATION_FILE",
+    "data/bse_industry_classification.csv"
+)
+
 CHECKPOINT_FILE = os.getenv(
     "NSE_CLASSIFICATION_CHECKPOINT",
     "data/nse_classification_checkpoint.json"
 )
 
+ENABLE_YAHOO_FALLBACK = True
+
 HIGH_CONFIDENCE = "HIGH"
 MEDIUM_CONFIDENCE = "MEDIUM"
 LOW_CONFIDENCE = "LOW"
+CONFLICT = "CONFLICT"
 NOT_RESOLVED = "NOT_RESOLVED"
 
 UNKNOWN_VALUES = {
@@ -598,6 +606,254 @@ def load_classification_master():
 
     return classification
 
+# ============================================================
+# LOAD BSE CLASSIFICATION MASTER
+# ============================================================
+
+def load_bse_classification_master():
+
+    print(
+        "\n============================================================"
+    )
+
+    print(
+        "LOAD BSE CLASSIFICATION MASTER"
+    )
+
+    print(
+        "============================================================"
+    )
+
+    print(
+        f"BSE classification file: "
+        f"{BSE_CLASSIFICATION_FILE}"
+    )
+
+    classification = {}
+
+    if not os.path.exists(
+        BSE_CLASSIFICATION_FILE
+    ):
+
+        print(
+            "\nWARNING: BSE classification CSV "
+            "does not exist."
+        )
+
+        return classification
+
+    try:
+
+        with open(
+            BSE_CLASSIFICATION_FILE,
+            "r",
+            encoding="utf-8-sig",
+            newline=""
+        ) as file:
+
+            reader = csv.DictReader(
+                file
+            )
+
+            if not reader.fieldnames:
+
+                print(
+                    "WARNING: BSE classification CSV "
+                    "has no headers."
+                )
+
+                return classification
+
+            headers = reader.fieldnames
+
+            print(
+                "\nBSE classification columns detected:"
+            )
+
+            for header in headers:
+
+                print(
+                    f"  - {header}"
+                )
+
+            symbol_col = find_column(
+                headers,
+                [
+                    "NSE Symbol",
+                    "NSE_Symbol",
+                    "Symbol",
+                    "Ticker",
+                ],
+                required=False
+            )
+
+            if not symbol_col:
+
+                print(
+                    "WARNING: BSE classification CSV "
+                    "does not contain an NSE Symbol column."
+                )
+
+                return classification
+
+            bse_code_col = find_column(
+                headers,
+                [
+                    "BSE Code",
+                    "BSE_Code",
+                    "BSECode",
+                ],
+                required=False
+            )
+
+            isin_col = find_column(
+                headers,
+                [
+                    "ISIN",
+                ],
+                required=False
+            )
+
+            macro_col = find_column(
+                headers,
+                [
+                    "Macro-Economic Sector",
+                    "Macro Economic Sector",
+                    "Macro Sector",
+                    "Macro_Economic_Sector",
+                ],
+                required=False
+            )
+
+            sector_col = find_column(
+                headers,
+                [
+                    "Sector",
+                ],
+                required=False
+            )
+
+            industry_col = find_column(
+                headers,
+                [
+                    "Industry",
+                ],
+                required=False
+            )
+
+            basic_industry_col = find_column(
+                headers,
+                [
+                    "Basic Industry",
+                    "Basic_Industry",
+                    "Basic Industry Name",
+                ],
+                required=False
+            )
+
+            for row in reader:
+
+                symbol = normalize_symbol(
+                    row.get(
+                        symbol_col,
+                        ""
+                    )
+                )
+
+                if not symbol:
+                    continue
+
+                classification[symbol] = {
+
+                    "BSE Code":
+                        normalize_text(
+                            row.get(
+                                bse_code_col,
+                                ""
+                            )
+                        )
+                        if bse_code_col
+                        else "",
+
+                    "ISIN":
+                        normalize_text(
+                            row.get(
+                                isin_col,
+                                ""
+                            )
+                        )
+                        if isin_col
+                        else "",
+
+                    "Macro-Economic Sector":
+                        normalize_text(
+                            row.get(
+                                macro_col,
+                                ""
+                            )
+                        )
+                        if macro_col
+                        else "",
+
+                    "Sector":
+                        normalize_text(
+                            row.get(
+                                sector_col,
+                                ""
+                            )
+                        )
+                        if sector_col
+                        else "",
+
+                    "Industry":
+                        normalize_text(
+                            row.get(
+                                industry_col,
+                                ""
+                            )
+                        )
+                        if industry_col
+                        else "",
+
+                    "Basic Industry":
+                        normalize_text(
+                            row.get(
+                                basic_industry_col,
+                                ""
+                            )
+                        )
+                        if basic_industry_col
+                        else "",
+                }
+
+    except Exception as error:
+
+        print(
+            "\nWARNING: Unable to read BSE "
+            "classification CSV."
+        )
+
+        print(
+            f"Reason: {error}"
+        )
+
+        return {}
+
+    if not classification:
+
+        print(
+            "\nWARNING: BSE classification CSV "
+            "contains headers but no records."
+        )
+
+        return {}
+
+    print(
+        "\nBSE classification records: "
+        f"{len(classification)}"
+    )
+
+    return classification
 
 # ============================================================
 # CHECKPOINT CLASSIFICATION LOADER
@@ -826,7 +1082,106 @@ def load_checkpoint_classification():
 
     return checkpoint_classification
 
+# ============================================================
+# RESOLVE YAHOO CLASSIFICATION
+# ============================================================
 
+def resolve_yahoo_classification(
+    nse_symbol
+):
+
+    result = {
+        "Yahoo Sector": "",
+        "Yahoo Industry": "",
+        "Classification Source": "",
+        "Classification Confidence": NOT_RESOLVED,
+        "Diagnosis": "YAHOO_CLASSIFICATION_NOT_AVAILABLE",
+        "Lookup Error": "",
+    }
+
+    if not ENABLE_YAHOO_FALLBACK:
+        return result
+
+    symbol = normalize_symbol(
+        nse_symbol
+    )
+
+    if not symbol:
+        return result
+
+    yahoo_ticker = f"{symbol}.NS"
+
+    try:
+
+        import yfinance as yf
+
+        print(
+            f"  Yahoo classification lookup: "
+            f"{yahoo_ticker}"
+        )
+
+        ticker = yf.Ticker(
+            yahoo_ticker
+        )
+
+        info = ticker.info or {}
+
+        sector = normalize_text(
+            info.get(
+                "sector",
+                ""
+            )
+        )
+
+        industry = normalize_text(
+            info.get(
+                "industry",
+                ""
+            )
+        )
+
+        if sector and industry:
+
+            return {
+                "Yahoo Sector": sector,
+                "Yahoo Industry": industry,
+                "Classification Source":
+                    "YAHOO_FINANCE",
+                "Classification Confidence":
+                    HIGH_CONFIDENCE,
+                "Diagnosis":
+                    "YAHOO_CLASSIFICATION_RESOLVED",
+                "Lookup Error": "",
+            }
+
+        if sector:
+
+            return {
+                "Yahoo Sector": sector,
+                "Yahoo Industry": industry,
+                "Classification Source":
+                    "YAHOO_FINANCE",
+                "Classification Confidence":
+                    MEDIUM_CONFIDENCE,
+                "Diagnosis":
+                    "YAHOO_SECTOR_ONLY",
+                "Lookup Error": "",
+            }
+
+        return result
+
+    except Exception as error:
+
+        result[
+            "Diagnosis"
+        ] = "YAHOO_CLASSIFICATION_LOOKUP_FAILED"
+
+        result[
+            "Lookup Error"
+        ] = str(error)
+
+        return result
+        
 # ============================================================
 # RESOLVE FROM SOURCES
 # ============================================================
@@ -834,7 +1189,8 @@ def load_checkpoint_classification():
 def resolve_from_sources(
     nse_symbol,
     csv_classification,
-    checkpoint_classification
+    checkpoint_classification,
+    bse_classification
 ):
 
     symbol = normalize_symbol(
@@ -842,11 +1198,7 @@ def resolve_from_sources(
     )
 
     # --------------------------------------------------------
-    # SOURCE 1:
-    # Current NSE classification CSV
-    #
-    # This is preferred because it represents the latest
-    # successfully retrieved classification master.
+    # SOURCE 1: NSE classification CSV
     # --------------------------------------------------------
 
     csv_result = csv_classification.get(
@@ -866,14 +1218,7 @@ def resolve_from_sources(
         )
 
     # --------------------------------------------------------
-    # SOURCE 2:
-    # Previously retrieved checkpoint
-    #
-    # IMPORTANT:
-    # A checkpoint is NOT a guess.
-    #
-    # It is only accepted if it actually contains
-    # classification fields.
+    # SOURCE 2: NSE checkpoint
     # --------------------------------------------------------
 
     checkpoint_result = (
@@ -895,14 +1240,74 @@ def resolve_from_sources(
         )
 
     # --------------------------------------------------------
-    # No actual NSE classification available.
+    # SOURCE 3: BSE / IICS classification
+    # --------------------------------------------------------
+
+    bse_result = bse_classification.get(
+        symbol
+    )
+
+    if (
+        bse_result
+        and classification_has_any_value(
+            bse_result
+        )
+    ):
+
+        return (
+            bse_result,
+            "BSE_IICS"
+        )
+
+    # --------------------------------------------------------
+    # SOURCE 4: Yahoo Finance
+    #
+    # Only reached when authoritative classification
+    # sources are unavailable.
+    # --------------------------------------------------------
+
+    yahoo_result = resolve_yahoo_classification(
+        symbol
+    )
+
+    if (
+        yahoo_result.get(
+            "Yahoo Sector",
+            ""
+        )
+        or
+        yahoo_result.get(
+            "Yahoo Industry",
+            ""
+        )
+    ):
+
+        return (
+            {
+                "Macro-Economic Sector": "",
+                "Sector":
+                    yahoo_result.get(
+                        "Yahoo Sector",
+                        ""
+                    ),
+                "Industry":
+                    yahoo_result.get(
+                        "Yahoo Industry",
+                        ""
+                    ),
+                "Basic Industry": "",
+            },
+            "YAHOO_FINANCE"
+        )
+
+    # --------------------------------------------------------
+    # Nothing available.
     # --------------------------------------------------------
 
     return (
         empty_classification(),
         ""
     )
-
 
 # ============================================================
 # BUILD RESOLUTION RESULT
@@ -1041,9 +1446,10 @@ def build_resolution_result(
 def create_diagnostic_rows(
     records,
     csv_classification,
-    checkpoint_classification
+    checkpoint_classification,
+    bse_classification
 ):
-
+    
     run_date = datetime.now().strftime(
         "%Y-%m-%d"
     )
@@ -1087,7 +1493,8 @@ def create_diagnostic_rows(
             resolve_from_sources(
                 nse_symbol,
                 csv_classification,
-                checkpoint_classification
+                checkpoint_classification,
+                bse_classification
             )
         )
 
@@ -1504,6 +1911,10 @@ def main():
         load_checkpoint_classification()
     )
 
+    bse_classification = (
+        load_bse_classification_master()
+    )
+    
     # --------------------------------------------------------
     # Resolve.
     # --------------------------------------------------------
@@ -1512,7 +1923,8 @@ def main():
         create_diagnostic_rows(
             records,
             csv_classification,
-            checkpoint_classification
+            checkpoint_classification,
+            bse_classification
         )
     )
 
