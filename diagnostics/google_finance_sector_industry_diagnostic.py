@@ -696,42 +696,42 @@ def add_google_finance_formulas(rows):
 
 def write_diagnostic_sheet(spreadsheet, rows):
 
-headers = [
-    "Run Date",
-    "Ticker",
-    "NSE Symbol",
-    "Company Name",
-
-    "Existing Sector",
-    "Existing Industry",
-
-    "GF Identifier",
-    "Yahoo Ticker",
-    "GF Identifier Status",
-
-    "GF Price",
-    "GF Market Cap",
-
-    "Yahoo Price",
-    "Yahoo Market Cap",
-    "Currency",
-
-    "Yahoo Sector",
-    "Yahoo Industry",
-
-    "Resolved Sector",
-    "Resolved Industry",
-
-    "Resolution Source",
-    "Resolution Confidence",
-
-    "Diagnosis",
-    "Lookup Error",
-
-    "GF Identifier Formula",
-    "GF Price Formula",
-    "GF Market Cap Formula",
-]
+    headers = [
+        "Run Date",
+        "Ticker",
+        "NSE Symbol",
+        "Company Name",
+    
+        "Existing Sector",
+        "Existing Industry",
+    
+        "GF Identifier",
+        "Yahoo Ticker",
+        "GF Identifier Status",
+    
+        "GF Price",
+        "GF Market Cap",
+    
+        "Yahoo Price",
+        "Yahoo Market Cap",
+        "Currency",
+    
+        "Yahoo Sector",
+        "Yahoo Industry",
+    
+        "Resolved Sector",
+        "Resolved Industry",
+    
+        "Resolution Source",
+        "Resolution Confidence",
+    
+        "Diagnosis",
+        "Lookup Error",
+    
+        "GF Identifier Formula",
+        "GF Price Formula",
+        "GF Market Cap Formula",
+    ]
 
     try:
         worksheet = spreadsheet.worksheet(
