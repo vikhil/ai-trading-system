@@ -6,7 +6,27 @@ on:
 
   workflow_dispatch:
 
+# ============================================================
+# WORKFLOW CONCURRENCY
+# ============================================================
+#
+# Prevent two Trading Bot runs from executing simultaneously.
+# This is particularly important because the workflow:
+#
+# 1. Updates NSE classification
+# 2. Writes checkpoint data
+# 3. Pushes changes to Git
+# 4. Runs the resolver
+#
+# ============================================================
+
+concurrency:
+  group: trading-bot
+  cancel-in-progress: false
+
+
 jobs:
+
   run-script:
 
     runs-on: ubuntu-latest
@@ -24,6 +44,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # ========================================================
       # PYTHON
@@ -59,10 +81,15 @@ jobs:
       # UPDATE NSE COMPANY CLASSIFICATION
       # ========================================================
       #
-      # Retrieves company classification information from NSE
-      # and maintains the NSE classification checkpoint.
+      # Retrieves NSE classification information and updates:
       #
-      # This runs BEFORE resolve_sector_industry.py.
+      #   data/nse_industry_classification.csv
+      #
+      # and/or:
+      #
+      #   data/nse_classification_checkpoint.json
+      #
+      # The resolver runs AFTER this step.
       #
       # ========================================================
 
@@ -82,34 +109,99 @@ jobs:
           python diagnostics/update_nse_industry_classification.py
 
       # ========================================================
-      # SAVE NSE CLASSIFICATION CHECKPOINT
+      # SHOW NSE CLASSIFICATION FILES
+      # ========================================================
+      #
+      # Diagnostic step so we can immediately see whether the
+      # NSE collector actually produced the files expected by
+      # resolve_sector_industry.py.
+      #
       # ========================================================
 
-      - name: Save NSE classification checkpoint
+      - name: Verify NSE classification files
+        if: always()
+        run: |
+          echo "============================================================"
+          echo "NSE CLASSIFICATION FILE CHECK"
+          echo "============================================================"
+
+          if [ -f data/nse_industry_classification.csv ]; then
+            echo "✓ NSE classification CSV found"
+            echo "File size:"
+            wc -c data/nse_industry_classification.csv
+
+            echo ""
+            echo "CSV header:"
+            head -n 1 data/nse_industry_classification.csv
+
+            echo ""
+            echo "CSV record count:"
+            tail -n +2 data/nse_industry_classification.csv | wc -l
+          else
+            echo "✗ NSE classification CSV NOT FOUND"
+          fi
+
+          echo ""
+
+          if [ -f data/nse_classification_checkpoint.json ]; then
+            echo "✓ NSE checkpoint found"
+            echo "File size:"
+            wc -c data/nse_classification_checkpoint.json
+          else
+            echo "✗ NSE checkpoint NOT FOUND"
+          fi
+
+          echo ""
+          echo "============================================================"
+
+      # ========================================================
+      # SAVE NSE CLASSIFICATION DATA
+      # ========================================================
+      #
+      # Persist the NSE classification CSV and checkpoint so
+      # subsequent GitHub Actions runs can reuse previously
+      # collected data.
+      #
+      # ========================================================
+
+      - name: Save NSE classification data
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          if [ -f data/nse_classification_checkpoint.json ]; then
-            git add data/nse_classification_checkpoint.json
+          echo "Checking NSE classification files for changes..."
 
-            if ! git diff --cached --quiet; then
-              git commit -m "Update NSE classification checkpoint"
-              git push
-            else
-              echo "No checkpoint changes to commit."
-            fi
+          git add data/nse_classification_checkpoint.json 2>/dev/null || true
+          git add data/nse_industry_classification.csv 2>/dev/null || true
+
+          if ! git diff --cached --quiet; then
+            git commit -m "Update NSE classification data"
+
+            # Refresh remote state before pushing.
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+
+            git push origin "HEAD:${GITHUB_REF_NAME}"
           else
-            echo "No NSE classification checkpoint file found."
+            echo "No NSE classification changes to commit."
           fi
 
       # ========================================================
       # RESOLVE STOCK MASTER CLASSIFICATIONS
       # ========================================================
       #
-      # Uses the classification data produced by the NSE update
-      # process to populate unresolved Stock_Master records.
+      # Resolver hierarchy:
+      #
+      #   1. NSE classification CSV
+      #   2. NSE checkpoint
+      #   3. NOT_RESOLVED
+      #
+      # The resolver does NOT:
+      #
+      #   - use BSE classification
+      #   - use Yahoo sector/industry
+      #   - call NSE live endpoints
+      #   - guess classifications
       #
       # ========================================================
 
@@ -119,7 +211,31 @@ jobs:
 
           NSE_CLASSIFICATION_FILE: data/nse_industry_classification.csv
 
-          NSE_COMPANY_CLASSIFICATION_FILE: data/nse_company_classification.csv
+          NSE_CLASSIFICATION_CHECKPOINT: data/nse_classification_checkpoint.json
 
         run: |
           python diagnostics/resolve_sector_industry.py
+
+      # ========================================================
+      # WORKFLOW SUMMARY
+      # ========================================================
+
+      - name: Workflow Summary
+        if: always()
+        run: |
+          echo ""
+          echo "============================================================"
+          echo "TRADING BOT WORKFLOW COMPLETED"
+          echo "============================================================"
+          echo ""
+          echo "NSE classification flow:"
+          echo ""
+          echo "Stock_Master"
+          echo "     ↓"
+          echo "NSE classification CSV"
+          echo "     ↓"
+          echo "NSE checkpoint fallback"
+          echo "     ↓"
+          echo "NSE_Sector_Industry_Diagnostic"
+          echo ""
+          echo "============================================================"
