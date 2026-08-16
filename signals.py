@@ -88,37 +88,37 @@ def calculate_institutional_score(cmp, rsi, ema20, ema50, ema200, volume_spike, 
         score += 5
 
     # -------------------
-    # VOLUME (20)
+    # VOLUME (15)
     # -------------------
 
     if volume_spike >= 2:
-        score += 20
-
-    elif volume_spike >= 1.5:
         score += 15
 
+    elif volume_spike >= 1.5:
+        score += 11
+
     elif volume_spike >= 1.2:
-        score += 10
+        score += 7
 
     # -------------------
-    # RELATIVE STRENGTH
+    # RELATIVE STRENGTH (15)
     # -------------------
     
     if rs_score >= 50:
-        score += 20
-    
-    elif rs_score >= 25:
         score += 15
     
+    elif rs_score >= 25:
+        score += 11
+    
     elif rs_score >= 10:
-        score += 10
+        score += 7
     
     # -------------------
-    # BREAKOUT (20)
+    # BREAKOUT (10)
     # -------------------
 
     if str(breakout).upper() == "YES":
-        score += 20
+        score += 10
 
     return min(score, 100)
 
