@@ -1,602 +1,615 @@
 {
-  "3BBLACKBIO": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:28:32"
+  "metadata": {
+    "updated_at": "2026-08-16T14:21:55.604622+00:00",
+    "script_version": "NSE_CLASSIFICATION_COLLECTOR_V2",
+    "source": "NSE_QUOTE_EQUITY",
+    "classification_levels": [
+      "Macro-Economic Sector",
+      "Sector",
+      "Industry",
+      "Basic Industry"
+    ]
   },
-  "3PLAND": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:28:56"
-  },
-  "AARNAV": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:29:18"
-  },
-  "ABMKNO": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:29:46"
-  },
-  "ACSTECH": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:30:14"
-  },
-  "AKCAPIT": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:30:37"
-  },
-  "ARTEMISMED": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:31:02"
-  },
-  "ASHIKAG": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:31:29"
-  },
-  "ASTAR": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:31:56"
-  },
-  "BAJAJST": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:32:21"
-  },
-  "BEEKAY": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:32:50"
-  },
-  "BENGALASM": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:33:17"
-  },
-  "BI": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:33:48"
-  },
-  "BIRLAPREC": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:34:14"
-  },
-  "BLIL": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:34:41"
-  },
-  "COMFINTE": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:35:05"
-  },
-  "DECNGOLD": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:35:34"
-  },
-  "DISAQ": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:35:59"
-  },
-  "DRAGARWQ": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:36:26"
-  },
-  "ELCIDIN": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:36:49"
-  },
-  "ELITECON": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:37:15"
-  },
-  "ELPROINTL": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:37:42"
-  },
-  "FEDDERSHOL": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:38:07"
-  },
-  "FERMENTA": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:38:32"
-  },
-  "FRONTSP": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:39:01"
-  },
-  "GNRL": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:39:27"
-  },
-  "GRANDOAK": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:39:59"
-  },
-  "GRAVISSHO": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:40:23"
-  },
-  "GUJRAFFIA": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:40:54"
-  },
-  "HBESD": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:41:20"
-  },
-  "INDPRUD": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:41:45"
-  },
-  "IWP": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:42:10"
-  },
-  "JSWDULUX": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:42:35"
-  },
-  "KAMAHOLD": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:43:04"
-  },
-  "KIRANVYPAR": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:43:29"
-  },
-  "KLBRENG-B": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:43:53"
-  },
-  "KOTIC": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:44:18"
-  },
-  "KPL": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:44:48"
-  },
-  "LAHOTIOV": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:45:15"
-  },
-  "MADHAVIPL": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:45:40"
-  },
-  "MAFATIND": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:46:06"
-  },
-  "MCCHRLS-B": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:46:31"
-  },
-  "MENNPIS": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:46:58"
-  },
-  "MERCANTILE": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:47:26"
-  },
-  "NATIONSTD": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:47:57"
-  },
-  "NEAGI": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:48:25"
-  },
-  "NILE": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:48:53"
-  },
-  "PML": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:49:15"
-  },
-  "PRAVEG": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:49:45"
-  },
-  "PREMCO": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:50:17"
-  },
-  "QUINT": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:50:45"
-  },
-  "RAJPALAYAM": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:51:13"
-  },
-  "RRIL": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:51:40"
-  },
-  "SAPPL": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:52:11"
-  },
-  "SEIL": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:52:40"
-  },
-  "SHBAJRG": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:53:00"
-  },
-  "SHINDL": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:53:29"
-  },
-  "SHRIKRISH": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:53:55"
-  },
-  "SIKA": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:54:20"
-  },
-  "SINGERIND": {
-    "Macro-Economic Sector": "",
-    "Sector": "",
-    "Industry": "",
-    "Basic Industry": "",
-    "Classification Source": "",
-    "Classification Confidence": "NOT_RESOLVED",
-    "Diagnosis": "NSE_ACCESS_BLOCKED",
-    "Last Attempt": "2026-08-13 17:54:48"
+  "classifications": {
+    "3BBLACKBIO": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:28:32"
+    },
+    "3PLAND": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:28:56"
+    },
+    "AARNAV": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:29:18"
+    },
+    "ABMKNO": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:29:46"
+    },
+    "ACSTECH": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:30:14"
+    },
+    "AKCAPIT": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:30:37"
+    },
+    "ARTEMISMED": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:31:02"
+    },
+    "ASHIKAG": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:31:29"
+    },
+    "ASTAR": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:31:56"
+    },
+    "BAJAJST": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:32:21"
+    },
+    "BEEKAY": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:32:50"
+    },
+    "BENGALASM": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:33:17"
+    },
+    "BI": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:33:48"
+    },
+    "BIRLAPREC": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:34:14"
+    },
+    "BLIL": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:34:41"
+    },
+    "COMFINTE": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:35:05"
+    },
+    "DECNGOLD": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:35:34"
+    },
+    "DISAQ": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:35:59"
+    },
+    "DRAGARWQ": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:36:26"
+    },
+    "ELCIDIN": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:36:49"
+    },
+    "ELITECON": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:37:15"
+    },
+    "ELPROINTL": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:37:42"
+    },
+    "FEDDERSHOL": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:38:07"
+    },
+    "FERMENTA": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:38:32"
+    },
+    "FRONTSP": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:39:01"
+    },
+    "GNRL": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:39:27"
+    },
+    "GRANDOAK": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:39:59"
+    },
+    "GRAVISSHO": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:40:23"
+    },
+    "GUJRAFFIA": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:40:54"
+    },
+    "HBESD": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:41:20"
+    },
+    "INDPRUD": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:41:45"
+    },
+    "IWP": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:42:10"
+    },
+    "JSWDULUX": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:42:35"
+    },
+    "KAMAHOLD": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:43:04"
+    },
+    "KIRANVYPAR": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:43:29"
+    },
+    "KLBRENG-B": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:43:53"
+    },
+    "KOTIC": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:44:18"
+    },
+    "KPL": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:44:48"
+    },
+    "LAHOTIOV": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:45:15"
+    },
+    "MADHAVIPL": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:45:40"
+    },
+    "MAFATIND": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:46:06"
+    },
+    "MCCHRLS-B": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:46:31"
+    },
+    "MENNPIS": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:46:58"
+    },
+    "MERCANTILE": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:47:26"
+    },
+    "NATIONSTD": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:47:57"
+    },
+    "NEAGI": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:48:25"
+    },
+    "NILE": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:48:53"
+    },
+    "PML": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:49:15"
+    },
+    "PRAVEG": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:49:45"
+    },
+    "PREMCO": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:50:17"
+    },
+    "QUINT": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:50:45"
+    },
+    "RAJPALAYAM": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:51:13"
+    },
+    "RRIL": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:51:40"
+    },
+    "SAPPL": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:52:11"
+    },
+    "SEIL": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:52:40"
+    },
+    "SHBAJRG": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:53:00"
+    },
+    "SHINDL": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:53:29"
+    },
+    "SHRIKRISH": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:53:55"
+    },
+    "SIKA": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:54:20"
+    },
+    "SINGERIND": {
+      "Macro-Economic Sector": "",
+      "Sector": "",
+      "Industry": "",
+      "Basic Industry": "",
+      "Classification Source": "",
+      "Classification Confidence": "NOT_RESOLVED",
+      "Diagnosis": "NSE_ACCESS_BLOCKED",
+      "Last Attempt": "2026-08-13 17:54:48"
+    }
   }
 }
