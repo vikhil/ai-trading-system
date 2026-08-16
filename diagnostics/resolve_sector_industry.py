@@ -40,8 +40,73 @@ CHECKPOINT_FILE = os.getenv(
 # ============================================================
 
 SCRIPT_VERSION = (
-    "NSE_CLASSIFICATION_RESOLVER_V3"
+    "NSE_CLASSIFICATION_RESOLVER_V4"
 )
+
+
+# ============================================================
+# LOCAL SYNC DECISION
+# ============================================================
+
+def classification_needs_stock_master_sync(
+    record,
+    classification
+):
+
+    if not isinstance(
+        classification,
+        dict
+    ):
+        return False
+
+    confidence = classification.get(
+        "Classification Confidence",
+        NOT_RESOLVED
+    )
+
+    if confidence not in {
+        HIGH_CONFIDENCE,
+        MEDIUM_CONFIDENCE,
+    }:
+        return False
+
+    sector = normalize_text(
+        classification.get(
+            "Sector",
+            ""
+        )
+    )
+
+    industry = normalize_text(
+        classification.get(
+            "Industry",
+            ""
+        )
+    )
+
+    if not sector or not industry:
+        return False
+
+    existing_sector = normalize_text(
+        record.get(
+            "Sector",
+            ""
+        )
+    )
+
+    existing_industry = normalize_text(
+        record.get(
+            "Industry",
+            ""
+        )
+    )
+
+    return (
+        is_unknown(existing_sector)
+        or is_unknown(existing_industry)
+        or existing_sector != sector
+        or existing_industry != industry
+    )
 
 
 # ============================================================
@@ -1805,6 +1870,15 @@ def write_diagnostic_sheet(
         "============================================================"
     )
 
+    if not rows:
+
+        print(
+            "No new diagnostic rows. Existing diagnostic history "
+            "will not be rewritten."
+        )
+
+        return
+
     headers = [
 
         "Run Date",
@@ -2067,34 +2141,30 @@ def main():
             )
         )
 
-        has_csv = (
-            csv_result
-            and classification_has_any_value(
-                csv_result
-            )
-        )
+        # ----------------------------------------------------
+        # Resolve the local sources first. This is cheap and does
+        # NOT make an NSE request.
+        #
+        # IMPORTANT: Do NOT use "has_csv or has_checkpoint" as a
+        # processing trigger. That caused every already-resolved
+        # stock to be processed on every 30-minute workflow run.
+        # ----------------------------------------------------
 
-        has_checkpoint = (
-            checkpoint_result
-            and classification_has_any_value(
-                checkpoint_result
+        local_classification = (
+            resolve_from_sources(
+                symbol,
+                csv_classification,
+                checkpoint
             )
         )
 
         needs_processing = (
-
-            is_unknown(
-                current_sector
+            is_unknown(current_sector)
+            or is_unknown(current_industry)
+            or classification_needs_stock_master_sync(
+                record,
+                local_classification
             )
-
-            or is_unknown(
-                current_industry
-            )
-
-            or has_csv
-
-            or has_checkpoint
-
         )
 
         if not needs_processing:
@@ -2127,13 +2197,7 @@ def main():
         # SOURCE RESOLUTION
         # ----------------------------------------------------
 
-        classification = (
-            resolve_from_sources(
-                symbol,
-                csv_classification,
-                checkpoint
-            )
-        )
+        classification = local_classification
 
         confidence = calculate_confidence(
             classification
