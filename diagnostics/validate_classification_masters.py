@@ -1,24 +1,15 @@
 import os
 import pandas as pd
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
+
+SPREADSHEET_ID = "1qGsaLVDzxxPSuYnY_Qd2vcEiYXE4tWoTEuxLfH38hPI"
+
+STOCK_MASTER_SHEET = "Stock_Master"
 
 NSE_FILE = "data/nse_industry_classification.csv"
 BSE_FILE = "data/bse_industry_classification.csv"
-
-
-NSE_HEADERS = [
-    "NSE Symbol",
-    "NSE Macro Sector",
-    "NSE Sector",
-    "NSE Industry",
-    "NSE Basic Industry",
-]
-
-BSE_HEADERS = [
-    "NSE Symbol",
-    "BSE Sector",
-    "BSE Industry",
-]
 
 
 INVALID_VALUES = {
@@ -36,216 +27,242 @@ def normalize(value):
     if value is None:
         return ""
 
-    return str(value).strip()
+    return str(value).strip().upper()
 
 
-def validate_file(
-    filename,
-    required_columns,
-    label
+def connect():
+
+    credentials_json = os.getenv(
+        "GOOGLE_CREDENTIALS"
+    )
+
+    if not credentials_json:
+        raise RuntimeError(
+            "GOOGLE_CREDENTIALS is not configured."
+        )
+
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive",
+        "https://www.googleapis.com/auth/spreadsheets",
+    ]
+
+    credentials = (
+        ServiceAccountCredentials
+        .from_json_keyfile_dict(
+            eval(credentials_json),
+            scope
+        )
+    )
+
+    client = gspread.authorize(
+        credentials
+    )
+
+    return client.open_by_key(
+        SPREADSHEET_ID
+    )
+
+
+def find_column(headers, names):
+
+    normalized = {
+        normalize(h): h
+        for h in headers
+    }
+
+    for name in names:
+
+        if normalize(name) in normalized:
+            return normalized[
+                normalize(name)
+            ]
+
+    raise RuntimeError(
+        f"Column not found: {names}"
+    )
+
+
+def read_unresolved_symbols(
+    spreadsheet
 ):
 
-    print()
-    print("=" * 70)
-    print(f"VALIDATING {label}")
-    print("=" * 70)
-
-    if not os.path.exists(filename):
-
-        raise RuntimeError(
-            f"{filename} does not exist."
-        )
-
-    df = pd.read_csv(
-        filename,
-        dtype=str
-    ).fillna("")
-
-    print(
-        f"Records found: {len(df)}"
+    ws = spreadsheet.worksheet(
+        STOCK_MASTER_SHEET
     )
 
-    print(
-        f"Columns found: {list(df.columns)}"
-    )
+    values = ws.get_all_values()
 
-    missing_columns = [
-        column
-        for column in required_columns
-        if column not in df.columns
-    ]
+    headers = values[0]
 
-    if missing_columns:
-
-        raise RuntimeError(
-            f"{label} missing columns: "
-            f"{missing_columns}"
-        )
-
-    if df.empty:
-
-        raise RuntimeError(
-            f"{label} contains headers but zero records."
-        )
-
-    # --------------------------------------------------------
-    # Normalize fields
-    # --------------------------------------------------------
-
-    for column in required_columns:
-
-        df[column] = (
-            df[column]
-            .astype(str)
-            .str.strip()
-        )
-
-    # --------------------------------------------------------
-    # Symbol validation
-    # --------------------------------------------------------
-
-    empty_symbols = df[
-        df["NSE Symbol"]
-        .isin(INVALID_VALUES)
-    ]
-
-    if not empty_symbols.empty:
-
-        raise RuntimeError(
-            f"{label} contains "
-            f"{len(empty_symbols)} empty symbols."
-        )
-
-    duplicate_symbols = (
-        df["NSE Symbol"]
-        .duplicated(keep=False)
-    )
-
-    if duplicate_symbols.any():
-
-        duplicates = (
-            df.loc[
-                duplicate_symbols,
-                "NSE Symbol"
-            ]
-            .unique()
-            .tolist()
-        )
-
-        raise RuntimeError(
-            f"{label} contains duplicate symbols: "
-            f"{duplicates}"
-        )
-
-    # --------------------------------------------------------
-    # Classification validation
-    # --------------------------------------------------------
-
-    classification_columns = [
-        column
-        for column in required_columns
-        if column != "NSE Symbol"
-    ]
-
-    for column in classification_columns:
-
-        invalid = df[
-            df[column]
-            .str.upper()
-            .isin(INVALID_VALUES)
+    ticker_col = find_column(
+        headers,
+        [
+            "Ticker",
+            "Yahoo Ticker",
+            "Symbol",
         ]
-
-        if not invalid.empty:
-
-            raise RuntimeError(
-                f"{label}: column '{column}' "
-                f"has {len(invalid)} invalid records."
-            )
-
-    print(
-        f"{label}: VALID"
     )
 
-    return df
+    sector_col = find_column(
+        headers,
+        ["Sector"]
+    )
+
+    industry_col = find_column(
+        headers,
+        ["Industry"]
+    )
+
+    symbols = set()
+
+    for row in values[1:]:
+
+        record = dict(
+            zip(headers, row)
+        )
+
+        sector = normalize(
+            record.get(sector_col)
+        )
+
+        industry = normalize(
+            record.get(industry_col)
+        )
+
+        if (
+            sector not in INVALID_VALUES
+            or
+            industry not in INVALID_VALUES
+        ):
+            continue
+
+        ticker = normalize(
+            record.get(ticker_col)
+        )
+
+        if ticker.endswith(".NS"):
+            ticker = ticker[:-3]
+
+        if ticker:
+            symbols.add(ticker)
+
+    return symbols
 
 
 def main():
 
-    print()
     print("=" * 70)
     print(
-        "CLASSIFICATION MASTER VALIDATION"
+        "CLASSIFICATION MASTER COVERAGE"
     )
     print("=" * 70)
 
-    nse_df = validate_file(
+    spreadsheet = connect()
+
+    stock_symbols = read_unresolved_symbols(
+        spreadsheet
+    )
+
+    nse = pd.read_csv(
         NSE_FILE,
-        NSE_HEADERS,
-        "NSE CLASSIFICATION"
-    )
+        dtype=str
+    ).fillna("")
 
-    bse_df = validate_file(
+    bse = pd.read_csv(
         BSE_FILE,
-        BSE_HEADERS,
-        "BSE CLASSIFICATION"
+        dtype=str
+    ).fillna("")
+
+    nse_symbols = {
+        normalize(x)
+        for x in nse["NSE Symbol"]
+    }
+
+    bse_symbols = {
+        normalize(x)
+        for x in bse["NSE Symbol"]
+    }
+
+    missing_nse = (
+        stock_symbols - nse_symbols
     )
 
-    # --------------------------------------------------------
-    # Cross-check symbols
-    # --------------------------------------------------------
-
-    nse_symbols = set(
-        nse_df["NSE Symbol"]
+    missing_bse = (
+        stock_symbols - bse_symbols
     )
 
-    bse_symbols = set(
-        bse_df["NSE Symbol"]
+    print()
+    print(
+        f"Stock_Master unresolved : "
+        f"{len(stock_symbols)}"
     )
 
-    missing_from_bse = (
-        nse_symbols - bse_symbols
+    print(
+        f"NSE master records      : "
+        f"{len(nse_symbols)}"
     )
 
-    missing_from_nse = (
-        bse_symbols - nse_symbols
+    print(
+        f"BSE master records      : "
+        f"{len(bse_symbols)}"
     )
 
-    if missing_from_bse:
+    print()
 
-        raise RuntimeError(
-            "Symbols present in NSE master "
-            "but missing from BSE master: "
-            f"{sorted(missing_from_bse)}"
+    if missing_nse:
+
+        print(
+            "Missing from NSE master:"
         )
 
-    if missing_from_nse:
+        for symbol in sorted(
+            missing_nse
+        ):
+            print(
+                f"  {symbol}"
+            )
 
-        raise RuntimeError(
-            "Symbols present in BSE master "
-            "but missing from NSE master: "
-            f"{sorted(missing_from_nse)}"
+    else:
+
+        print(
+            "All unresolved stocks "
+            "exist in NSE master."
         )
 
     print()
-    print(
-        f"NSE records : {len(nse_df)}"
-    )
 
-    print(
-        f"BSE records : {len(bse_df)}"
-    )
+    if missing_bse:
+
+        print(
+            "Missing from BSE master:"
+        )
+
+        for symbol in sorted(
+            missing_bse
+        ):
+            print(
+                f"  {symbol}"
+            )
+
+    else:
+
+        print(
+            "All unresolved stocks "
+            "exist in BSE master."
+        )
 
     print()
-    print(
-        "NSE/BSE symbol sets match."
-    )
 
-    print()
-    print("=" * 70)
+    if missing_nse or missing_bse:
+
+        raise RuntimeError(
+            "Classification master coverage FAILED."
+        )
+
     print(
-        "CLASSIFICATION MASTERS ARE VALID"
+        "Classification master coverage PASSED."
     )
-    print("=" * 70)
 
 
 if __name__ == "__main__":
