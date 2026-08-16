@@ -39,6 +39,10 @@ NSE_QUOTE_API_URL = (
     "https://www.nseindia.com/api/quote-equity"
 )
 
+NSE_NEXT_QUOTE_API_URL = (
+    "https://www.nseindia.com/api/NextApi/apiClient/GetQuoteApi"
+)
+
 
 # ============================================================
 # FILES
@@ -1146,57 +1150,6 @@ def request_nse_quote(
         )
 
         # ----------------------------------------------------
-        # 403 = HARD CIRCUIT BREAKER
-        # ----------------------------------------------------
-
-        if status == 403:
-
-            print(
-                "\n"
-                "****************************************************"
-            )
-
-            print(
-                "NSE QUOTE API HTTP 403"
-            )
-
-            print(
-                "NSE access is BLOCKED."
-            )
-
-            print(
-                "No retry."
-            )
-
-            print(
-                "No session refresh."
-            )
-
-            print(
-                "No additional NSE requests."
-            )
-
-            print(
-                "****************************************************"
-            )
-
-            return {
-
-                "success":
-                    False,
-
-                "access_blocked":
-                    True,
-
-                "payload":
-                    {},
-
-                "error":
-                    NSE_ACCESS_BLOCKED,
-
-            }
-
-        # ----------------------------------------------------
         # SUCCESS
         # ----------------------------------------------------
 
@@ -1258,6 +1211,219 @@ def request_nse_quote(
 
                 "error":
                     "NSE_INVALID_JSON_PAYLOAD",
+
+            }
+
+        # ----------------------------------------------------
+        # 403 = TRY NSE NEXT API
+        # ----------------------------------------------------
+
+        if status == 403:
+
+            print(
+                "\n"
+                "****************************************************"
+            )
+
+            print(
+                "NSE QUOTE API HTTP 403"
+            )
+
+            print(
+                "Primary /api/quote-equity endpoint is blocked."
+            )
+
+            print(
+                "Trying NSE Next quote endpoint..."
+            )
+
+            print(
+                "****************************************************"
+            )
+
+            next_headers = {
+
+                "Referer":
+                    (
+                        f"{NSE_QUOTE_PAGE_URL}"
+                        f"?symbol={symbol}"
+                    ),
+
+                "Accept":
+                    (
+                        "application/json,"
+                        "text/plain,*/*"
+                    ),
+
+                "X-Requested-With":
+                    "XMLHttpRequest",
+
+            }
+
+            try:
+
+                next_response = session.get(
+
+                    NSE_NEXT_QUOTE_API_URL,
+
+                    params={
+
+                        "functionName":
+                            "getSymbolData",
+
+                        "marketType":
+                            "N",
+
+                        "series":
+                            "EQ",
+
+                        "symbol":
+                            symbol,
+
+                    },
+
+                    headers=next_headers,
+
+                    timeout=REQUEST_TIMEOUT
+
+                )
+
+            except requests.RequestException as error:
+
+                print(
+                    "    NSE Next API request exception:"
+                )
+
+                print(
+                    f"    {error}"
+                )
+
+                return {
+
+                    "success":
+                        False,
+
+                    "access_blocked":
+                        True,
+
+                    "payload":
+                        {},
+
+                    "error":
+                        NSE_ACCESS_BLOCKED,
+
+                }
+
+            next_status = (
+                next_response.status_code
+            )
+
+            print(
+                "    NSE Next API HTTP status: "
+                f"{next_status}"
+            )
+
+            if next_status == 200:
+
+                try:
+
+                    next_payload = (
+                        next_response.json()
+                    )
+
+                except ValueError:
+
+                    return {
+
+                        "success":
+                            False,
+
+                        "access_blocked":
+                            False,
+
+                        "payload":
+                            {},
+
+                        "error":
+                            "NSE_NEXT_API_NON_JSON_RESPONSE",
+
+                    }
+
+                if isinstance(
+                    next_payload,
+                    dict
+                ):
+
+                    return {
+
+                        "success":
+                            True,
+
+                        "access_blocked":
+                            False,
+
+                        "payload":
+                            next_payload,
+
+                        "error":
+                            "",
+
+                    }
+
+                return {
+
+                    "success":
+                        False,
+
+                    "access_blocked":
+                        False,
+
+                    "payload":
+                        {},
+
+                    "error":
+                        "NSE_NEXT_API_INVALID_PAYLOAD",
+
+                }
+
+            if next_status == 403:
+
+                print(
+                    "    NSE Next API also returned HTTP 403."
+                )
+
+                return {
+
+                    "success":
+                        False,
+
+                    "access_blocked":
+                        True,
+
+                    "payload":
+                        {},
+
+                    "error":
+                        NSE_ACCESS_BLOCKED,
+
+                }
+
+            return {
+
+                "success":
+                    False,
+
+                "access_blocked":
+                    False,
+
+                "payload":
+                    {},
+
+                "error":
+                    (
+                        "NSE_NEXT_API_HTTP_STATUS_"
+                        f"{next_status}"
+                    ),
 
             }
 
@@ -1345,7 +1511,6 @@ def request_nse_quote(
                 ),
 
         }
-
 
 # ============================================================
 # EXTRACT INDUSTRY INFORMATION
