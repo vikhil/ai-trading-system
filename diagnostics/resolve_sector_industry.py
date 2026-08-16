@@ -11,13 +11,9 @@ from oauth2client.service_account import ServiceAccountCredentials
 # CONFIGURATION
 # ============================================================
 
-STOCK_MASTER_SHEET = (
-    "Stock_Master"
-)
+STOCK_MASTER_SHEET = "Stock_Master"
 
-DIAGNOSTIC_SHEET = (
-    "NSE_Sector_Industry_Diagnostic"
-)
+DIAGNOSTIC_SHEET = "NSE_Sector_Industry_Diagnostic"
 
 SPREADSHEET_ID = (
     "1qGsaLVDzxxPSuYnY_Qd2vcEiYXE4tWoTEuxLfH38hPI"
@@ -40,7 +36,16 @@ CHECKPOINT_FILE = os.getenv(
 
 
 # ============================================================
-# CONSTANTS
+# VERSION
+# ============================================================
+
+SCRIPT_VERSION = (
+    "NSE_CLASSIFICATION_RESOLVER_V3"
+)
+
+
+# ============================================================
+# CONFIDENCE
 # ============================================================
 
 HIGH_CONFIDENCE = "HIGH"
@@ -48,33 +53,46 @@ MEDIUM_CONFIDENCE = "MEDIUM"
 LOW_CONFIDENCE = "LOW"
 NOT_RESOLVED = "NOT_RESOLVED"
 
-CONFLICT = "CONFLICT"
 
-SCRIPT_VERSION = (
-    "NSE_CLASSIFICATION_RESOLVER_V2"
-)
-
+# ============================================================
+# UNKNOWN VALUES
+# ============================================================
 
 UNKNOWN_VALUES = {
-
     "",
     "UNKNOWN",
     "N/A",
     "NA",
     "NULL",
     "NONE",
-
 }
 
 
 # ============================================================
-# GOOGLE SHEETS
+# SOURCE NAMES
+# ============================================================
+
+SOURCE_CSV = "NSE_CLASSIFICATION_CSV"
+
+SOURCE_CHECKPOINT = "NSE_CHECKPOINT"
+
+
+# ============================================================
+# GOOGLE SHEETS CONNECTION
 # ============================================================
 
 def connect_to_google_sheet():
 
     print(
-        "\nConnecting to Google Sheet..."
+        "\n============================================================"
+    )
+
+    print(
+        "CONNECTING TO GOOGLE SHEETS"
+    )
+
+    print(
+        "============================================================"
     )
 
     google_credentials = os.getenv(
@@ -84,8 +102,8 @@ def connect_to_google_sheet():
     if not google_credentials:
 
         raise RuntimeError(
-            "GOOGLE_CREDENTIALS environment "
-            "variable is not configured."
+            "GOOGLE_CREDENTIALS environment variable "
+            "is not configured."
         )
 
     scope = [
@@ -119,7 +137,7 @@ def connect_to_google_sheet():
     )
 
     print(
-        "Google Sheet connected."
+        "Google Sheet connected successfully."
     )
 
     return spreadsheet
@@ -146,15 +164,11 @@ def normalize_symbol(value):
         value
     ).upper()
 
-    if value.startswith(
-        "NSE:"
-    ):
+    if value.startswith("NSE:"):
 
         value = value[4:]
 
-    if value.endswith(
-        ".NS"
-    ):
+    if value.endswith(".NS"):
 
         value = value[:-3]
 
@@ -172,15 +186,13 @@ def is_unknown(value):
 
 
 # ============================================================
-# HEADER HELPERS
+# HEADER NORMALIZATION
 # ============================================================
 
 def normalize_header(value):
 
     return (
-        normalize_text(
-            value
-        )
+        normalize_text(value)
         .lower()
         .replace("_", " ")
         .replace("-", " ")
@@ -193,11 +205,9 @@ def find_column(
     required=True
 ):
 
-    normalized = {
+    normalized_headers = {
 
-        normalize_header(
-            header
-        ):
+        normalize_header(header):
             header
 
         for header in headers
@@ -206,13 +216,17 @@ def find_column(
 
     for candidate in candidates:
 
-        key = normalize_header(
-            candidate
+        normalized_candidate = (
+            normalize_header(
+                candidate
+            )
         )
 
-        if key in normalized:
+        if normalized_candidate in normalized_headers:
 
-            return normalized[key]
+            return normalized_headers[
+                normalized_candidate
+            ]
 
     if required:
 
@@ -225,7 +239,7 @@ def find_column(
 
 
 # ============================================================
-# CLASSIFICATION STRUCTURE
+# EMPTY CLASSIFICATION
 # ============================================================
 
 def empty_classification():
@@ -240,8 +254,22 @@ def empty_classification():
 
         "Basic Industry": "",
 
+        "Classification Source": "",
+
+        "Classification Retrieved At": "",
+
+        "Classification Confidence":
+            NOT_RESOLVED,
+
+        "Diagnosis":
+            "NSE_CLASSIFICATION_NOT_AVAILABLE",
+
     }
 
+
+# ============================================================
+# CLASSIFICATION HELPERS
+# ============================================================
 
 def classification_has_any_value(
     classification
@@ -264,10 +292,15 @@ def classification_has_any_value(
         )
 
         for field in [
+
             "Macro-Economic Sector",
+
             "Sector",
+
             "Industry",
+
             "Basic Industry",
+
         ]
 
     )
@@ -294,12 +327,48 @@ def classification_is_complete(
         )
 
         for field in [
+
             "Macro-Economic Sector",
+
             "Sector",
+
             "Industry",
+
             "Basic Industry",
+
         ]
 
+    )
+
+
+def classification_has_sector_and_industry(
+    classification
+):
+
+    if not isinstance(
+        classification,
+        dict
+    ):
+
+        return False
+
+    sector = normalize_text(
+        classification.get(
+            "Sector",
+            ""
+        )
+    )
+
+    industry = normalize_text(
+        classification.get(
+            "Industry",
+            ""
+        )
+    )
+
+    return bool(
+        sector
+        and industry
     )
 
 
@@ -310,6 +379,13 @@ def classification_is_complete(
 def calculate_confidence(
     classification
 ):
+
+    if not isinstance(
+        classification,
+        dict
+    ):
+
+        return NOT_RESOLVED
 
     macro = normalize_text(
         classification.get(
@@ -339,7 +415,10 @@ def calculate_confidence(
         )
     )
 
-    # Full hierarchy
+    # --------------------------------------------------------
+    # COMPLETE NSE FOUR-LEVEL CLASSIFICATION
+    # --------------------------------------------------------
+
     if (
         macro
         and sector
@@ -349,7 +428,12 @@ def calculate_confidence(
 
         return HIGH_CONFIDENCE
 
-    # Useful three-level NSE classification
+    # --------------------------------------------------------
+    # USABLE THREE-LEVEL CLASSIFICATION
+    #
+    # Sector + Industry + Basic Industry
+    # --------------------------------------------------------
+
     if (
         sector
         and industry
@@ -358,14 +442,36 @@ def calculate_confidence(
 
         return MEDIUM_CONFIDENCE
 
+    # --------------------------------------------------------
+    # SECTOR + INDUSTRY AVAILABLE
+    #
+    # This is sufficient for Stock_Master synchronization.
+    # --------------------------------------------------------
+
+    if (
+        sector
+        and industry
+    ):
+
+        return MEDIUM_CONFIDENCE
+
+    # --------------------------------------------------------
+    # PARTIAL DATA
+    # --------------------------------------------------------
+
     populated = sum(
+
         bool(value)
+
         for value in [
+
             macro,
             sector,
             industry,
-            basic
+            basic,
+
         ]
+
     )
 
     if populated >= 2:
@@ -380,6 +486,123 @@ def calculate_confidence(
 
 
 # ============================================================
+# NORMALIZE CLASSIFICATION RECORD
+# ============================================================
+
+def normalize_classification(
+    classification,
+    default_source=""
+):
+
+    result = empty_classification()
+
+    if not isinstance(
+        classification,
+        dict
+    ):
+
+        return result
+
+    result[
+        "Macro-Economic Sector"
+    ] = normalize_text(
+        classification.get(
+            "Macro-Economic Sector",
+            classification.get(
+                "Macro Economic Sector",
+                classification.get(
+                    "macro",
+                    ""
+                )
+            )
+        )
+    )
+
+    result[
+        "Sector"
+    ] = normalize_text(
+        classification.get(
+            "Sector",
+            classification.get(
+                "sector",
+                ""
+            )
+        )
+    )
+
+    result[
+        "Industry"
+    ] = normalize_text(
+        classification.get(
+            "Industry",
+            classification.get(
+                "industry",
+                ""
+            )
+        )
+    )
+
+    result[
+        "Basic Industry"
+    ] = normalize_text(
+        classification.get(
+            "Basic Industry",
+            classification.get(
+                "Basic_Industry",
+                classification.get(
+                    "basic_industry",
+                    ""
+                )
+            )
+        )
+    )
+
+    result[
+        "Classification Source"
+    ] = normalize_text(
+        classification.get(
+            "Classification Source",
+            classification.get(
+                "source",
+                default_source
+            )
+        )
+    )
+
+    result[
+        "Classification Retrieved At"
+    ] = normalize_text(
+        classification.get(
+            "Classification Retrieved At",
+            classification.get(
+                "retrieved_at",
+                classification.get(
+                    "timestamp",
+                    ""
+                )
+            )
+        )
+    )
+
+    result[
+        "Classification Confidence"
+    ] = calculate_confidence(
+        result
+    )
+
+    result[
+        "Diagnosis"
+    ] = normalize_text(
+        classification.get(
+            "Diagnosis",
+            ""
+        )
+    )
+
+    return result
+
+
+# ============================================================
 # READ STOCK MASTER
 # ============================================================
 
@@ -388,7 +611,15 @@ def read_stock_master(
 ):
 
     print(
-        "\nReading Stock_Master..."
+        "\n============================================================"
+    )
+
+    print(
+        "READING STOCK_MASTER"
+    )
+
+    print(
+        "============================================================"
     )
 
     worksheet = spreadsheet.worksheet(
@@ -406,7 +637,7 @@ def read_stock_master(
     headers = values[0]
 
     print(
-        "\nStock_Master columns detected:"
+        "\nStock_Master columns:"
     )
 
     for header in headers:
@@ -420,7 +651,7 @@ def read_stock_master(
         [
             "Ticker",
             "Yahoo Ticker",
-            "Symbol"
+            "Symbol",
         ]
     )
 
@@ -429,82 +660,23 @@ def read_stock_master(
         [
             "Company Name",
             "Company",
-            "Name"
+            "Name",
         ]
     )
 
     sector_col = find_column(
         headers,
         [
-            "Sector"
+            "Sector",
         ]
     )
 
     industry_col = find_column(
         headers,
         [
-            "Industry"
+            "Industry",
         ]
     )
-
-    records = [
-
-        {
-
-            "Sheet Row":
-                row_number,
-
-            "Ticker":
-                normalize_text(
-                    row.get(
-                        ticker_col,
-                        ""
-                    )
-                ),
-
-            "Company Name":
-                normalize_text(
-                    row.get(
-                        company_col,
-                        ""
-                    )
-                ),
-
-            "Sector":
-                normalize_text(
-                    row.get(
-                        sector_col,
-                        ""
-                    )
-                ),
-
-            "Industry":
-                normalize_text(
-                    row.get(
-                        industry_col,
-                        ""
-                    )
-                ),
-
-        }
-
-        for row_number, row in enumerate(
-            [
-                dict(
-                    zip(
-                        headers,
-                        values[1]
-                    )
-                )
-            ],
-            start=2
-        )
-
-    ]
-
-    # --------------------------------------------------------
-    # Correct record construction
-    # --------------------------------------------------------
 
     records = []
 
@@ -520,17 +692,28 @@ def read_stock_master(
             )
         )
 
+        ticker = normalize_text(
+            record.get(
+                ticker_col,
+                ""
+            )
+        )
+
+        if not ticker:
+
+            continue
+
         records.append({
 
             "Sheet Row":
                 row_number,
 
             "Ticker":
-                normalize_text(
-                    record.get(
-                        ticker_col,
-                        ""
-                    )
+                ticker,
+
+            "NSE Symbol":
+                normalize_symbol(
+                    ticker
                 ),
 
             "Company Name":
@@ -560,7 +743,7 @@ def read_stock_master(
         })
 
     print(
-        f"Stock_Master records: "
+        f"\nStock_Master valid ticker rows: "
         f"{len(records)}"
     )
 
@@ -580,12 +763,11 @@ def read_stock_master(
 def load_classification_master():
 
     print(
-        "\n"
-        "============================================================"
+        "\n============================================================"
     )
 
     print(
-        "LOAD NSE CLASSIFICATION CSV"
+        "LOADING NSE CLASSIFICATION CSV"
     )
 
     print(
@@ -603,7 +785,7 @@ def load_classification_master():
     ):
 
         print(
-            "CSV does not exist."
+            "CSV not found."
         )
 
         print(
@@ -628,7 +810,7 @@ def load_classification_master():
             if not reader.fieldnames:
 
                 print(
-                    "WARNING: CSV has no headers."
+                    "WARNING: CSV contains no headers."
                 )
 
                 return {}
@@ -653,7 +835,9 @@ def load_classification_master():
                     "Macro Economic Sector",
                     "Macro Sector",
                     "Macro_Economic_Sector",
-                ]
+                    "Macro",
+                ],
+                required=False
             )
 
             sector_col = find_column(
@@ -679,7 +863,19 @@ def load_classification_master():
                     "Basic Industry",
                     "Basic_Industry",
                     "Basic Industry Name",
-                ]
+                ],
+                required=False
+            )
+
+            retrieved_col = find_column(
+                headers,
+                [
+                    "Classification Retrieved At",
+                    "Retrieved At",
+                    "Timestamp",
+                    "Retrieved Timestamp",
+                ],
+                required=False
             )
 
             for row in reader:
@@ -695,9 +891,7 @@ def load_classification_master():
 
                     continue
 
-                classification[
-                    symbol
-                ] = {
+                record = {
 
                     "Macro-Economic Sector":
                         normalize_text(
@@ -705,7 +899,9 @@ def load_classification_master():
                                 macro_col,
                                 ""
                             )
-                        ),
+                        )
+                        if macro_col
+                        else "",
 
                     "Sector":
                         normalize_text(
@@ -729,20 +925,40 @@ def load_classification_master():
                                 basic_col,
                                 ""
                             )
-                        ),
+                        )
+                        if basic_col
+                        else "",
 
                     "Classification Source":
-                        "NSE_CLASSIFICATION_CSV",
+                        SOURCE_CSV,
 
                     "Classification Retrieved At":
-                        "",
+                        normalize_text(
+                            row.get(
+                                retrieved_col,
+                                ""
+                            )
+                        )
+                        if retrieved_col
+                        else "",
 
                 }
+
+                record[
+                    "Classification Confidence"
+                ] = calculate_confidence(
+                    record
+                )
+
+                classification[
+                    symbol
+                ] = record
 
     except Exception as error:
 
         print(
-            "WARNING: Could not read classification CSV."
+            "WARNING: Unable to read NSE "
+            "classification CSV."
         )
 
         print(
@@ -752,7 +968,7 @@ def load_classification_master():
         return {}
 
     print(
-        "CSV classification records: "
+        f"CSV classification records: "
         f"{len(classification)}"
     )
 
@@ -760,22 +976,28 @@ def load_classification_master():
 
 
 # ============================================================
-# LOAD CHECKPOINT
+# CHECKPOINT NORMALIZATION
 # ============================================================
 
 def normalize_checkpoint(
-    checkpoint
+    raw_checkpoint
 ):
 
     if not isinstance(
-        checkpoint,
+        raw_checkpoint,
         dict
     ):
 
         return {}
 
-    classifications = checkpoint.get(
-        "classifications"
+    # --------------------------------------------------------
+    # Preferred current format
+    # --------------------------------------------------------
+
+    classifications = (
+        raw_checkpoint.get(
+            "classifications"
+        )
     )
 
     if isinstance(
@@ -783,82 +1005,143 @@ def normalize_checkpoint(
         dict
     ):
 
-        return classifications
+        source = classifications
 
-    # Backward compatibility with old format
-    converted = {}
+    else:
 
-    for symbol, value in checkpoint.items():
+        source = {}
 
-        if symbol == "metadata":
+    # --------------------------------------------------------
+    # Backward-compatible formats
+    # --------------------------------------------------------
 
-            continue
+    containers = []
 
-        normalized = normalize_symbol(
-            symbol
+    if source:
+
+        containers.append(
+            source
         )
 
-        if (
-            normalized
-            and isinstance(
-                value,
-                dict
-            )
+    containers.append(
+        raw_checkpoint
+    )
+
+    for key in [
+
+        "results",
+        "records",
+        "data",
+        "classification",
+        "symbols",
+
+    ]:
+
+        container = raw_checkpoint.get(
+            key
+        )
+
+        if isinstance(
+            container,
+            dict
         ):
 
-            converted[
-                normalized
-            ] = value
-
-    # Support older nested formats
-    if not converted:
-
-        for container_key in [
-            "results",
-            "records",
-            "data",
-            "classification",
-            "symbols",
-        ]:
-
-            container = checkpoint.get(
-                container_key
+            containers.append(
+                container
             )
 
+    normalized = {}
+
+    for container in containers:
+
+        for raw_symbol, raw_value in (
+            container.items()
+        ):
+
+            if raw_symbol == "metadata":
+
+                continue
+
+            symbol = normalize_symbol(
+                raw_symbol
+            )
+
+            if not symbol:
+
+                continue
+
             if not isinstance(
-                container,
+                raw_value,
                 dict
             ):
 
                 continue
 
-            for symbol, value in (
-                container.items()
-            ):
+            candidate = raw_value
 
-                normalized = normalize_symbol(
-                    symbol
+            for nested_key in [
+
+                "classification",
+                "data",
+                "result",
+
+            ]:
+
+                nested = raw_value.get(
+                    nested_key
                 )
 
-                if (
-                    normalized
-                    and isinstance(
-                        value,
-                        dict
-                    )
+                if isinstance(
+                    nested,
+                    dict
                 ):
 
-                    converted[
-                        normalized
-                    ] = value
+                    candidate = nested
 
-    return converted
+                    break
 
+            classification = (
+                normalize_classification(
+                    candidate,
+                    SOURCE_CHECKPOINT
+                )
+            )
+
+            if classification_has_any_value(
+                classification
+            ):
+
+                classification[
+                    "Classification Source"
+                ] = SOURCE_CHECKPOINT
+
+                normalized[
+                    symbol
+                ] = classification
+
+    return normalized
+
+
+# ============================================================
+# LOAD CHECKPOINT
+# ============================================================
 
 def load_checkpoint():
 
     print(
-        "\nLoading checkpoint..."
+        "\n============================================================"
+    )
+
+    print(
+        "LOADING NSE CHECKPOINT"
+    )
+
+    print(
+        "============================================================"
+    )
+
+    print(
+        f"File: {CHECKPOINT_FILE}"
     )
 
     if not os.path.exists(
@@ -866,7 +1149,7 @@ def load_checkpoint():
     ):
 
         print(
-            "No checkpoint found."
+            "Checkpoint not found."
         )
 
         return {}
@@ -889,11 +1172,11 @@ def load_checkpoint():
     ) as error:
 
         print(
-            "WARNING: Could not load checkpoint:"
+            "WARNING: Unable to load checkpoint."
         )
 
         print(
-            f"  {error}"
+            f"Reason: {error}"
         )
 
         return {}
@@ -903,7 +1186,7 @@ def load_checkpoint():
     )
 
     print(
-        "Checkpoint records: "
+        f"Checkpoint classification records: "
         f"{len(checkpoint)}"
     )
 
@@ -911,133 +1194,80 @@ def load_checkpoint():
 
 
 # ============================================================
-# SUCCESS VALIDATION
+# SOURCE QUALITY
 # ============================================================
 
-def is_successful_classification(
+def source_quality(
     classification
 ):
 
-    if not isinstance(
-        classification,
-        dict
+    """
+    Higher number = better source.
+
+    4 = complete CSV
+    3 = complete checkpoint
+    2 = partial CSV
+    1 = partial checkpoint
+    0 = unusable
+    """
+
+    if not classification_has_any_value(
+        classification
     ):
 
-        return False
+        return 0
 
-    confidence = classification.get(
-        "Classification Confidence"
-    )
-
-    if confidence in {
-        HIGH_CONFIDENCE,
-        MEDIUM_CONFIDENCE,
-        LOW_CONFIDENCE,
-    }:
-
-        return True
-
-    # Backward compatibility:
-    # old checkpoint may not contain confidence.
-    return (
-        calculate_confidence(
-            classification
-        )
-        != NOT_RESOLVED
-    )
-
-
-# ============================================================
-# NORMALIZE CHECKPOINT CLASSIFICATION
-# ============================================================
-
-def normalize_checkpoint_classification(
-    classification
-):
-
-    result = empty_classification()
-
-    if not isinstance(
-        classification,
-        dict
-    ):
-
-        return {
-
-            **result,
-
-            "Classification Source":
-                "",
-
-            "Classification Confidence":
-                NOT_RESOLVED,
-
-            "Diagnosis":
-                "INVALID_CHECKPOINT_RECORD",
-
-        }
-
-    for field in result:
-
-        result[field] = normalize_text(
-            classification.get(
-                field,
-                ""
-            )
-        )
-
-    result[
-        "Classification Source"
-    ] = normalize_text(
+    source = normalize_text(
         classification.get(
             "Classification Source",
-            "NSE_CHECKPOINT"
-        )
-    )
-
-    confidence = (
-        classification.get(
-            "Classification Confidence"
-        )
-    )
-
-    if confidence not in {
-        HIGH_CONFIDENCE,
-        MEDIUM_CONFIDENCE,
-        LOW_CONFIDENCE,
-    }:
-
-        confidence = calculate_confidence(
-            result
-        )
-
-    result[
-        "Classification Confidence"
-    ] = confidence
-
-    result[
-        "Diagnosis"
-    ] = normalize_text(
-        classification.get(
-            "Diagnosis",
-            "NSE_CHECKPOINT_CLASSIFICATION"
-        )
-    )
-
-    result[
-        "Classification Retrieved At"
-    ] = normalize_text(
-        classification.get(
-            "Classification Retrieved At",
             ""
         )
     )
 
-    return result
+    complete = classification_is_complete(
+        classification
+    )
+
+    if (
+        source == SOURCE_CSV
+        and complete
+    ):
+
+        return 4
+
+    if (
+        source == SOURCE_CHECKPOINT
+        and complete
+    ):
+
+        return 3
+
+    if (
+        source == SOURCE_CSV
+        and classification_has_sector_and_industry(
+            classification
+        )
+    ):
+
+        return 2
+
+    if (
+        source == SOURCE_CHECKPOINT
+        and classification_has_sector_and_industry(
+            classification
+        )
+    ):
+
+        return 1
+
+    # A source with only macro/basic etc.
+    # is not sufficient to update Stock_Master.
+
+    return 0
 
 
 # ============================================================
-# RESOLVE SOURCE
+# RESOLUTION HIERARCHY
 # ============================================================
 
 def resolve_from_sources(
@@ -1060,167 +1290,118 @@ def resolve_from_sources(
         )
     )
 
-    csv_valid = (
-        csv_result
-        and classification_has_any_value(
+    csv_result = normalize_classification(
+        csv_result,
+        SOURCE_CSV
+    ) if csv_result else None
+
+    checkpoint_result = (
+        normalize_classification(
+            checkpoint_result,
+            SOURCE_CHECKPOINT
+        )
+        if checkpoint_result
+        else None
+    )
+
+    candidates = []
+
+    if csv_result:
+
+        csv_result[
+            "Classification Source"
+        ] = SOURCE_CSV
+
+        candidates.append(
             csv_result
         )
-    )
 
-    checkpoint_valid = (
-        checkpoint_result
-        and classification_has_any_value(
+    if checkpoint_result:
+
+        checkpoint_result[
+            "Classification Source"
+        ] = SOURCE_CHECKPOINT
+
+        candidates.append(
             checkpoint_result
         )
+
+    if not candidates:
+
+        return empty_classification()
+
+    # --------------------------------------------------------
+    # Sort by strict source hierarchy.
+    #
+    # Complete CSV
+    #     ↓
+    # Complete checkpoint
+    #     ↓
+    # Partial CSV
+    #     ↓
+    # Partial checkpoint
+    #     ↓
+    # NOT_RESOLVED
+    # --------------------------------------------------------
+
+    candidates.sort(
+        key=lambda item: (
+            source_quality(item),
+            normalize_text(
+                item.get(
+                    "Classification Retrieved At",
+                    ""
+                )
+            )
+        ),
+        reverse=True
     )
 
-    # --------------------------------------------------------
-    # Both available
-    #
-    # Prefer checkpoint because it represents a direct NSE
-    # quote retrieval and contains a retrieval timestamp.
-    # --------------------------------------------------------
+    best = candidates[0]
 
-    if (
-        csv_valid
-        and checkpoint_valid
+    if source_quality(best) == 0:
+
+        return empty_classification()
+
+    best[
+        "Classification Confidence"
+    ] = calculate_confidence(
+        best
+    )
+
+    if classification_is_complete(
+        best
     ):
 
-        csv_normalized = (
-            normalize_checkpoint_classification(
-                csv_result
-            )
+        best[
+            "Diagnosis"
+        ] = (
+            "NSE_CLASSIFICATION_COMPLETE"
         )
 
-        checkpoint_normalized = (
-            normalize_checkpoint_classification(
-                checkpoint_result
-            )
+    elif classification_has_sector_and_industry(
+        best
+    ):
+
+        best[
+            "Diagnosis"
+        ] = (
+            "NSE_CLASSIFICATION_PARTIAL"
         )
 
-        csv_retrieved = (
-            csv_normalized.get(
-                "Classification Retrieved At",
-                ""
-            )
+    else:
+
+        best[
+            "Classification Confidence"
+        ] = NOT_RESOLVED
+
+        best[
+            "Diagnosis"
+        ] = (
+            "NSE_CLASSIFICATION_NOT_USABLE"
         )
 
-        checkpoint_retrieved = (
-            checkpoint_normalized.get(
-                "Classification Retrieved At",
-                ""
-            )
-        )
-
-        # If timestamps are available, use the newest.
-        if (
-            csv_retrieved
-            and checkpoint_retrieved
-        ):
-
-            if (
-                checkpoint_retrieved
-                >= csv_retrieved
-            ):
-
-                checkpoint_normalized[
-                    "Classification Source"
-                ] = "NSE_CHECKPOINT"
-
-                return (
-                    checkpoint_normalized,
-                    "NSE_CHECKPOINT"
-                )
-
-            csv_normalized[
-                "Classification Source"
-            ] = "NSE_CLASSIFICATION_CSV"
-
-            return (
-                csv_normalized,
-                "NSE_CLASSIFICATION_CSV"
-            )
-
-        # No timestamps:
-        # direct NSE checkpoint wins.
-        checkpoint_normalized[
-            "Classification Source"
-        ] = "NSE_CHECKPOINT"
-
-        return (
-            checkpoint_normalized,
-            "NSE_CHECKPOINT"
-        )
-
-    # --------------------------------------------------------
-    # CSV only
-    # --------------------------------------------------------
-
-    if csv_valid:
-
-        result = (
-            normalize_checkpoint_classification(
-                csv_result
-            )
-        )
-
-        result[
-            "Classification Source"
-        ] = "NSE_CLASSIFICATION_CSV"
-
-        return (
-            result,
-            "NSE_CLASSIFICATION_CSV"
-        )
-
-    # --------------------------------------------------------
-    # CHECKPOINT only
-    # --------------------------------------------------------
-
-    if checkpoint_valid:
-
-        result = (
-            normalize_checkpoint_classification(
-                checkpoint_result
-            )
-        )
-
-        result[
-            "Classification Source"
-        ] = "NSE_CHECKPOINT"
-
-        return (
-            result,
-            "NSE_CHECKPOINT"
-        )
-
-    # --------------------------------------------------------
-    # Nothing available
-    # --------------------------------------------------------
-
-    return (
-
-        {
-
-            **empty_classification(),
-
-            "Classification Source":
-                "",
-
-            "Classification Confidence":
-                NOT_RESOLVED,
-
-            "Diagnosis":
-                "NSE_CLASSIFICATION_NOT_AVAILABLE",
-
-            "Classification Retrieved At":
-                "",
-
-        },
-
-        ""
-
-    )
+    return best
 
 
 # ============================================================
@@ -1237,12 +1418,11 @@ def update_stock_master(
 ):
 
     print(
-        "\n"
-        "============================================================"
+        "\n============================================================"
     )
 
     print(
-        "UPDATING STOCK_MASTER"
+        "SYNCHRONIZING STOCK_MASTER"
     )
 
     print(
@@ -1261,11 +1441,9 @@ def update_stock_master(
         )
     )
 
-    values = worksheet.get_all_values()
-
     updates = []
 
-    updated_count = 0
+    updated_symbols = set()
 
     for record in records:
 
@@ -1286,12 +1464,20 @@ def update_stock_master(
             continue
 
         confidence = classification.get(
-            "Classification Confidence"
+            "Classification Confidence",
+            NOT_RESOLVED
         )
 
+        # ----------------------------------------------------
+        # Only HIGH or MEDIUM classifications can synchronize
+        # Sector/Industry.
+        # ----------------------------------------------------
+
         if confidence not in {
+
             HIGH_CONFIDENCE,
             MEDIUM_CONFIDENCE,
+
         }:
 
             continue
@@ -1310,6 +1496,10 @@ def update_stock_master(
             )
         )
 
+        # ----------------------------------------------------
+        # NEVER write incomplete Sector/Industry data.
+        # ----------------------------------------------------
+
         if not sector:
 
             continue
@@ -1322,62 +1512,104 @@ def update_stock_master(
             "Sheet Row"
         ]
 
-        updates.append({
+        existing_sector = normalize_text(
+            record[
+                "Sector"
+            ]
+        )
 
-            "range":
-                (
-                    f"{gspread.utils.rowcol_to_a1("
-                    row_number,
-                    sector_index + 1
-                    )}"
-                ),
+        existing_industry = normalize_text(
+            record[
+                "Industry"
+            ]
+        )
 
-            "values":
-                [[
-                    sector
-                ]],
+        # ----------------------------------------------------
+        # Do not rewrite identical values.
+        # ----------------------------------------------------
 
-        })
+        sector_changed = (
+            existing_sector
+            != sector
+        )
 
-        updates.append({
+        industry_changed = (
+            existing_industry
+            != industry
+        )
 
-            "range":
-                (
-                    f"{gspread.utils.rowcol_to_a1("
-                    row_number,
-                    industry_index + 1
-                    )}"
-                ),
+        if not sector_changed and not industry_changed:
 
-            "values":
-                [[
-                    industry
-                ]],
+            print(
+                f"{symbol}: Stock_Master already "
+                "contains correct classification."
+            )
 
-        })
+            continue
 
-        updated_count += 1
+        if sector_changed:
+
+            updates.append({
+
+                "range":
+                    gspread.utils.rowcol_to_a1(
+                        row_number,
+                        sector_index + 1
+                    ),
+
+                "values":
+                    [[
+                        sector
+                    ]],
+
+            })
+
+        if industry_changed:
+
+            updates.append({
+
+                "range":
+                    gspread.utils.rowcol_to_a1(
+                        row_number,
+                        industry_index + 1
+                    ),
+
+                "values":
+                    [[
+                        industry
+                    ]],
+
+            })
+
+        updated_symbols.add(
+            symbol
+        )
 
         print(
             f"{symbol}:"
         )
 
         print(
-            f"  Sector   = {sector}"
+            f"  Sector       : {sector}"
         )
 
         print(
-            f"  Industry = {industry}"
+            f"  Industry     : {industry}"
         )
 
         print(
-            f"  Confidence = {confidence}"
+            f"  Confidence   : {confidence}"
+        )
+
+        print(
+            f"  Source       : "
+            f"{classification.get('Classification Source', '')}"
         )
 
     if not updates:
 
         print(
-            "No Stock_Master updates required."
+            "\nNo Stock_Master changes required."
         )
 
         return 0
@@ -1387,193 +1619,15 @@ def update_stock_master(
     )
 
     print(
-        "\nStock_Master rows updated: "
-        f"{updated_count}"
-    )
-
-    return updated_count
-
-
-# ============================================================
-# DIAGNOSTIC SHEET
-# ============================================================
-
-def read_existing_diagnostic(
-    spreadsheet
-):
-
-    try:
-
-        worksheet = spreadsheet.worksheet(
-            DIAGNOSTIC_SHEET
-        )
-
-    except gspread.WorksheetNotFound:
-
-        return []
-
-    values = worksheet.get_all_values()
-
-    if len(values) <= 1:
-
-        return []
-
-    headers = values[0]
-
-    records = [
-
-        dict(
-            zip(
-                headers,
-                row
-            )
-        )
-
-        for row in values[1:]
-
-    ]
-
-    return records
-
-
-def write_diagnostic_sheet(
-    spreadsheet,
-    rows
-):
-
-    headers = [
-
-        "Run Date",
-
-        "Run Timestamp",
-
-        "Ticker",
-
-        "NSE Symbol",
-
-        "Company Name",
-
-        "Existing Sector",
-
-        "Existing Industry",
-
-        "NSE Classification Status",
-
-        "Macro-Economic Sector",
-
-        "Sector",
-
-        "Industry",
-
-        "Basic Industry",
-
-        "Classification Source",
-
-        "Classification Confidence",
-
-        "Diagnosis",
-
-        "Classification Retrieved At",
-
-        "Resolver Version",
-
-    ]
-
-    try:
-
-        worksheet = spreadsheet.worksheet(
-            DIAGNOSTIC_SHEET
-        )
-
-    except gspread.WorksheetNotFound:
-
-        worksheet = spreadsheet.add_worksheet(
-
-            title=DIAGNOSTIC_SHEET,
-
-            rows=max(
-                len(rows) + 100,
-                1000
-            ),
-
-            cols=len(headers)
-
-        )
-
-    # --------------------------------------------------------
-    # IMPORTANT:
-    #
-    # DO NOT clear history.
-    # We append the current run to the diagnostic sheet.
-    # --------------------------------------------------------
-
-    existing = (
-        read_existing_diagnostic(
-            spreadsheet
-        )
-    )
-
-    data = [
-
-        headers
-
-    ]
-
-    # Keep historical records
-    for historical in existing:
-
-        data.append([
-
-            historical.get(
-                header,
-                ""
-            )
-
-            for header in headers
-
-        ])
-
-    # Add current records
-    for row in rows:
-
-        data.append([
-
-            row.get(
-                header,
-                ""
-            )
-
-            for header in headers
-
-        ])
-
-    worksheet.clear()
-
-    worksheet.update(
-
-        range_name=(
-            f"A1:Q{len(data)}"
-        ),
-
-        values=data,
-
-        value_input_option="USER_ENTERED"
-
+        "\nStock_Master successfully updated."
     )
 
     print(
-        "\nDiagnostic sheet updated."
+        f"Rows changed: "
+        f"{len(updated_symbols)}"
     )
 
-    print(
-        f"Historical rows retained: "
-        f"{len(existing)}"
-    )
-
-    print(
-        f"Current run rows added: "
-        f"{len(rows)}"
-    )
+    return len(updated_symbols)
 
 
 # ============================================================
@@ -1610,11 +1664,9 @@ def build_diagnostic_row(
             ],
 
         "NSE Symbol":
-            normalize_symbol(
-                record[
-                    "Ticker"
-                ]
-            ),
+            record[
+                "NSE Symbol"
+            ],
 
         "Company Name":
             record[
@@ -1691,6 +1743,207 @@ def build_diagnostic_row(
 
 
 # ============================================================
+# READ EXISTING DIAGNOSTIC
+# ============================================================
+
+def read_existing_diagnostic(
+    spreadsheet
+):
+
+    try:
+
+        worksheet = spreadsheet.worksheet(
+            DIAGNOSTIC_SHEET
+        )
+
+    except gspread.WorksheetNotFound:
+
+        return []
+
+    values = worksheet.get_all_values()
+
+    if len(values) <= 1:
+
+        return []
+
+    headers = values[0]
+
+    records = []
+
+    for row in values[1:]:
+
+        records.append(
+            dict(
+                zip(
+                    headers,
+                    row
+                )
+            )
+        )
+
+    return records
+
+
+# ============================================================
+# WRITE DIAGNOSTIC
+# ============================================================
+
+def write_diagnostic_sheet(
+    spreadsheet,
+    rows
+):
+
+    print(
+        "\n============================================================"
+    )
+
+    print(
+        "UPDATING DIAGNOSTIC SHEET"
+    )
+
+    print(
+        "============================================================"
+    )
+
+    headers = [
+
+        "Run Date",
+
+        "Run Timestamp",
+
+        "Ticker",
+
+        "NSE Symbol",
+
+        "Company Name",
+
+        "Existing Sector",
+
+        "Existing Industry",
+
+        "NSE Classification Status",
+
+        "Macro-Economic Sector",
+
+        "Sector",
+
+        "Industry",
+
+        "Basic Industry",
+
+        "Classification Source",
+
+        "Classification Confidence",
+
+        "Diagnosis",
+
+        "Classification Retrieved At",
+
+        "Resolver Version",
+
+    ]
+
+    try:
+
+        worksheet = spreadsheet.worksheet(
+            DIAGNOSTIC_SHEET
+        )
+
+    except gspread.WorksheetNotFound:
+
+        print(
+            f"Creating worksheet: "
+            f"{DIAGNOSTIC_SHEET}"
+        )
+
+        worksheet = spreadsheet.add_worksheet(
+
+            title=DIAGNOSTIC_SHEET,
+
+            rows=max(
+                len(rows) + 100,
+                1000
+            ),
+
+            cols=len(headers)
+
+        )
+
+    existing = (
+        read_existing_diagnostic(
+            spreadsheet
+        )
+    )
+
+    data = [
+        headers
+    ]
+
+    # --------------------------------------------------------
+    # Preserve history.
+    # --------------------------------------------------------
+
+    for historical in existing:
+
+        data.append([
+
+            historical.get(
+                header,
+                ""
+            )
+
+            for header in headers
+
+        ])
+
+    # --------------------------------------------------------
+    # Add current run.
+    # --------------------------------------------------------
+
+    for row in rows:
+
+        data.append([
+
+            row.get(
+                header,
+                ""
+            )
+
+            for header in headers
+
+        ])
+
+    worksheet.clear()
+
+    end_row = max(
+        len(data),
+        1
+    )
+
+    worksheet.update(
+
+        range_name=(
+            f"A1:Q{end_row}"
+        ),
+
+        values=data,
+
+        value_input_option="USER_ENTERED"
+
+    )
+
+    print(
+        f"Historical diagnostic rows retained: "
+        f"{len(existing)}"
+    )
+
+    print(
+        f"Current diagnostic rows added: "
+        f"{len(rows)}"
+    )
+
+
+# ============================================================
 # MAIN
 # ============================================================
 
@@ -1713,9 +1966,17 @@ def main():
         "============================================================"
     )
 
+    # --------------------------------------------------------
+    # 1. CONNECT TO GOOGLE SHEETS
+    # --------------------------------------------------------
+
     spreadsheet = (
         connect_to_google_sheet()
     )
+
+    # --------------------------------------------------------
+    # 2. READ STOCK MASTER
+    # --------------------------------------------------------
 
     (
         worksheet,
@@ -1727,6 +1988,10 @@ def main():
         spreadsheet
     )
 
+    # --------------------------------------------------------
+    # 3. LOAD SOURCES
+    # --------------------------------------------------------
+
     checkpoint = (
         load_checkpoint()
     )
@@ -1734,6 +1999,10 @@ def main():
     csv_classification = (
         load_classification_master()
     )
+
+    # --------------------------------------------------------
+    # 4. RESOLVE
+    # --------------------------------------------------------
 
     resolved_by_symbol = {}
 
@@ -1745,49 +2014,46 @@ def main():
 
     unresolved = 0
 
-    stock_master_updated = 0
+    source_csv = 0
+
+    source_checkpoint = 0
+
+    high = 0
+
+    medium = 0
+
+    low = 0
 
     # --------------------------------------------------------
-    # Process every Stock_Master record that has a ticker.
+    # Process only records that:
     #
-    # This allows checkpoint classifications to synchronize
-    # into Stock_Master even if Stock_Master currently says
-    # UNKNOWN.
+    #   A. currently have UNKNOWN Sector
+    #
+    # OR
+    #
+    #   B. have an NSE classification available for sync
+    #
+    # This allows a previously collected NSE classification
+    # to repair Stock_Master without processing every stock.
     # --------------------------------------------------------
 
     for record in records:
 
-        ticker = record[
-            "Ticker"
+        symbol = record[
+            "NSE Symbol"
         ]
-
-        if not ticker:
-
-            continue
-
-        symbol = normalize_symbol(
-            ticker
-        )
 
         if not symbol:
 
             continue
 
-        # ----------------------------------------------------
-        # Only interesting if:
-        #
-        # 1. Sector is UNKNOWN
-        # OR
-        # 2. Checkpoint has classification
-        #
-        # This avoids unnecessary processing.
-        # ----------------------------------------------------
+        current_sector = record[
+            "Sector"
+        ]
 
-        checkpoint_result = (
-            checkpoint.get(
-                symbol
-            )
-        )
+        current_industry = record[
+            "Industry"
+        ]
 
         csv_result = (
             csv_classification.get(
@@ -1795,10 +2061,9 @@ def main():
             )
         )
 
-        has_checkpoint = (
-            checkpoint_result
-            and classification_has_any_value(
-                checkpoint_result
+        checkpoint_result = (
+            checkpoint.get(
+                symbol
             )
         )
 
@@ -1809,25 +2074,37 @@ def main():
             )
         )
 
-        needs_sync = (
-            is_unknown(
-                record[
-                    "Sector"
-                ]
+        has_checkpoint = (
+            checkpoint_result
+            and classification_has_any_value(
+                checkpoint_result
             )
-            or has_checkpoint
-            or has_csv
         )
 
-        if not needs_sync:
+        needs_processing = (
+
+            is_unknown(
+                current_sector
+            )
+
+            or is_unknown(
+                current_industry
+            )
+
+            or has_csv
+
+            or has_checkpoint
+
+        )
+
+        if not needs_processing:
 
             continue
 
         processed += 1
 
         print(
-            "\n"
-            "------------------------------------------------------------"
+            "\n------------------------------------------------------------"
         )
 
         print(
@@ -1836,7 +2113,21 @@ def main():
             f"{record['Company Name']}"
         )
 
-        classification, source = (
+        print(
+            f"Existing Sector   : "
+            f"{current_sector}"
+        )
+
+        print(
+            f"Existing Industry : "
+            f"{current_industry}"
+        )
+
+        # ----------------------------------------------------
+        # SOURCE RESOLUTION
+        # ----------------------------------------------------
+
+        classification = (
             resolve_from_sources(
                 symbol,
                 csv_classification,
@@ -1853,39 +2144,129 @@ def main():
         ] = confidence
 
         # ----------------------------------------------------
-        # If classification came from CSV/checkpoint but did
-        # not have a diagnosis, create one.
+        # Diagnosis
         # ----------------------------------------------------
 
-        if not classification.get(
-            "Diagnosis"
+        if confidence == NOT_RESOLVED:
+
+            classification[
+                "Diagnosis"
+            ] = (
+                "NSE_CLASSIFICATION_NOT_AVAILABLE"
+            )
+
+        elif classification_is_complete(
+            classification
         ):
 
             classification[
                 "Diagnosis"
             ] = (
-                "NSE_CLASSIFICATION_RESOLVED"
-                if confidence
-                != NOT_RESOLVED
-                else
-                "NSE_CLASSIFICATION_NOT_AVAILABLE"
+                "NSE_CLASSIFICATION_COMPLETE"
             )
 
-        classification[
-            "Classification Source"
-        ] = source
+        elif classification_has_sector_and_industry(
+            classification
+        ):
+
+            classification[
+                "Diagnosis"
+            ] = (
+                "NSE_CLASSIFICATION_PARTIAL"
+            )
+
+        else:
+
+            classification[
+                "Diagnosis"
+            ] = (
+                "NSE_CLASSIFICATION_INCOMPLETE"
+            )
+
+            classification[
+                "Classification Confidence"
+            ] = NOT_RESOLVED
+
+            confidence = NOT_RESOLVED
 
         resolved_by_symbol[
             symbol
         ] = classification
 
-        if confidence != NOT_RESOLVED:
+        # ----------------------------------------------------
+        # Statistics
+        # ----------------------------------------------------
 
-            resolved += 1
+        if confidence == HIGH_CONFIDENCE:
+
+            high += 1
+
+        elif confidence == MEDIUM_CONFIDENCE:
+
+            medium += 1
+
+        elif confidence == LOW_CONFIDENCE:
+
+            low += 1
 
         else:
 
             unresolved += 1
+
+        if confidence != NOT_RESOLVED:
+
+            resolved += 1
+
+        source = classification.get(
+            "Classification Source",
+            ""
+        )
+
+        if source == SOURCE_CSV:
+
+            source_csv += 1
+
+        elif source == SOURCE_CHECKPOINT:
+
+            source_checkpoint += 1
+
+        # ----------------------------------------------------
+        # Display result
+        # ----------------------------------------------------
+
+        print(
+            f"Resolved Sector   : "
+            f"{classification.get('Sector', '')}"
+        )
+
+        print(
+            f"Resolved Industry : "
+            f"{classification.get('Industry', '')}"
+        )
+
+        print(
+            f"Basic Industry    : "
+            f"{classification.get('Basic Industry', '')}"
+        )
+
+        print(
+            f"Source            : "
+            f"{source}"
+        )
+
+        print(
+            f"Confidence        : "
+            f"{confidence}"
+        )
+
+        print(
+            f"Diagnosis         : "
+            f"{classification.get('Diagnosis', '')}"
+        )
+
+        # ----------------------------------------------------
+        # Diagnostic record
+        # ----------------------------------------------------
 
         diagnostic_rows.append(
             build_diagnostic_row(
@@ -1895,7 +2276,7 @@ def main():
         )
 
     # --------------------------------------------------------
-    # UPDATE STOCK MASTER
+    # 5. UPDATE STOCK MASTER
     # --------------------------------------------------------
 
     stock_master_updated = (
@@ -1910,7 +2291,7 @@ def main():
     )
 
     # --------------------------------------------------------
-    # WRITE DIAGNOSTICS
+    # 6. WRITE DIAGNOSTICS
     # --------------------------------------------------------
 
     write_diagnostic_sheet(
@@ -1919,7 +2300,7 @@ def main():
     )
 
     # --------------------------------------------------------
-    # SUMMARY
+    # 7. SUMMARY
     # --------------------------------------------------------
 
     print(
@@ -1928,7 +2309,7 @@ def main():
     )
 
     print(
-        "FINAL RESOLUTION SUMMARY"
+        "FINAL NSE CLASSIFICATION SUMMARY"
     )
 
     print(
@@ -1941,17 +2322,45 @@ def main():
     )
 
     print(
-        f"Resolved                : "
-        f"{resolved}"
+        f"High Confidence        : "
+        f"{high}"
     )
 
     print(
-        f"Not resolved            : "
+        f"Medium Confidence      : "
+        f"{medium}"
+    )
+
+    print(
+        f"Low Confidence         : "
+        f"{low}"
+    )
+
+    print(
+        f"Not Resolved            : "
         f"{unresolved}"
     )
 
     print(
-        f"Stock_Master updated    : "
+        "------------------------------------------------------------"
+    )
+
+    print(
+        f"Resolved from CSV       : "
+        f"{source_csv}"
+    )
+
+    print(
+        f"Resolved from Checkpoint: "
+        f"{source_checkpoint}"
+    )
+
+    print(
+        "------------------------------------------------------------"
+    )
+
+    print(
+        f"Stock_Master rows updated: "
         f"{stock_master_updated}"
     )
 
@@ -1967,18 +2376,23 @@ def main():
     )
 
     print(
-        f"Checkpoint file         : "
-        f"{CHECKPOINT_FILE}"
-    )
-
-    print(
         f"Classification CSV      : "
         f"{CLASSIFICATION_FILE}"
     )
 
     print(
-        f"Diagnostic sheet        : "
+        f"Checkpoint              : "
+        f"{CHECKPOINT_FILE}"
+    )
+
+    print(
+        f"Diagnostic Sheet        : "
         f"{DIAGNOSTIC_SHEET}"
+    )
+
+    print(
+        f"Resolver Version        : "
+        f"{SCRIPT_VERSION}"
     )
 
     print(
@@ -1986,9 +2400,13 @@ def main():
     )
 
     print(
-        "\nResolver completed."
+        "\nResolver completed successfully."
     )
 
+
+# ============================================================
+# ENTRY POINT
+# ============================================================
 
 if __name__ == "__main__":
 
