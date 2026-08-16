@@ -1339,11 +1339,11 @@ def main():
 
     if not records:
 
-    print(
-        "No Sector/Industry diagnostic rows found."
-    )
-
-    return
+        print(
+            "No Sector/Industry diagnostic rows found."
+        )
+    
+        return
     
     print("\nLoading classification masters...")
     
