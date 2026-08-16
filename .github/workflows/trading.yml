@@ -6,24 +6,9 @@ on:
 
   workflow_dispatch:
 
-# ============================================================
-# WORKFLOW CONCURRENCY
-# ============================================================
-#
-# Prevent two Trading Bot runs from executing simultaneously.
-# This is particularly important because the workflow:
-#
-# 1. Updates NSE classification
-# 2. Writes checkpoint data
-# 3. Pushes changes to Git
-# 4. Runs the resolver
-#
-# ============================================================
-
 concurrency:
   group: trading-bot
   cancel-in-progress: false
-
 
 jobs:
 
@@ -39,7 +24,7 @@ jobs:
     steps:
 
       # ========================================================
-      # CHECKOUT
+      # 1. CHECKOUT
       # ========================================================
 
       - name: Checkout
@@ -48,7 +33,7 @@ jobs:
           fetch-depth: 0
 
       # ========================================================
-      # PYTHON
+      # 2. PYTHON
       # ========================================================
 
       - name: Setup Python
@@ -57,7 +42,7 @@ jobs:
           python-version: "3.10"
 
       # ========================================================
-      # INSTALL LIBRARIES
+      # 3. INSTALL LIBRARIES
       # ========================================================
 
       - name: Install Libraries
@@ -66,7 +51,7 @@ jobs:
           pip install -r requirements.txt
 
       # ========================================================
-      # GOOGLE FINANCE / MARKET DIAGNOSTIC
+      # 4. GOOGLE FINANCE DIAGNOSTIC
       # ========================================================
 
       - name: Run Google Finance Sector Industry Diagnostic
@@ -78,18 +63,16 @@ jobs:
           python diagnostics/google_finance_sector_industry_diagnostic.py
 
       # ========================================================
-      # UPDATE NSE COMPANY CLASSIFICATION
+      # 5. NSE COLLECTOR
       # ========================================================
       #
-      # Retrieves NSE classification information and updates:
+      # IMPORTANT:
+      # This MUST complete before the resolver runs.
       #
-      #   data/nse_industry_classification.csv
+      # Output:
       #
-      # and/or:
-      #
-      #   data/nse_classification_checkpoint.json
-      #
-      # The resolver runs AFTER this step.
+      # data/nse_industry_classification.csv
+      # data/nse_classification_checkpoint.json
       #
       # ========================================================
 
@@ -109,24 +92,22 @@ jobs:
           python diagnostics/update_nse_industry_classification.py
 
       # ========================================================
-      # SHOW NSE CLASSIFICATION FILES
-      # ========================================================
-      #
-      # Diagnostic step so we can immediately see whether the
-      # NSE collector actually produced the files expected by
-      # resolve_sector_industry.py.
-      #
+      # 6. VERIFY NSE DATA
       # ========================================================
 
       - name: Verify NSE classification files
         if: always()
         run: |
+
           echo "============================================================"
           echo "NSE CLASSIFICATION FILE CHECK"
           echo "============================================================"
 
           if [ -f data/nse_industry_classification.csv ]; then
+
             echo "✓ NSE classification CSV found"
+
+            echo ""
             echo "File size:"
             wc -c data/nse_industry_classification.csv
 
@@ -136,72 +117,103 @@ jobs:
 
             echo ""
             echo "CSV record count:"
-            tail -n +2 data/nse_industry_classification.csv | wc -l
+            tail -n +2 \
+              data/nse_industry_classification.csv | wc -l
+
           else
+
             echo "✗ NSE classification CSV NOT FOUND"
+
           fi
 
           echo ""
 
           if [ -f data/nse_classification_checkpoint.json ]; then
+
             echo "✓ NSE checkpoint found"
+
+            echo ""
             echo "File size:"
             wc -c data/nse_classification_checkpoint.json
+
           else
+
             echo "✗ NSE checkpoint NOT FOUND"
+
           fi
 
           echo ""
           echo "============================================================"
 
       # ========================================================
-      # SAVE NSE CLASSIFICATION DATA
+      # 7. PERSIST NSE DATA
       # ========================================================
       #
-      # Persist the NSE classification CSV and checkpoint so
-      # subsequent GitHub Actions runs can reuse previously
-      # collected data.
+      # This is for FUTURE GitHub Actions runs.
+      #
+      # The resolver does NOT depend on this push.
+      # It reads the files directly from the current workspace.
       #
       # ========================================================
 
       - name: Save NSE classification data
         if: always()
         run: |
+
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          echo "Checking NSE classification files for changes..."
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add data/nse_classification_checkpoint.json 2>/dev/null || true
-          git add data/nse_industry_classification.csv 2>/dev/null || true
+          echo "Checking NSE classification files..."
 
-          if ! git diff --cached --quiet; then
-            git commit -m "Update NSE classification data"
+          git fetch origin "${GITHUB_REF_NAME}"
 
-            # Refresh remote state before pushing.
-            git pull --rebase origin "${GITHUB_REF_NAME}"
+          git rebase "origin/${GITHUB_REF_NAME}" || {
 
-            git push origin "HEAD:${GITHUB_REF_NAME}"
+            echo "WARNING: Git rebase failed."
+
+            git rebase --abort || true
+
+            exit 1
+
+          }
+
+          git add \
+            data/nse_classification_checkpoint.json \
+            data/nse_industry_classification.csv \
+            2>/dev/null || true
+
+          if git diff --cached --quiet; then
+
+            echo "No NSE classification changes."
+
           else
-            echo "No NSE classification changes to commit."
+
+            git commit \
+              -m "Update NSE classification data"
+
+            git push \
+              origin \
+              "HEAD:${GITHUB_REF_NAME}"
+
           fi
 
       # ========================================================
-      # RESOLVE STOCK MASTER CLASSIFICATIONS
+      # 8. RESOLVE NSE SECTOR / INDUSTRY
       # ========================================================
+      #
+      # IMPORTANT:
+      #
+      # This runs ONLY after the NSE collector has completed.
       #
       # Resolver hierarchy:
       #
-      #   1. NSE classification CSV
-      #   2. NSE checkpoint
-      #   3. NOT_RESOLVED
-      #
-      # The resolver does NOT:
-      #
-      #   - use BSE classification
-      #   - use Yahoo sector/industry
-      #   - call NSE live endpoints
-      #   - guess classifications
+      # 1. Complete NSE CSV
+      # 2. Complete checkpoint
+      # 3. Partial NSE CSV
+      # 4. Partial checkpoint
+      # 5. NOT_RESOLVED
       #
       # ========================================================
 
@@ -217,25 +229,41 @@ jobs:
           python diagnostics/resolve_sector_industry.py
 
       # ========================================================
-      # WORKFLOW SUMMARY
+      # 9. WORKFLOW SUMMARY
       # ========================================================
 
       - name: Workflow Summary
         if: always()
         run: |
+
           echo ""
           echo "============================================================"
           echo "TRADING BOT WORKFLOW COMPLETED"
           echo "============================================================"
           echo ""
-          echo "NSE classification flow:"
+
+          echo "Execution order:"
+          echo ""
+
+          echo "1. Google Finance diagnostic"
+          echo "2. NSE classification collector"
+          echo "3. NSE classification file verification"
+          echo "4. NSE data persistence"
+          echo "5. NSE sector/industry resolver"
+          echo "6. Trading workflow"
+          echo ""
+
+          echo "NSE data flow:"
           echo ""
           echo "Stock_Master"
           echo "     ↓"
-          echo "NSE classification CSV"
+          echo "NSE Collector"
           echo "     ↓"
-          echo "NSE checkpoint fallback"
+          echo "CSV + Checkpoint"
           echo "     ↓"
-          echo "NSE_Sector_Industry_Diagnostic"
+          echo "Resolver"
+          echo "     ↓"
+          echo "Stock_Master / Diagnostic"
           echo ""
+
           echo "============================================================"
