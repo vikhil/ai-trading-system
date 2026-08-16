@@ -229,41 +229,33 @@ jobs:
           python diagnostics/resolve_sector_industry.py
 
       # ========================================================
-      # 9. WORKFLOW SUMMARY
+      # 9. RUN TRADING BOT
+      # ========================================================
+      #
+      # IMPORTANT:
+      #
+      # This runs main.py only after:
+      #
+      # 1. Google Finance diagnostic
+      # 2. NSE classification collector
+      # 3. NSE classification verification
+      # 4. NSE data persistence
+      # 5. NSE sector / industry resolver
+      #
+      # main.py therefore receives the latest resolved
+      # Stock_Master data during the same workflow run.
+      #
       # ========================================================
 
-      - name: Workflow Summary
-        if: always()
+      - name: Run Trading Bot
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+
         run: |
-
-          echo ""
-          echo "============================================================"
-          echo "TRADING BOT WORKFLOW COMPLETED"
-          echo "============================================================"
-          echo ""
-
-          echo "Execution order:"
-          echo ""
-
-          echo "1. Google Finance diagnostic"
-          echo "2. NSE classification collector"
-          echo "3. NSE classification file verification"
-          echo "4. NSE data persistence"
-          echo "5. NSE sector/industry resolver"
-          echo "6. Trading workflow"
-          echo ""
-
-          echo "NSE data flow:"
-          echo ""
-          echo "Stock_Master"
-          echo "     ↓"
-          echo "NSE Collector"
-          echo "     ↓"
-          echo "CSV + Checkpoint"
-          echo "     ↓"
-          echo "Resolver"
-          echo "     ↓"
-          echo "Stock_Master / Diagnostic"
-          echo ""
-
-          echo "============================================================"
+          python main.py    
+      
+      # ========================================================
+      # 10. WORKFLOW SUMMARY
+      # ========================================================
