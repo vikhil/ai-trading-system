@@ -29,7 +29,7 @@ CHECKPOINT_FILE = os.getenv(
     "data/nse_classification_checkpoint.json"
 )
 
-ENABLE_YAHOO_FALLBACK = True
+ENABLE_YAHOO_FALLBACK = False
 
 HIGH_CONFIDENCE = "HIGH"
 MEDIUM_CONFIDENCE = "MEDIUM"
@@ -478,6 +478,7 @@ def load_classification_master():
             macro_col = find_column(
                 headers,
                 [
+                    "NSE Macro Sector",
                     "Macro-Economic Sector",
                     "Macro Economic Sector",
                     "Macro Sector",
@@ -489,6 +490,7 @@ def load_classification_master():
             sector_col = find_column(
                 headers,
                 [
+                    "NSE Sector",
                     "Sector",
                 ],
                 required=False
@@ -497,6 +499,7 @@ def load_classification_master():
             industry_col = find_column(
                 headers,
                 [
+                    "NSE Industry",
                     "Industry",
                 ],
                 required=False
@@ -505,6 +508,7 @@ def load_classification_master():
             basic_industry_col = find_column(
                 headers,
                 [
+                    "NSE Basic Industry",
                     "Basic Industry",
                     "Basic_Industry",
                     "Basic Industry Name",
@@ -728,6 +732,7 @@ def load_bse_classification_master():
             sector_col = find_column(
                 headers,
                 [
+                    "BSE Sector",
                     "Sector",
                 ],
                 required=False
@@ -736,6 +741,7 @@ def load_bse_classification_master():
             industry_col = find_column(
                 headers,
                 [
+                    "BSE Industry",
                     "Industry",
                 ],
                 required=False
@@ -1260,48 +1266,21 @@ def resolve_from_sources(
         )
 
     # --------------------------------------------------------
-    # SOURCE 4: Yahoo Finance
+    # SOURCE 4: NO YAHOO CLASSIFICATION FALLBACK
     #
-    # Only reached when authoritative classification
-    # sources are unavailable.
-    # --------------------------------------------------------
-
-    yahoo_result = resolve_yahoo_classification(
-        symbol
-    )
-
-    if (
-        yahoo_result.get(
-            "Yahoo Sector",
-            ""
-        )
-        or
-        yahoo_result.get(
-            "Yahoo Industry",
-            ""
-        )
-    ):
-
-        return (
-            {
-                "Macro-Economic Sector": "",
-                "Sector":
-                    yahoo_result.get(
-                        "Yahoo Sector",
-                        ""
-                    ),
-                "Industry":
-                    yahoo_result.get(
-                        "Yahoo Industry",
-                        ""
-                    ),
-                "Basic Industry": "",
-            },
-            "YAHOO_FINANCE"
-        )
-
-    # --------------------------------------------------------
-    # Nothing available.
+    # Yahoo Finance does not reliably provide the required
+    # NSE four-level classification:
+    #
+    #   NSE Macro Sector
+    #   NSE Sector
+    #   NSE Industry
+    #   NSE Basic Industry
+    #
+    # Therefore Yahoo Finance is intentionally NOT used
+    # for Sector / Industry resolution.
+    #
+    # Yahoo Finance may still be used elsewhere in the
+    # trading system for market/price data.
     # --------------------------------------------------------
 
     return (
